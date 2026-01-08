@@ -23,6 +23,11 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
     </svg>
   ),
+  Calendar: () => (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+  ),
   Settings: () => (
     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -117,6 +122,13 @@ function App() {
   const [chatSending, setChatSending] = useState(false)
   const chatEndRef = useRef(null)
   const isResizing = useRef(false)
+  const [planData, setPlanData] = useState(null)
+  const [planLoading, setPlanLoading] = useState(false)
+  const [planError, setPlanError] = useState('')
+  const [selectedPlanDate, setSelectedPlanDate] = useState(() => {
+    const today = new Date()
+    return today.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  })
 
   // Modern minimalist palette with graphite neutrals + emerald accent
   const theme = darkMode ? {
@@ -205,6 +217,7 @@ function App() {
 
   const navItems = [
     { id: 'dashboard', icon: Icons.Home, label: 'Dashboard' },
+    { id: 'plan', icon: Icons.Calendar, label: 'Plan' },
     { id: 'chat', icon: Icons.Chat, label: 'Chat' },
     { id: 'stats', icon: Icons.Chart, label: 'Statistiken' },
     { id: 'settings', icon: Icons.Settings, label: 'Einstellungen' },
@@ -290,6 +303,120 @@ function App() {
       setChatInput('')
     }
     setChatSending(false)
+  }
+
+  const fetchPlanData = async () => {
+    setPlanLoading(true)
+    setPlanError('')
+    setPlanData(null)
+
+    try {
+      const { data: files, error: listError } = await supabase
+        .storage
+        .from('tagesmep')
+        .list('', { limit: 100, sortBy: { column: 'name', order: 'desc' } })
+
+      if (listError) throw listError
+      if (!files || files.length === 0) throw new Error('Keine XML-Dateien im Bucket gefunden.')
+
+      const xmlFiles = files
+        .filter((f) => f.name.endsWith('.xml'))
+        .sort((a, b) => b.name.localeCompare(a.name))
+
+      if (xmlFiles.length === 0) throw new Error('Keine XML-Dateien gefunden.')
+
+      let xmlContent = null
+      let usedFile = null
+
+      for (const file of xmlFiles) {
+        const { data, error: downloadError } = await supabase
+          .storage
+          .from('tagesmep')
+          .download(file.name)
+
+        if (!downloadError && data) {
+          xmlContent = await data.text()
+          usedFile = file.name
+          break
+        }
+      }
+
+      if (!xmlContent) throw new Error('Konnte keine XML-Datei laden.')
+
+      const parser = new DOMParser()
+      const xmlDoc = parser.parseFromString(xmlContent, 'text/xml')
+      const parseError = xmlDoc.querySelector('parsererror')
+      if (parseError) throw new Error('XML konnte nicht geparst werden.')
+
+      const reportDate = xmlDoc.documentElement.getAttribute('date') || ''
+      const orgGroups = xmlDoc.querySelectorAll('orggroup')
+      const parsed = { reportDate, usedFile, days: {} }
+
+      orgGroups.forEach((group) => {
+        const issueDate = group.getAttribute('issueDate') || ''
+        const groupName = group.getAttribute('name') || ''
+        const dateMatch = issueDate.match(/(\d{2}\.\d{2}\.\d{4})/)
+        const dateKey = dateMatch ? dateMatch[1] : issueDate
+
+        if (!parsed.days[dateKey]) {
+          parsed.days[dateKey] = { issueDate, groups: {} }
+        }
+
+        if (!parsed.days[dateKey].groups[groupName]) {
+          parsed.days[dateKey].groups[groupName] = []
+        }
+
+        const employees = group.querySelectorAll('employee')
+        employees.forEach((emp) => {
+          const visible = emp.querySelector('visible')?.textContent
+          if (visible !== 'true') return
+
+          const firstName = emp.getAttribute('firstName') || ''
+          const lastName = emp.getAttribute('lastName') || ''
+          const workStart = emp.getAttribute('workStart') || ''
+          const workStop = emp.getAttribute('workStop') || ''
+          const color = emp.getAttribute('color') || ''
+
+          const planEl = emp.querySelector('plan')
+          const timeblocks = []
+          if (planEl) {
+            planEl.querySelectorAll('timeblock').forEach((tb) => {
+              timeblocks.push({
+                type: tb.getAttribute('type') || '',
+                duration: parseInt(tb.getAttribute('duration') || '0', 10),
+                color1: tb.getAttribute('color1') || '',
+                text: tb.textContent?.trim() || '',
+              })
+            })
+          }
+
+          let status = ''
+          const workBlock = timeblocks.find((tb) => tb.type === 'work' && tb.text)
+          if (workBlock) {
+            const txt = workBlock.text.toLowerCase()
+            if (txt.includes('urlaub')) status = 'Urlaub'
+            else if (txt.includes('krankheit') || txt.includes('krank')) status = 'Krank'
+            else if (workStart && workStop) status = ''
+          }
+
+          parsed.days[dateKey].groups[groupName].push({
+            firstName,
+            lastName,
+            workStart,
+            workStop,
+            color,
+            status,
+            timeblocks,
+          })
+        })
+      })
+
+      setPlanData(parsed)
+    } catch (err) {
+      setPlanError(err.message || 'Fehler beim Laden der Plandaten.')
+    } finally {
+      setPlanLoading(false)
+    }
   }
 
   const weatherDescription = (code) => {
@@ -692,6 +819,12 @@ function App() {
     }
   }, [activeView, chatMessages])
 
+  useEffect(() => {
+    if (session && activeView === 'plan' && !planData && !planLoading && !planError) {
+      fetchPlanData()
+    }
+  }, [activeView, session, planData, planLoading, planError])
+
   const handleSignIn = async (e) => {
     e.preventDefault()
     setLoading(true)
@@ -997,6 +1130,338 @@ function App() {
                       </button>
                     </form>
                   </div>
+                </>
+              )}
+
+              {activeView === 'plan' && (
+                <>
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-2xl lg:text-3xl font-semibold tracking-tight">Plan</h2>
+                    <button
+                      type="button"
+                      onClick={() => { setPlanData(null); setPlanError(''); fetchPlanData(); }}
+                      className={`text-xs font-medium ${theme.accentText} hover:opacity-80`}
+                      title="Daten neu laden"
+                    >
+                      Aktualisieren
+                    </button>
+                  </div>
+
+                  {planLoading && (
+                    <div className={`${theme.panel} rounded-2xl p-6 border ${theme.border} ${theme.cardShadow}`}>
+                      <p className={theme.textMuted}>Plandaten werden geladen...</p>
+                    </div>
+                  )}
+
+                  {!planLoading && planError && (
+                    <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3">
+                      <p className="text-rose-400 text-sm">{planError}</p>
+                    </div>
+                  )}
+
+                  {!planLoading && !planError && planData && (
+                    <div className="grid gap-4 lg:grid-cols-[auto_1fr]">
+                      {/* Kalender-Matrix links */}
+                      <div className={`${theme.panel} rounded-2xl p-4 border ${theme.border} ${theme.cardShadow} h-fit`}>
+                        <p className={`text-xs font-medium mb-3 ${theme.textMuted}`}>Kalender</p>
+                        {(() => {
+                          const today = new Date()
+                          const todayStr = today.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+
+                          // Erstelle 4 Wochen Kalender (28 Tage) ab Montag der aktuellen Woche
+                          const currentDay = today.getDay()
+                          const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay
+                          const startDate = new Date(today)
+                          startDate.setDate(today.getDate() + mondayOffset)
+
+                          const weeks = []
+                          for (let w = 0; w < 4; w++) {
+                            const week = []
+                            for (let d = 0; d < 7; d++) {
+                              const date = new Date(startDate)
+                              date.setDate(startDate.getDate() + w * 7 + d)
+                              const dateStr = date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                              const dayNum = date.getDate()
+                              const hasData = planData.days[dateStr]
+                              const isSelected = selectedPlanDate === dateStr
+                              const isTodayDate = dateStr === todayStr
+                              const isWeekend = d >= 5
+
+                              week.push({ date, dateStr, dayNum, hasData, isSelected, isTodayDate, isWeekend })
+                            }
+                            weeks.push(week)
+                          }
+
+                          const weekDays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
+
+                          return (
+                            <div className="space-y-1">
+                              {/* Wochentags-Header */}
+                              <div className="grid grid-cols-7 gap-1 mb-2">
+                                {weekDays.map((day, idx) => (
+                                  <div key={day} className={`text-[10px] text-center ${idx >= 5 ? theme.textMuted : theme.textSecondary}`}>
+                                    {day}
+                                  </div>
+                                ))}
+                              </div>
+                              {/* Wochen */}
+                              {weeks.map((week, wIdx) => (
+                                <div key={wIdx} className="grid grid-cols-7 gap-1">
+                                  {week.map((day) => (
+                                    <button
+                                      key={day.dateStr}
+                                      type="button"
+                                      onClick={() => day.hasData && setSelectedPlanDate(day.dateStr)}
+                                      disabled={!day.hasData}
+                                      className={`
+                                        w-8 h-8 rounded-lg text-xs font-medium transition-colors
+                                        ${day.isSelected
+                                          ? 'bg-emerald-500 text-white'
+                                          : day.isTodayDate
+                                            ? `border-2 border-emerald-500/50 ${day.hasData ? theme.text : theme.textMuted}`
+                                            : day.hasData
+                                              ? `${theme.bgHover} ${day.isWeekend ? theme.textMuted : theme.text}`
+                                              : `${theme.textMuted} opacity-40 cursor-not-allowed`
+                                        }
+                                      `}
+                                      title={day.dateStr}
+                                    >
+                                      {day.dayNum}
+                                    </button>
+                                  ))}
+                                </div>
+                              ))}
+                            </div>
+                          )
+                        })()}
+                        <p className={`text-[10px] mt-3 ${theme.textMuted}`}>
+                          Quelle: {planData.usedFile}
+                        </p>
+                      </div>
+
+                      {/* Tagesansicht rechts - Timeline */}
+                      <div className="space-y-4 min-w-0">
+                        {(() => {
+                          const dayData = planData.days[selectedPlanDate]
+                          const today = new Date()
+                          const todayStr = today.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                          const isToday = selectedPlanDate === todayStr
+
+                          // Zeitachse: 6:00 - 20:00 (14 Stunden)
+                          const START_HOUR = 6
+                          const END_HOUR = 20
+                          const TOTAL_HOURS = END_HOUR - START_HOUR
+                          const hours = Array.from({ length: TOTAL_HOURS + 1 }, (_, i) => START_HOUR + i)
+
+                          const parseTime = (timeStr) => {
+                            if (!timeStr) return null
+                            const [h, m] = timeStr.split(':').map(Number)
+                            return h + m / 60
+                          }
+
+                          const getBarStyle = (start, end) => {
+                            // Behandle Nachtschichten
+                            let displayStart = start
+                            let displayEnd = end
+
+                            // Wenn Ende 0:00 (Mitternacht) oder kleiner als Start -> bis 20:00 anzeigen
+                            if (end <= start && end < START_HOUR) {
+                              displayEnd = END_HOUR
+                            }
+
+                            // Wenn Start vor 6:00 -> ab 6:00 anzeigen
+                            if (displayStart < START_HOUR) {
+                              displayStart = START_HOUR
+                            }
+
+                            // Wenn Ende nach 20:00 -> bis 20:00 anzeigen
+                            if (displayEnd > END_HOUR) {
+                              displayEnd = END_HOUR
+                            }
+
+                            // Clamp to visible range
+                            displayStart = Math.max(START_HOUR, Math.min(END_HOUR, displayStart))
+                            displayEnd = Math.max(START_HOUR, Math.min(END_HOUR, displayEnd))
+
+                            const left = ((displayStart - START_HOUR) / TOTAL_HOURS) * 100
+                            const width = ((displayEnd - displayStart) / TOTAL_HOURS) * 100
+
+                            return { left: `${left}%`, width: `${Math.max(0, width)}%` }
+                          }
+
+                          if (!dayData) {
+                            return (
+                              <div className={`${theme.panel} rounded-2xl p-6 border ${theme.border} ${theme.cardShadow}`}>
+                                <p className={theme.textMuted}>Keine Daten fuer {selectedPlanDate} verfuegbar.</p>
+                              </div>
+                            )
+                          }
+
+                          return (
+                            <div className={`${theme.panel} rounded-2xl p-5 border ${isToday ? 'border-emerald-500/40' : theme.border} ${theme.cardShadow}`}>
+                              <div className="flex items-center gap-2 mb-4">
+                                <h3 className="text-lg font-semibold">{dayData.issueDate}</h3>
+                                {isToday && (
+                                  <span className="text-[10px] uppercase tracking-wide px-2 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+                                    Heute
+                                  </span>
+                                )}
+                              </div>
+
+                              {Object.entries(dayData.groups).map(([groupName, employees]) => (
+                                <div key={groupName} className="mb-6 last:mb-0">
+                                  <p className={`text-xs font-medium mb-3 ${theme.textMuted}`}>{groupName}</p>
+
+                                  {/* Zeitachse */}
+                                  <div className="relative mb-2">
+                                    <div className="flex justify-between text-[10px] text-zinc-500">
+                                      {hours.map((h) => (
+                                        <span key={h} className="w-0 text-center" style={{ marginLeft: h === START_HOUR ? 0 : undefined }}>
+                                          {h}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+
+                                  {/* Mitarbeiter-Balken */}
+                                  <div className="space-y-1.5">
+                                    {employees.map((emp, idx) => {
+                                      const startTime = parseTime(emp.workStart)
+                                      const endTime = parseTime(emp.workStop)
+                                      const hasWork = startTime !== null && endTime !== null && emp.workStart !== emp.workStop
+                                      const isAbsent = emp.status === 'Urlaub' || emp.status === 'Krank'
+                                      const isFree = !hasWork && !isAbsent
+
+                                      // Finde Pausen aus timeblocks
+                                      const breakBlock = emp.timeblocks.find((tb) => tb.type === 'break')
+                                      const breakDuration = breakBlock ? breakBlock.duration : 0
+
+                                      // Berechne Pausenposition (nach dem ersten Arbeitsblock)
+                                      let breakStart = null
+                                      let breakEnd = null
+                                      if (breakDuration > 0 && hasWork) {
+                                        let accumulated = 0
+                                        for (const tb of emp.timeblocks) {
+                                          if (tb.type === 'empty') {
+                                            accumulated += tb.duration
+                                          } else if (tb.type === 'work') {
+                                            accumulated += tb.duration
+                                          } else if (tb.type === 'break') {
+                                            breakStart = START_HOUR + accumulated / 60
+                                            breakEnd = breakStart + tb.duration / 60
+                                            break
+                                          }
+                                        }
+                                      }
+
+                                      return (
+                                        <div
+                                          key={`${emp.firstName}-${emp.lastName}-${idx}`}
+                                          className={`relative h-7 rounded ${darkMode ? 'bg-zinc-800/50' : 'bg-zinc-200/50'}`}
+                                        >
+                                          {/* Hintergrund-Raster */}
+                                          <div className="absolute inset-0 flex">
+                                            {hours.slice(0, -1).map((h) => (
+                                              <div key={h} className={`flex-1 border-r ${darkMode ? 'border-zinc-700/30' : 'border-zinc-300/50'}`} />
+                                            ))}
+                                          </div>
+
+                                          {/* Arbeitsbalken */}
+                                          {hasWork && !isAbsent && (
+                                            <>
+                                              <div
+                                                className="absolute top-0.5 bottom-0.5 bg-emerald-500 rounded"
+                                                style={getBarStyle(startTime, endTime)}
+                                              />
+                                              {/* Pause */}
+                                              {breakStart && breakEnd && (
+                                                <div
+                                                  className="absolute top-0.5 bottom-0.5 bg-rose-500 rounded"
+                                                  style={getBarStyle(breakStart, breakEnd)}
+                                                />
+                                              )}
+                                              {/* Name über allem */}
+                                              <div
+                                                className="absolute top-0.5 bottom-0.5 flex items-center justify-center overflow-hidden pointer-events-none"
+                                                style={getBarStyle(startTime, endTime)}
+                                              >
+                                                <span className="text-[11px] font-semibold text-zinc-900 truncate px-2 drop-shadow-[0_0_2px_rgba(255,255,255,0.8)]">
+                                                  {emp.firstName} {emp.lastName}
+                                                </span>
+                                              </div>
+                                            </>
+                                          )}
+
+                                          {/* Urlaub */}
+                                          {emp.status === 'Urlaub' && (
+                                            <div
+                                              className="absolute top-0.5 bottom-0.5 rounded flex items-center justify-center overflow-hidden"
+                                              style={{ left: '0%', width: '100%', backgroundColor: '#A481A2' }}
+                                            >
+                                              <span className="text-[11px] font-semibold text-zinc-900 truncate px-2 drop-shadow-[0_0_2px_rgba(255,255,255,0.8)]">
+                                                {emp.firstName} {emp.lastName} - Urlaub
+                                              </span>
+                                            </div>
+                                          )}
+
+                                          {/* Krank */}
+                                          {emp.status === 'Krank' && (
+                                            <div
+                                              className="absolute top-0.5 bottom-0.5 rounded flex items-center justify-center overflow-hidden"
+                                              style={{ left: '0%', width: '100%', backgroundColor: '#FBBF24' }}
+                                            >
+                                              <span className="text-[11px] font-semibold text-zinc-900 truncate px-2 drop-shadow-[0_0_2px_rgba(255,255,255,0.8)]">
+                                                {emp.firstName} {emp.lastName} - Krank
+                                              </span>
+                                            </div>
+                                          )}
+
+                                          {/* Frei */}
+                                          {isFree && (
+                                            <div className="absolute inset-0 flex items-center px-2">
+                                              <span className={`text-[11px] ${theme.textMuted} truncate`}>
+                                                {emp.firstName} {emp.lastName}
+                                              </span>
+                                            </div>
+                                          )}
+                                        </div>
+                                      )
+                                    })}
+                                  </div>
+                                </div>
+                              ))}
+
+                              {/* Legende */}
+                              <div className={`flex flex-wrap gap-4 mt-4 pt-4 border-t ${theme.border} text-[10px] ${theme.textMuted}`}>
+                                <div className="flex items-center gap-1.5">
+                                  <div className="w-3 h-3 rounded bg-emerald-500" />
+                                  <span>Arbeit</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <div className="w-3 h-3 rounded bg-rose-500" />
+                                  <span>Pause</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <div className="w-3 h-3 rounded" style={{ backgroundColor: '#A481A2' }} />
+                                  <span>Urlaub</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <div className="w-3 h-3 rounded" style={{ backgroundColor: '#FBBF24' }} />
+                                  <span>Krank</span>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })()}
+                      </div>
+                    </div>
+                  )}
+
+                  {!planLoading && !planError && !planData && (
+                    <div className={`${theme.panel} rounded-2xl p-6 border ${theme.border} ${theme.cardShadow}`}>
+                      <p className={theme.textMuted}>Keine Plandaten verfuegbar.</p>
+                    </div>
+                  )}
                 </>
               )}
 

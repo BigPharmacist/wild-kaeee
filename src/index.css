@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Sora', ui-sans-serif, system-ui, sans-serif;
 }
 
 html {
@@ -10,7 +10,7 @@ html {
 
 /* Smooth transitions for theme switching */
 * {
-  transition-property: background-color, border-color;
+  transition-property: background-color, border-color, color, box-shadow;
   transition-duration: 150ms;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -26,10 +26,10 @@ html {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #64748b;
+  background: #52525b;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #71717a;
 }
