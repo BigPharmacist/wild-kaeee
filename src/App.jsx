@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from './lib/supabase'
+import ReactCrop from 'react-image-crop'
+import 'react-image-crop/dist/ReactCrop.css'
 
 // SVG Icons as components for modern look
 const Icons = {
@@ -59,6 +61,11 @@ const Icons = {
     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+  ),
+  Photo: () => (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
     </svg>
   ),
 }
@@ -131,6 +138,19 @@ function App() {
   const cameraInputRef = useRef(null)
   const [latestPhoto, setLatestPhoto] = useState(null)
   const [photoUploading, setPhotoUploading] = useState(false)
+  const [allPhotos, setAllPhotos] = useState([])
+  const [photosLoading, setPhotosLoading] = useState(false)
+  const [selectedPhoto, setSelectedPhoto] = useState(null)
+  const [photoEditorOpen, setPhotoEditorOpen] = useState(false)
+  const [crop, setCrop] = useState()
+  const [completedCrop, setCompletedCrop] = useState()
+  const [brightness, setBrightness] = useState(100)
+  const [contrast, setContrast] = useState(100)
+  const [photoSaving, setPhotoSaving] = useState(false)
+  const photoImgRef = useRef(null)
+  const [photoOcrData, setPhotoOcrData] = useState({})
+  const [mistralApiKey, setMistralApiKey] = useState(null)
+  const [ocrProcessing, setOcrProcessing] = useState({})
   const [planData, setPlanData] = useState(null)
   const [planLoading, setPlanLoading] = useState(false)
   const [planError, setPlanError] = useState('')
@@ -226,6 +246,7 @@ function App() {
 
   const navItems = [
     { id: 'dashboard', icon: Icons.Home, label: 'Dashboard' },
+    { id: 'photos', icon: Icons.Photo, label: 'Fotos' },
     { id: 'plan', icon: Icons.Calendar, label: 'Plan' },
     { id: 'chat', icon: Icons.Chat, label: 'Chat' },
     { id: 'stats', icon: Icons.Chart, label: 'Statistiken' },
@@ -636,7 +657,232 @@ function App() {
       return
     }
     await fetchLatestPhoto()
+    await fetchAllPhotos()
     setPhotoUploading(false)
+
+    // OCR im Hintergrund starten
+    const { data: urlData } = supabase
+      .storage
+      .from('documents')
+      .getPublicUrl(filePath)
+    if (urlData?.publicUrl) {
+      runOcrForPhoto(fileName, urlData.publicUrl)
+    }
+  }
+
+  const fetchAllPhotos = async () => {
+    setPhotosLoading(true)
+    const { data, error } = await supabase
+      .storage
+      .from('documents')
+      .list('photos', { sortBy: { column: 'created_at', order: 'desc' } })
+    if (error || !data) {
+      setAllPhotos([])
+      setPhotosLoading(false)
+      return
+    }
+    const photosWithUrls = data.map((file) => {
+      const { data: urlData } = supabase
+        .storage
+        .from('documents')
+        .getPublicUrl(`photos/${file.name}`)
+      const ext = file.name.split('.').pop()?.toUpperCase() || 'JPG'
+      const sizeKB = file.metadata?.size ? Math.round(file.metadata.size / 1024) : null
+      return {
+        name: file.name,
+        url: urlData.publicUrl,
+        createdAt: file.created_at,
+        format: ext,
+        sizeKB,
+      }
+    })
+    setAllPhotos(photosWithUrls)
+    setPhotosLoading(false)
+  }
+
+  const deletePhoto = async (photoName, event) => {
+    event.stopPropagation()
+    if (!confirm('Foto unwiderruflich loeschen?')) return
+    const { data, error } = await supabase
+      .storage
+      .from('documents')
+      .remove([`photos/${photoName}`])
+    console.log('Delete response:', { data, error, photoName })
+    if (error) {
+      alert('Loeschen fehlgeschlagen: ' + error.message)
+      return
+    }
+    if (!data || data.length === 0) {
+      alert('Foto konnte nicht geloescht werden. Pruefe die Storage-Berechtigungen.')
+      return
+    }
+    setAllPhotos((prev) => prev.filter((p) => p.name !== photoName))
+    await fetchLatestPhoto()
+  }
+
+  const fetchMistralApiKey = async () => {
+    const { data, error } = await supabase
+      .from('api_keys')
+      .select('key')
+      .eq('name', 'Mistral')
+      .single()
+    if (!error && data) {
+      setMistralApiKey(data.key)
+      return data.key
+    }
+    return null
+  }
+
+  const fetchPhotoOcrData = async () => {
+    const { data, error } = await supabase
+      .from('photo_ocr')
+      .select('photo_name, ocr_text, ocr_status')
+    if (!error && data) {
+      const ocrMap = {}
+      data.forEach((item) => {
+        ocrMap[item.photo_name] = { text: item.ocr_text, status: item.ocr_status }
+      })
+      setPhotoOcrData(ocrMap)
+    }
+  }
+
+  const runOcrForPhoto = async (photoName, photoUrl) => {
+    let apiKey = mistralApiKey
+    if (!apiKey) {
+      apiKey = await fetchMistralApiKey()
+    }
+    if (!apiKey) {
+      console.error('Mistral API Key nicht gefunden')
+      return
+    }
+
+    setOcrProcessing((prev) => ({ ...prev, [photoName]: true }))
+
+    try {
+      const response = await fetch('https://api.mistral.ai/v1/ocr', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'mistral-ocr-latest',
+          document: {
+            type: 'image_url',
+            image_url: photoUrl,
+          },
+        }),
+      })
+
+      const result = await response.json()
+      let ocrText = ''
+
+      if (result.pages && result.pages.length > 0) {
+        ocrText = result.pages.map((p) => p.markdown || p.text || '').join('\n')
+      } else if (result.text) {
+        ocrText = result.text
+      } else if (result.content) {
+        ocrText = result.content
+      }
+
+      const { error } = await supabase
+        .from('photo_ocr')
+        .upsert({
+          photo_name: photoName,
+          ocr_text: ocrText || '(kein Text erkannt)',
+          ocr_status: 'completed',
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'photo_name' })
+
+      if (!error) {
+        setPhotoOcrData((prev) => ({
+          ...prev,
+          [photoName]: { text: ocrText || '(kein Text erkannt)', status: 'completed' },
+        }))
+      }
+    } catch (err) {
+      console.error('OCR fehlgeschlagen:', err)
+      await supabase
+        .from('photo_ocr')
+        .upsert({
+          photo_name: photoName,
+          ocr_text: '',
+          ocr_status: 'error',
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'photo_name' })
+      setPhotoOcrData((prev) => ({
+        ...prev,
+        [photoName]: { text: '', status: 'error' },
+      }))
+    } finally {
+      setOcrProcessing((prev) => ({ ...prev, [photoName]: false }))
+    }
+  }
+
+  const openPhotoEditor = (photo) => {
+    setSelectedPhoto(photo)
+    setCrop(undefined)
+    setCompletedCrop(undefined)
+    setBrightness(100)
+    setContrast(100)
+    setPhotoEditorOpen(true)
+  }
+
+  const closePhotoEditor = () => {
+    setPhotoEditorOpen(false)
+    setSelectedPhoto(null)
+    setCrop(undefined)
+    setCompletedCrop(undefined)
+  }
+
+  const saveEditedPhoto = async () => {
+    if (!selectedPhoto || !photoImgRef.current) return
+    setPhotoSaving(true)
+
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    const image = photoImgRef.current
+
+    const scaleX = image.naturalWidth / image.width
+    const scaleY = image.naturalHeight / image.height
+
+    if (completedCrop) {
+      canvas.width = completedCrop.width * scaleX
+      canvas.height = completedCrop.height * scaleY
+      ctx.filter = `brightness(${brightness}%) contrast(${contrast}%)`
+      ctx.drawImage(
+        image,
+        completedCrop.x * scaleX,
+        completedCrop.y * scaleY,
+        completedCrop.width * scaleX,
+        completedCrop.height * scaleY,
+        0, 0,
+        canvas.width,
+        canvas.height
+      )
+    } else {
+      canvas.width = image.naturalWidth
+      canvas.height = image.naturalHeight
+      ctx.filter = `brightness(${brightness}%) contrast(${contrast}%)`
+      ctx.drawImage(image, 0, 0)
+    }
+
+    canvas.toBlob(async (blob) => {
+      const fileName = `edited_${Date.now()}.jpg`
+      const filePath = `photos/${fileName}`
+      const { error } = await supabase
+        .storage
+        .from('documents')
+        .upload(filePath, blob)
+      if (error) {
+        console.error('Speichern fehlgeschlagen:', error.message)
+      } else {
+        await fetchAllPhotos()
+        await fetchLatestPhoto()
+        closePhotoEditor()
+      }
+      setPhotoSaving(false)
+    }, 'image/jpeg', 0.9)
   }
 
   const linkCurrentUser = () => {
@@ -812,6 +1058,9 @@ function App() {
       fetchPharmacies()
       fetchStaff()
       fetchLatestPhoto()
+      fetchAllPhotos()
+      fetchPhotoOcrData()
+      fetchMistralApiKey()
     }
   }, [session])
 
@@ -1138,6 +1387,76 @@ function App() {
                       )}
                     </div>
                   </div>
+                </>
+              )}
+
+              {activeView === 'photos' && (
+                <>
+                  <h2 className="text-2xl lg:text-3xl font-semibold mb-6 tracking-tight">Fotos</h2>
+                  {photosLoading ? (
+                    <p className={theme.textMuted}>Fotos werden geladen...</p>
+                  ) : allPhotos.length === 0 ? (
+                    <p className={theme.textMuted}>Keine Fotos vorhanden. Nutze das Kamera-Symbol oben.</p>
+                  ) : (
+                    <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+                      {allPhotos.map((photo) => (
+                        <div
+                          key={photo.name}
+                          className={`${theme.panel} rounded-xl border ${theme.border} ${theme.cardShadow} overflow-hidden hover:ring-2 hover:ring-emerald-400 transition-all relative group`}
+                        >
+                          <button
+                            type="button"
+                            onClick={(e) => deletePhoto(photo.name, e)}
+                            className={`absolute top-2 right-2 p-1.5 rounded-lg ${theme.panel} border ${theme.border} opacity-0 group-hover:opacity-100 transition-opacity ${theme.danger} z-10`}
+                            title="Foto loeschen"
+                          >
+                            <Icons.X />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openPhotoEditor(photo)}
+                            className="w-full text-left"
+                          >
+                            <img
+                              src={photo.url}
+                              alt={photo.name}
+                              className="w-full h-32 object-cover"
+                            />
+                            <div className="p-2 space-y-1">
+                              <p className={`text-xs ${theme.textMuted} truncate`}>
+                                {photo.createdAt
+                                  ? new Date(photo.createdAt).toLocaleDateString('de-DE')
+                                  : photo.name}
+                              </p>
+                              <p className={`text-xs ${theme.textMuted}`}>
+                                {photo.format}{photo.sizeKB ? ` · ${photo.sizeKB} KB` : ''}
+                              </p>
+                              {ocrProcessing[photo.name] && (
+                                <p className={`text-xs ${theme.accentText}`}>OCR läuft...</p>
+                              )}
+                              {!ocrProcessing[photo.name] && photoOcrData[photo.name]?.status === 'completed' && (
+                                <p className={`text-xs ${theme.textMuted} line-clamp-2`}>
+                                  {photoOcrData[photo.name].text}
+                                </p>
+                              )}
+                              {!ocrProcessing[photo.name] && photoOcrData[photo.name]?.status === 'error' && (
+                                <p className="text-xs text-rose-400">OCR fehlgeschlagen</p>
+                              )}
+                              {!ocrProcessing[photo.name] && !photoOcrData[photo.name] && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); runOcrForPhoto(photo.name, photo.url); }}
+                                  className={`text-xs ${theme.accentText} hover:underline`}
+                                >
+                                  OCR starten
+                                </button>
+                              )}
+                            </div>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </>
               )}
 
@@ -2257,6 +2576,119 @@ function App() {
             </div>
           </div>
         )}
+
+        {photoEditorOpen && selectedPhoto && (
+          <div className={`fixed inset-0 ${theme.overlay} z-50 flex items-center justify-center p-4`}>
+            <div className={`${theme.panel} rounded-2xl border ${theme.border} ${theme.cardShadow} w-full max-w-3xl max-h-[90vh] overflow-auto`}>
+              <div className={`flex items-center justify-between p-4 border-b ${theme.border}`}>
+                <h3 className={`text-lg font-semibold ${theme.text}`}>Foto bearbeiten</h3>
+                <button
+                  type="button"
+                  onClick={closePhotoEditor}
+                  className={`${theme.textMuted} ${theme.bgHover} p-2 rounded-lg`}
+                >
+                  <Icons.X />
+                </button>
+              </div>
+
+              <div className="p-4">
+                <div className="flex justify-center">
+                  <ReactCrop crop={crop} onChange={setCrop} onComplete={setCompletedCrop}>
+                    <img
+                      ref={photoImgRef}
+                      src={selectedPhoto.url}
+                      alt="Bearbeiten"
+                      className="max-w-full max-h-[50vh]"
+                      style={{ filter: `brightness(${brightness}%) contrast(${contrast}%)` }}
+                      crossOrigin="anonymous"
+                    />
+                  </ReactCrop>
+                </div>
+
+                <div className="mt-6 space-y-4">
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${theme.textSecondary}`}>
+                      Helligkeit: {brightness}%
+                    </label>
+                    <input
+                      type="range"
+                      min="50"
+                      max="150"
+                      value={brightness}
+                      onChange={(e) => setBrightness(Number(e.target.value))}
+                      className="w-full accent-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${theme.textSecondary}`}>
+                      Kontrast: {contrast}%
+                    </label>
+                    <input
+                      type="range"
+                      min="50"
+                      max="150"
+                      value={contrast}
+                      onChange={(e) => setContrast(Number(e.target.value))}
+                      className="w-full accent-emerald-500"
+                    />
+                  </div>
+
+                  <div className={`border-t ${theme.border} pt-4`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className={`text-sm font-medium ${theme.textSecondary}`}>
+                        OCR-Text
+                      </label>
+                      {!photoOcrData[selectedPhoto.name] && !ocrProcessing[selectedPhoto.name] && (
+                        <button
+                          type="button"
+                          onClick={() => runOcrForPhoto(selectedPhoto.name, selectedPhoto.url)}
+                          className={`text-xs px-3 py-1 rounded-lg ${theme.accent} text-white`}
+                        >
+                          OCR starten
+                        </button>
+                      )}
+                    </div>
+                    {ocrProcessing[selectedPhoto.name] && (
+                      <p className={`text-sm ${theme.accentText}`}>OCR wird ausgefuehrt...</p>
+                    )}
+                    {photoOcrData[selectedPhoto.name]?.status === 'completed' && (
+                      <div className={`${theme.input} border rounded-lg p-3 max-h-40 overflow-auto`}>
+                        <pre className={`text-sm ${theme.text} whitespace-pre-wrap font-sans`}>
+                          {photoOcrData[selectedPhoto.name].text}
+                        </pre>
+                      </div>
+                    )}
+                    {photoOcrData[selectedPhoto.name]?.status === 'error' && (
+                      <p className="text-sm text-rose-400">OCR fehlgeschlagen</p>
+                    )}
+                    {!photoOcrData[selectedPhoto.name] && !ocrProcessing[selectedPhoto.name] && (
+                      <p className={`text-sm ${theme.textMuted}`}>Noch kein OCR durchgefuehrt</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className={`flex justify-end gap-3 p-4 border-t ${theme.border}`}>
+                <button
+                  type="button"
+                  onClick={closePhotoEditor}
+                  className={`px-4 py-2.5 rounded-lg ${theme.bgHover} ${theme.textSecondary} border ${theme.border}`}
+                >
+                  Abbrechen
+                </button>
+                <button
+                  type="button"
+                  onClick={saveEditedPhoto}
+                  disabled={photoSaving}
+                  className={`px-4 py-2.5 rounded-lg ${theme.accent} text-white font-medium disabled:opacity-50`}
+                >
+                  {photoSaving ? 'Speichere...' : 'Als Kopie speichern'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     )
   }
