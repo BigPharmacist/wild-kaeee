@@ -55,6 +55,12 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
     </svg>
   ),
+  Camera: () => (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+  ),
 }
 
 function App() {
@@ -122,6 +128,9 @@ function App() {
   const [chatSending, setChatSending] = useState(false)
   const chatEndRef = useRef(null)
   const isResizing = useRef(false)
+  const cameraInputRef = useRef(null)
+  const [latestPhoto, setLatestPhoto] = useState(null)
+  const [photoUploading, setPhotoUploading] = useState(false)
   const [planData, setPlanData] = useState(null)
   const [planLoading, setPlanLoading] = useState(false)
   const [planError, setPlanError] = useState('')
@@ -594,6 +603,42 @@ function App() {
     setStaffAvatarPreview(URL.createObjectURL(file))
   }
 
+  const fetchLatestPhoto = async () => {
+    const { data, error } = await supabase
+      .storage
+      .from('documents')
+      .list('photos', { limit: 1, sortBy: { column: 'created_at', order: 'desc' } })
+    if (error || !data || data.length === 0) {
+      setLatestPhoto(null)
+      return
+    }
+    const { data: urlData } = supabase
+      .storage
+      .from('documents')
+      .getPublicUrl(`photos/${data[0].name}`)
+    setLatestPhoto({ name: data[0].name, url: urlData.publicUrl, createdAt: data[0].created_at })
+  }
+
+  const handleCameraCapture = async (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    setPhotoUploading(true)
+    const fileExt = file.name.split('.').pop() || 'jpg'
+    const fileName = `${Date.now()}.${fileExt}`
+    const filePath = `photos/${fileName}`
+    const { error } = await supabase
+      .storage
+      .from('documents')
+      .upload(filePath, file)
+    if (error) {
+      console.error('Foto-Upload fehlgeschlagen:', error.message)
+      setPhotoUploading(false)
+      return
+    }
+    await fetchLatestPhoto()
+    setPhotoUploading(false)
+  }
+
   const linkCurrentUser = () => {
     if (!session?.user?.id) return
     setStaffForm((prev) => ({
@@ -766,6 +811,7 @@ function App() {
     if (session) {
       fetchPharmacies()
       fetchStaff()
+      fetchLatestPhoto()
     }
   }, [session])
 
@@ -867,6 +913,24 @@ function App() {
             >
               {darkMode ? <Icons.Sun /> : <Icons.Moon />}
             </button>
+
+            {/* Camera button */}
+            <button
+              onClick={() => cameraInputRef.current?.click()}
+              className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted} transition-colors ${photoUploading ? 'opacity-50' : ''}`}
+              title="Foto aufnehmen"
+              disabled={photoUploading}
+            >
+              <Icons.Camera />
+            </button>
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handleCameraCapture}
+              className="hidden"
+            />
 
             {/* User email - hidden on mobile */}
             <div className="hidden sm:flex items-center gap-2">
@@ -1045,6 +1109,31 @@ function App() {
                       {!weatherLoading && !weatherError && !weatherData && (
                         <p className={theme.textMuted}>
                           Kein Wetter verfuegbar.
+                        </p>
+                      )}
+                    </div>
+                    <div className={`${theme.panel} rounded-2xl p-4 border ${theme.border} ${theme.cardShadow} flex flex-col gap-3`}>
+                      <h3 className={`text-lg font-medium ${theme.text}`}>Letztes Foto</h3>
+                      {photoUploading && (
+                        <p className={`text-xs ${theme.textMuted}`}>Foto wird hochgeladen...</p>
+                      )}
+                      {!photoUploading && latestPhoto && (
+                        <div className="space-y-2">
+                          <img
+                            src={latestPhoto.url}
+                            alt="Letztes Foto"
+                            className="w-full h-40 object-cover rounded-xl"
+                          />
+                          <p className={`text-xs ${theme.textMuted}`}>
+                            {latestPhoto.createdAt
+                              ? new Date(latestPhoto.createdAt).toLocaleString('de-DE')
+                              : latestPhoto.name}
+                          </p>
+                        </div>
+                      )}
+                      {!photoUploading && !latestPhoto && (
+                        <p className={theme.textMuted}>
+                          Noch kein Foto vorhanden. Nutze das Kamera-Symbol oben.
                         </p>
                       )}
                     </div>
