@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { supabase } from './lib/supabase'
+import { supabase, supabaseUrl } from './lib/supabase'
 import ReactCrop from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 
@@ -66,6 +66,21 @@ const Icons = {
   Photo: () => (
     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+  ),
+  Pill: () => (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714a2.25 2.25 0 00.659 1.591L19 14.5M14.25 3.104c.251.023.501.05.75.082M19 14.5l-2.47 2.47a3.187 3.187 0 01-4.508 0L5 14.5m14 0l-4.5 4.5m-5-4.5l4.5 4.5" />
+    </svg>
+  ),
+  ChevronLeft: () => (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+    </svg>
+  ),
+  ChevronRight: () => (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
     </svg>
   ),
 }
@@ -151,6 +166,18 @@ function App() {
   const [photoOcrData, setPhotoOcrData] = useState({})
   const [mistralApiKey, setMistralApiKey] = useState(null)
   const [ocrProcessing, setOcrProcessing] = useState({})
+  const [apoTab, setApoTab] = useState('amk')
+  const [apoMonth, setApoMonth] = useState(() => {
+    const now = new Date()
+    return { year: now.getFullYear(), month: now.getMonth() }
+  })
+  const [amkMessages, setAmkMessages] = useState([])
+  const [amkLoading, setAmkLoading] = useState(false)
+  const [recallMessages, setRecallMessages] = useState([])
+  const [recallLoading, setRecallLoading] = useState(false)
+  const [lavAusgaben, setLavAusgaben] = useState([])
+  const [lavLoading, setLavLoading] = useState(false)
+  const [selectedApoMessage, setSelectedApoMessage] = useState(null)
   const [planData, setPlanData] = useState(null)
   const [planLoading, setPlanLoading] = useState(false)
   const [planError, setPlanError] = useState('')
@@ -158,6 +185,39 @@ function App() {
     const today = new Date()
     return today.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
   })
+
+  // Kalender-System State
+  const [calendars, setCalendars] = useState([])
+  const [calendarsLoading, setCalendarsLoading] = useState(false)
+  const [calendarsError, setCalendarsError] = useState('')
+  const [selectedCalendarId, setSelectedCalendarId] = useState(null)
+  const [calendarEvents, setCalendarEvents] = useState([])
+  const [eventsLoading, setEventsLoading] = useState(false)
+  const [calendarViewDate, setCalendarViewDate] = useState(new Date())
+  const [calendarViewMode, setCalendarViewMode] = useState('month')
+  const [editingEvent, setEditingEvent] = useState(null)
+  const [eventForm, setEventForm] = useState({
+    title: '',
+    description: '',
+    startDate: '',
+    startTime: '',
+    endDate: '',
+    endTime: '',
+    allDay: false,
+    location: '',
+  })
+  const [eventSaving, setEventSaving] = useState(false)
+  const [eventError, setEventError] = useState('')
+  const [editingCalendar, setEditingCalendar] = useState(null)
+  const [calendarForm, setCalendarForm] = useState({
+    name: '',
+    description: '',
+    color: '#10b981',
+  })
+  const [calendarSaving, setCalendarSaving] = useState(false)
+  const [permissionsModalOpen, setPermissionsModalOpen] = useState(false)
+  const [calendarPermissions, setCalendarPermissions] = useState([])
+  const [permissionsLoading, setPermissionsLoading] = useState(false)
 
   // Modern minimalist palette with graphite neutrals + emerald accent
   const theme = darkMode ? {
@@ -247,7 +307,9 @@ function App() {
   const navItems = [
     { id: 'dashboard', icon: Icons.Home, label: 'Dashboard' },
     { id: 'photos', icon: Icons.Photo, label: 'Fotos' },
+    { id: 'apo', icon: Icons.Pill, label: 'Apo' },
     { id: 'plan', icon: Icons.Calendar, label: 'Plan' },
+    { id: 'calendar', icon: Icons.Calendar, label: 'Kalender' },
     { id: 'chat', icon: Icons.Chat, label: 'Chat' },
     { id: 'stats', icon: Icons.Chart, label: 'Statistiken' },
     { id: 'settings', icon: Icons.Settings, label: 'Einstellungen' },
@@ -447,6 +509,372 @@ function App() {
     } finally {
       setPlanLoading(false)
     }
+  }
+
+  // ============================================
+  // KALENDER-SYSTEM FUNKTIONEN
+  // ============================================
+
+  const fetchCalendars = async () => {
+    setCalendarsLoading(true)
+    setCalendarsError('')
+
+    const { data, error } = await supabase
+      .from('calendars')
+      .select(`
+        id,
+        name,
+        description,
+        color,
+        created_by,
+        created_at,
+        is_active,
+        calendar_permissions(permission)
+      `)
+      .eq('is_active', true)
+      .order('name', { ascending: true })
+
+    if (error) {
+      setCalendarsError(error.message)
+      setCalendars([])
+    } else {
+      const calendarsWithPermission = (data || []).map((cal) => ({
+        ...cal,
+        userPermission: cal.calendar_permissions?.[0]?.permission || 'read',
+      }))
+      setCalendars(calendarsWithPermission)
+
+      // Standard: "Alle Kalender" Ansicht
+      if (!selectedCalendarId && calendarsWithPermission.length > 0) {
+        setSelectedCalendarId('all')
+      }
+    }
+    setCalendarsLoading(false)
+  }
+
+  const getCalendarViewRange = () => {
+    const d = new Date(calendarViewDate)
+    let startDate, endDate
+
+    if (calendarViewMode === 'month') {
+      startDate = new Date(d.getFullYear(), d.getMonth(), 1)
+      startDate.setDate(startDate.getDate() - ((startDate.getDay() + 6) % 7))
+      endDate = new Date(d.getFullYear(), d.getMonth() + 1, 0)
+      endDate.setDate(endDate.getDate() + (7 - endDate.getDay()) % 7)
+    } else if (calendarViewMode === 'week') {
+      startDate = new Date(d)
+      startDate.setDate(d.getDate() - ((d.getDay() + 6) % 7))
+      endDate = new Date(startDate)
+      endDate.setDate(startDate.getDate() + 6)
+    } else {
+      startDate = new Date(d)
+      endDate = new Date(d)
+      endDate.setDate(endDate.getDate() + 1)  // +1 Tag für ganztägige Termine
+    }
+
+    startDate.setHours(0, 0, 0, 0)
+    endDate.setHours(23, 59, 59, 999)
+    return { startDate, endDate }
+  }
+
+  const fetchCalendarEvents = async (calendarId) => {
+    if (!calendarId) return
+    setEventsLoading(true)
+
+    const { startDate, endDate } = getCalendarViewRange()
+
+    let query = supabase
+      .from('calendar_events')
+      .select('*')
+      .gte('start_time', startDate.toISOString())
+      .lte('end_time', endDate.toISOString())
+      .order('start_time', { ascending: true })
+
+    // Bei "all" alle Kalender laden, sonst nur den ausgewaehlten
+    if (calendarId !== 'all') {
+      query = query.eq('calendar_id', calendarId)
+    }
+
+    const { data, error } = await query
+
+    if (error) {
+      console.error('Events laden fehlgeschlagen:', error.message)
+      setCalendarEvents([])
+    } else {
+      setCalendarEvents(data || [])
+    }
+    setEventsLoading(false)
+  }
+
+  const fetchCalendarPermissions = async (calendarId) => {
+    setPermissionsLoading(true)
+
+    const { data, error } = await supabase
+      .from('calendar_permissions')
+      .select('id, user_id, permission, granted_by, created_at')
+      .eq('calendar_id', calendarId)
+      .order('created_at', { ascending: false })
+
+    if (!error && data) {
+      const permissionsWithStaff = data.map((perm) => ({
+        ...perm,
+        staffMember: staff.find((s) => s.auth_user_id === perm.user_id),
+      }))
+      setCalendarPermissions(permissionsWithStaff)
+    }
+    setPermissionsLoading(false)
+  }
+
+  const createCalendar = async () => {
+    if (!calendarForm.name.trim()) return
+    setCalendarSaving(true)
+
+    const { data, error } = await supabase
+      .from('calendars')
+      .insert({
+        name: calendarForm.name.trim(),
+        description: calendarForm.description.trim(),
+        color: calendarForm.color,
+        created_by: session.user.id,
+      })
+      .select()
+      .single()
+
+    if (error) {
+      alert('Fehler: ' + error.message)
+    } else {
+      await supabase
+        .from('calendar_permissions')
+        .insert({
+          calendar_id: data.id,
+          user_id: session.user.id,
+          permission: 'write',
+          granted_by: session.user.id,
+        })
+
+      await fetchCalendars()
+      setEditingCalendar(null)
+      setCalendarForm({ name: '', description: '', color: '#10b981' })
+    }
+    setCalendarSaving(false)
+  }
+
+  const updateCalendar = async (calendarId) => {
+    setCalendarSaving(true)
+
+    const { error } = await supabase
+      .from('calendars')
+      .update({
+        name: calendarForm.name.trim(),
+        description: calendarForm.description.trim(),
+        color: calendarForm.color,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', calendarId)
+
+    if (error) {
+      alert('Fehler: ' + error.message)
+    } else {
+      await fetchCalendars()
+      setEditingCalendar(null)
+    }
+    setCalendarSaving(false)
+  }
+
+  const createEvent = async () => {
+    if (!eventForm.title.trim() || !selectedCalendarId) return
+    setEventSaving(true)
+    setEventError('')
+
+    const startTime = eventForm.allDay
+      ? new Date(eventForm.startDate + 'T00:00:00')
+      : new Date(eventForm.startDate + 'T' + eventForm.startTime)
+
+    const endTime = eventForm.allDay
+      ? new Date(eventForm.endDate + 'T23:59:59')
+      : new Date(eventForm.endDate + 'T' + eventForm.endTime)
+
+    const { error } = await supabase
+      .from('calendar_events')
+      .insert({
+        calendar_id: selectedCalendarId,
+        title: eventForm.title.trim(),
+        description: eventForm.description.trim(),
+        start_time: startTime.toISOString(),
+        end_time: endTime.toISOString(),
+        all_day: eventForm.allDay,
+        location: eventForm.location.trim(),
+        created_by: session.user.id,
+      })
+
+    if (error) {
+      setEventError(error.message)
+    } else {
+      await fetchCalendarEvents(selectedCalendarId)
+      closeEventModal()
+    }
+    setEventSaving(false)
+  }
+
+  const updateEvent = async (eventId) => {
+    setEventSaving(true)
+    setEventError('')
+
+    const startTime = eventForm.allDay
+      ? new Date(eventForm.startDate + 'T00:00:00')
+      : new Date(eventForm.startDate + 'T' + eventForm.startTime)
+
+    const endTime = eventForm.allDay
+      ? new Date(eventForm.endDate + 'T23:59:59')
+      : new Date(eventForm.endDate + 'T' + eventForm.endTime)
+
+    const { error } = await supabase
+      .from('calendar_events')
+      .update({
+        title: eventForm.title.trim(),
+        description: eventForm.description.trim(),
+        start_time: startTime.toISOString(),
+        end_time: endTime.toISOString(),
+        all_day: eventForm.allDay,
+        location: eventForm.location.trim(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', eventId)
+
+    if (error) {
+      setEventError(error.message)
+    } else {
+      await fetchCalendarEvents(selectedCalendarId)
+      closeEventModal()
+    }
+    setEventSaving(false)
+  }
+
+  const deleteEvent = async (eventId) => {
+    if (!confirm('Termin unwiderruflich loeschen?')) return
+
+    const { error } = await supabase
+      .from('calendar_events')
+      .delete()
+      .eq('id', eventId)
+
+    if (error) {
+      alert('Fehler: ' + error.message)
+    } else {
+      await fetchCalendarEvents(selectedCalendarId)
+      closeEventModal()
+    }
+  }
+
+  const addCalendarPermission = async (calendarId, userId, permission) => {
+    const { error } = await supabase
+      .from('calendar_permissions')
+      .upsert(
+        {
+          calendar_id: calendarId,
+          user_id: userId,
+          permission: permission,
+          granted_by: session.user.id,
+        },
+        { onConflict: 'calendar_id,user_id' },
+      )
+
+    if (error) {
+      alert('Fehler: ' + error.message)
+    } else {
+      await fetchCalendarPermissions(calendarId)
+    }
+  }
+
+  const removeCalendarPermission = async (permissionId, calendarId) => {
+    const { error } = await supabase
+      .from('calendar_permissions')
+      .delete()
+      .eq('id', permissionId)
+
+    if (error) {
+      alert('Fehler: ' + error.message)
+    } else {
+      await fetchCalendarPermissions(calendarId)
+    }
+  }
+
+  const openEventModal = (event = null, clickedDate = null) => {
+    const today = clickedDate || new Date()
+    // Lokales Datum formatieren (ohne Zeitzonenkonvertierung)
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+
+    if (event) {
+      // Datum direkt aus String extrahieren (vermeidet Zeitzonenprobleme)
+      const startDate = event.start_time.substring(0, 10)
+      const endDate = event.end_time.substring(0, 10)
+      // Zeit aus Date-Objekt fuer lokale Anzeige
+      const start = new Date(event.start_time)
+      const end = new Date(event.end_time)
+      setEditingEvent(event)
+      setEventForm({
+        title: event.title,
+        description: event.description || '',
+        startDate: startDate,
+        startTime: start.toTimeString().slice(0, 5),
+        endDate: endDate,
+        endTime: end.toTimeString().slice(0, 5),
+        allDay: event.all_day,
+        location: event.location || '',
+      })
+    } else {
+      setEditingEvent({ id: null })
+      setEventForm({
+        title: '',
+        description: '',
+        startDate: todayStr,
+        startTime: '09:00',
+        endDate: todayStr,
+        endTime: '10:00',
+        allDay: false,
+        location: '',
+      })
+    }
+    setEventError('')
+  }
+
+  const closeEventModal = () => {
+    setEditingEvent(null)
+    setEventError('')
+  }
+
+  const openCalendarModal = (calendar = null) => {
+    if (calendar) {
+      setEditingCalendar(calendar)
+      setCalendarForm({
+        name: calendar.name,
+        description: calendar.description || '',
+        color: calendar.color || '#10b981',
+      })
+    } else {
+      setEditingCalendar({ id: null })
+      setCalendarForm({ name: '', description: '', color: '#10b981' })
+    }
+  }
+
+  const closeCalendarModal = () => {
+    setEditingCalendar(null)
+  }
+
+  const currentCalendarPermission = () => {
+    // Bei "Alle Kalender" keine Schreibberechtigung (man muss einen spezifischen Kalender waehlen)
+    if (selectedCalendarId === 'all') return null
+    if (currentStaff?.is_admin) return 'write'
+    const cal = calendars.find((c) => c.id === selectedCalendarId)
+    return cal?.userPermission || null
+  }
+
+  const canWriteCurrentCalendar = () => currentCalendarPermission() === 'write'
+
+  // Hilfsfunktion: Farbe fuer ein Event basierend auf seinem Kalender
+  const getEventColor = (event) => {
+    const cal = calendars.find((c) => c.id === event.calendar_id)
+    return cal?.color || '#10b981'
   }
 
   const weatherDescription = (code) => {
@@ -835,6 +1263,80 @@ function App() {
     setCompletedCrop(undefined)
   }
 
+  const fetchAmkMessages = async (year, month) => {
+    setAmkLoading(true)
+    const startDate = new Date(year, month, 1).toISOString().split('T')[0]
+    const endDate = new Date(year, month + 1, 0).toISOString().split('T')[0]
+    const { data, error } = await supabase
+      .from('abda_amk_messages')
+      .select('*')
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .order('date', { ascending: false })
+    if (!error && data) {
+      setAmkMessages(data)
+    } else {
+      setAmkMessages([])
+    }
+    setAmkLoading(false)
+  }
+
+  const fetchRecallMessages = async (year, month) => {
+    setRecallLoading(true)
+    const startDate = new Date(year, month, 1).toISOString().split('T')[0]
+    const endDate = new Date(year, month + 1, 0).toISOString().split('T')[0]
+    const { data, error } = await supabase
+      .from('abda_recall')
+      .select('*')
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .order('date', { ascending: false })
+    if (!error && data) {
+      setRecallMessages(data)
+    } else {
+      setRecallMessages([])
+    }
+    setRecallLoading(false)
+  }
+
+  const fetchLavAusgaben = async (year, month) => {
+    setLavLoading(true)
+    const startDate = new Date(year, month, 1).toISOString().split('T')[0]
+    const endDate = new Date(year, month + 1, 0).toISOString().split('T')[0]
+    const { data, error } = await supabase
+      .from('lav_ausgaben')
+      .select(`
+        *,
+        lav_themes (*)
+      `)
+      .gte('datum', startDate)
+      .lte('datum', endDate)
+      .order('datum', { ascending: false })
+    if (!error && data) {
+      setLavAusgaben(data)
+    } else {
+      setLavAusgaben([])
+    }
+    setLavLoading(false)
+  }
+
+  const changeApoMonth = (delta) => {
+    setApoMonth((prev) => {
+      let newMonth = prev.month + delta
+      let newYear = prev.year
+      if (newMonth < 0) {
+        newMonth = 11
+        newYear -= 1
+      } else if (newMonth > 11) {
+        newMonth = 0
+        newYear += 1
+      }
+      return { year: newYear, month: newMonth }
+    })
+  }
+
+  const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']
+
   const saveEditedPhoto = async () => {
     if (!selectedPhoto || !photoImgRef.current) return
     setPhotoSaving(true)
@@ -1065,6 +1567,18 @@ function App() {
   }, [session])
 
   useEffect(() => {
+    if (session && activeView === 'apo') {
+      if (apoTab === 'amk') {
+        fetchAmkMessages(apoMonth.year, apoMonth.month)
+      } else if (apoTab === 'recall') {
+        fetchRecallMessages(apoMonth.year, apoMonth.month)
+      } else if (apoTab === 'lav') {
+        fetchLavAusgaben(apoMonth.year, apoMonth.month)
+      }
+    }
+  }, [session, activeView, apoTab, apoMonth])
+
+  useEffect(() => {
     if (session?.user?.id) {
       const matched = staff.find((member) => member.auth_user_id === session.user.id)
       setCurrentStaff(matched || null)
@@ -1119,6 +1633,41 @@ function App() {
       fetchPlanData()
     }
   }, [activeView, session, planData, planLoading, planError])
+
+  // Kalender laden bei View-Wechsel
+  useEffect(() => {
+    if (session && activeView === 'calendar') {
+      fetchCalendars()
+    }
+  }, [session, activeView])
+
+  // Events laden bei Kalender/Datum-Wechsel
+  useEffect(() => {
+    if (session && activeView === 'calendar' && selectedCalendarId) {
+      fetchCalendarEvents(selectedCalendarId)
+    }
+  }, [selectedCalendarId, calendarViewDate, calendarViewMode])
+
+  // Realtime-Subscription fuer Kalender-Events
+  useEffect(() => {
+    if (!session || activeView !== 'calendar' || !selectedCalendarId) return
+
+    // Bei "all" auf alle Events hoeren, sonst nur auf den ausgewaehlten Kalender
+    const subscriptionConfig = selectedCalendarId === 'all'
+      ? { event: '*', schema: 'public', table: 'calendar_events' }
+      : { event: '*', schema: 'public', table: 'calendar_events', filter: `calendar_id=eq.${selectedCalendarId}` }
+
+    const channel = supabase
+      .channel(`calendar_events_${selectedCalendarId}`)
+      .on('postgres_changes', subscriptionConfig, () => {
+        fetchCalendarEvents(selectedCalendarId)
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [activeView, session, selectedCalendarId])
 
   const handleSignIn = async (e) => {
     e.preventDefault()
@@ -1455,6 +2004,182 @@ function App() {
                           </button>
                         </div>
                       ))}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {activeView === 'apo' && (
+                <>
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-2xl lg:text-3xl font-semibold tracking-tight">Apo</h2>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => changeApoMonth(-1)}
+                        className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
+                        title="Vorheriger Monat"
+                      >
+                        <Icons.ChevronLeft />
+                      </button>
+                      <span className={`text-sm font-medium ${theme.text} min-w-[140px] text-center`}>
+                        {monthNames[apoMonth.month]} {apoMonth.year}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => changeApoMonth(1)}
+                        className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
+                        title="Naechster Monat"
+                      >
+                        <Icons.ChevronRight />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 mb-6">
+                    <button
+                      type="button"
+                      onClick={() => setApoTab('lav')}
+                      className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                        apoTab === 'lav'
+                          ? `${theme.accent} text-white`
+                          : `${theme.bgHover} ${theme.textSecondary} border ${theme.border}`
+                      }`}
+                    >
+                      LAK-Info
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setApoTab('amk')}
+                      className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                        apoTab === 'amk'
+                          ? `${theme.accent} text-white`
+                          : `${theme.bgHover} ${theme.textSecondary} border ${theme.border}`
+                      }`}
+                    >
+                      AMK-Meldungen
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setApoTab('recall')}
+                      className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                        apoTab === 'recall'
+                          ? `${theme.accent} text-white`
+                          : `${theme.bgHover} ${theme.textSecondary} border ${theme.border}`
+                      }`}
+                    >
+                      Rueckrufe
+                    </button>
+                  </div>
+
+                  {apoTab === 'amk' && (
+                    <div className="space-y-3">
+                      {amkLoading ? (
+                        <p className={theme.textMuted}>AMK-Meldungen werden geladen...</p>
+                      ) : amkMessages.length === 0 ? (
+                        <p className={theme.textMuted}>Keine AMK-Meldungen in diesem Monat.</p>
+                      ) : (
+                        amkMessages.map((msg) => (
+                          <button
+                            key={msg.id}
+                            type="button"
+                            onClick={() => setSelectedApoMessage({ ...msg, type: 'amk' })}
+                            className={`w-full text-left ${theme.panel} rounded-xl border ${theme.border} p-4 hover:ring-2 hover:ring-emerald-400 transition-all`}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <h3 className={`font-medium ${theme.text} line-clamp-2`}>{msg.title}</h3>
+                              <span className={`text-xs ${theme.textMuted} whitespace-nowrap`}>
+                                {msg.date ? new Date(msg.date).toLocaleDateString('de-DE') : ''}
+                              </span>
+                            </div>
+                            <p className={`text-sm ${theme.textMuted} mt-2 line-clamp-2`}>
+                              {msg.description || msg.full_text?.substring(0, 150) || ''}
+                            </p>
+                            {msg.category && (
+                              <span className={`inline-block mt-2 text-xs px-2 py-1 rounded ${theme.surface} ${theme.textMuted}`}>
+                                {msg.category}
+                              </span>
+                            )}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+
+                  {apoTab === 'recall' && (
+                    <div className="space-y-3">
+                      {recallLoading ? (
+                        <p className={theme.textMuted}>Rueckrufe werden geladen...</p>
+                      ) : recallMessages.length === 0 ? (
+                        <p className={theme.textMuted}>Keine Rueckrufe in diesem Monat.</p>
+                      ) : (
+                        recallMessages.map((msg) => (
+                          <button
+                            key={msg.id}
+                            type="button"
+                            onClick={() => setSelectedApoMessage({ ...msg, type: 'recall' })}
+                            className={`w-full text-left ${theme.panel} rounded-xl border ${theme.border} p-4 hover:ring-2 hover:ring-emerald-400 transition-all`}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <h3 className={`font-medium ${theme.text} line-clamp-2`}>{msg.title}</h3>
+                              <span className={`text-xs ${theme.textMuted} whitespace-nowrap`}>
+                                {msg.date ? new Date(msg.date).toLocaleDateString('de-DE') : ''}
+                              </span>
+                            </div>
+                            <p className={`text-sm ${theme.textMuted} mt-2 line-clamp-2`}>
+                              {msg.description || msg.full_text?.substring(0, 150) || ''}
+                            </p>
+                            {msg.product_name && (
+                              <span className={`inline-block mt-2 text-xs px-2 py-1 rounded ${theme.surface} ${theme.textMuted}`}>
+                                {msg.product_name}
+                              </span>
+                            )}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+
+                  {apoTab === 'lav' && (
+                    <div className="space-y-3">
+                      {lavLoading ? (
+                        <p className={theme.textMuted}>LAK-Infos werden geladen...</p>
+                      ) : lavAusgaben.length === 0 ? (
+                        <p className={theme.textMuted}>Keine LAK-Infos in diesem Monat.</p>
+                      ) : (
+                        lavAusgaben.map((ausgabe) => (
+                          <button
+                            key={ausgabe.id}
+                            type="button"
+                            onClick={() => setSelectedApoMessage({ ...ausgabe, type: 'lav' })}
+                            className={`w-full text-left ${theme.panel} rounded-xl border ${theme.border} p-4 hover:ring-2 hover:ring-emerald-400 transition-all`}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <h3 className={`font-medium ${theme.text} line-clamp-2`}>{ausgabe.subject || `LAV-Info ${ausgabe.ausgabe}`}</h3>
+                              <span className={`text-xs ${theme.textMuted} whitespace-nowrap`}>
+                                {ausgabe.datum ? new Date(ausgabe.datum).toLocaleDateString('de-DE') : ''}
+                              </span>
+                            </div>
+                            <p className={`text-sm ${theme.textMuted} mt-2`}>
+                              Ausgabe {ausgabe.ausgabe} - {ausgabe.lav_themes?.length || 0} Themen
+                            </p>
+                            {ausgabe.lav_themes && ausgabe.lav_themes.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {ausgabe.lav_themes.slice(0, 3).map((t) => (
+                                  <span key={t.id} className={`text-xs px-2 py-1 rounded ${theme.surface} ${theme.textMuted}`}>
+                                    {t.titel?.substring(0, 30) || 'Thema'}{t.titel?.length > 30 ? '...' : ''}
+                                  </span>
+                                ))}
+                                {ausgabe.lav_themes.length > 3 && (
+                                  <span className={`text-xs px-2 py-1 rounded ${theme.surface} ${theme.textMuted}`}>
+                                    +{ausgabe.lav_themes.length - 3} weitere
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </button>
+                        ))
+                      )}
                     </div>
                   )}
                 </>
@@ -1869,6 +2594,375 @@ function App() {
                     <div className={`${theme.panel} rounded-2xl p-6 border ${theme.border} ${theme.cardShadow}`}>
                       <p className={theme.textMuted}>Keine Plandaten verfuegbar.</p>
                     </div>
+                  )}
+                </>
+              )}
+
+              {activeView === 'calendar' && (
+                <>
+                  {/* Header mit Kalender-Auswahl und Controls */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                    <div className="flex items-center gap-3">
+                      <h2 className="text-2xl lg:text-3xl font-semibold tracking-tight">Kalender</h2>
+
+                      {calendars.length > 0 && (
+                        <select
+                          value={selectedCalendarId || ''}
+                          onChange={(e) => setSelectedCalendarId(e.target.value)}
+                          className={`px-3 py-2 rounded-lg border ${theme.input} ${theme.text} text-sm`}
+                        >
+                          <option value="all">Alle Kalender</option>
+                          {calendars.map((cal) => (
+                            <option key={cal.id} value={cal.id}>
+                              {cal.name}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {/* Ansicht-Wechsler */}
+                      <div className={`flex rounded-lg border ${theme.border} overflow-hidden`}>
+                        {['month', 'week', 'day'].map((mode) => (
+                          <button
+                            key={mode}
+                            type="button"
+                            onClick={() => setCalendarViewMode(mode)}
+                            className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                              calendarViewMode === mode
+                                ? 'bg-emerald-500 text-white'
+                                : `${theme.panel} ${theme.textMuted} ${theme.bgHover}`
+                            }`}
+                          >
+                            {mode === 'month' ? 'Monat' : mode === 'week' ? 'Woche' : 'Tag'}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Navigation */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const d = new Date(calendarViewDate)
+                          if (calendarViewMode === 'month') d.setMonth(d.getMonth() - 1)
+                          else if (calendarViewMode === 'week') d.setDate(d.getDate() - 7)
+                          else d.setDate(d.getDate() - 1)
+                          setCalendarViewDate(d)
+                        }}
+                        className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
+                        title="Zurueck"
+                      >
+                        <Icons.ChevronLeft />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setCalendarViewDate(new Date())}
+                        className={`px-3 py-1.5 text-xs font-medium rounded-lg ${theme.bgHover} ${theme.textMuted}`}
+                      >
+                        Heute
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const d = new Date(calendarViewDate)
+                          if (calendarViewMode === 'month') d.setMonth(d.getMonth() + 1)
+                          else if (calendarViewMode === 'week') d.setDate(d.getDate() + 7)
+                          else d.setDate(d.getDate() + 1)
+                          setCalendarViewDate(d)
+                        }}
+                        className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
+                        title="Vor"
+                      >
+                        <Icons.ChevronRight />
+                      </button>
+
+                      {/* Admin-Aktionen */}
+                      {currentStaff?.is_admin && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => openCalendarModal()}
+                            className={`px-3 py-1.5 text-xs font-medium rounded-lg ${theme.accent} text-white`}
+                          >
+                            + Kalender
+                          </button>
+                          {selectedCalendarId && selectedCalendarId !== 'all' && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPermissionsModalOpen(true)
+                                fetchCalendarPermissions(selectedCalendarId)
+                              }}
+                              className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
+                              title="Berechtigungen verwalten"
+                            >
+                              <Icons.Settings />
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Aktueller Monat/Woche Anzeige */}
+                  <div className="mb-4">
+                    <h3 className={`text-lg font-medium ${theme.text}`}>
+                      {calendarViewDate.toLocaleDateString('de-DE', {
+                        month: 'long',
+                        year: 'numeric',
+                        ...(calendarViewMode === 'day' && { day: 'numeric', weekday: 'long' }),
+                      })}
+                    </h3>
+                  </div>
+
+                  {calendarsLoading || eventsLoading ? (
+                    <div className={`${theme.panel} rounded-2xl p-6 border ${theme.border} ${theme.cardShadow}`}>
+                      <p className={theme.textMuted}>{calendarsLoading ? 'Kalender werden geladen...' : 'Termine werden geladen...'}</p>
+                    </div>
+                  ) : calendarsError ? (
+                    <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3">
+                      <p className="text-rose-400 text-sm">{calendarsError}</p>
+                    </div>
+                  ) : calendars.length === 0 ? (
+                    <div className={`${theme.panel} rounded-2xl p-6 border ${theme.border} ${theme.cardShadow}`}>
+                      <p className={theme.textMuted}>
+                        Keine Kalender verfuegbar.
+                        {currentStaff?.is_admin && ' Erstelle einen neuen Kalender.'}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className={`${theme.panel} rounded-2xl p-4 border ${theme.border} ${theme.cardShadow}`}>
+                      {/* Monatsansicht */}
+                      {calendarViewMode === 'month' && (() => {
+                        const today = new Date()
+                        // Lokales Datum formatieren (ohne Zeitzonenkonvertierung)
+                        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+
+                        const firstDay = new Date(calendarViewDate.getFullYear(), calendarViewDate.getMonth(), 1)
+                        const startOffset = (firstDay.getDay() + 6) % 7
+                        const startDate = new Date(firstDay)
+                        startDate.setDate(startDate.getDate() - startOffset)
+
+                        const weeks = []
+                        const currentDate = new Date(startDate)
+
+                        for (let w = 0; w < 6; w++) {
+                          const week = []
+                          for (let d = 0; d < 7; d++) {
+                            const dayDate = new Date(currentDate)
+                            // Lokales Datum formatieren (ohne Zeitzonenkonvertierung)
+                            const dateStr = `${dayDate.getFullYear()}-${String(dayDate.getMonth() + 1).padStart(2, '0')}-${String(dayDate.getDate()).padStart(2, '0')}`
+                            const isCurrentMonth = dayDate.getMonth() === calendarViewDate.getMonth()
+                            const isToday = dateStr === todayStr
+
+                            const dayEvents = calendarEvents.filter((e) => {
+                              // Datum direkt aus String extrahieren (vermeidet Zeitzonenprobleme)
+                              const eventDate = e.start_time.substring(0, 10)
+                              return eventDate === dateStr
+                            })
+
+                            week.push({ date: dayDate, dateStr, isCurrentMonth, isToday, events: dayEvents })
+                            currentDate.setDate(currentDate.getDate() + 1)
+                          }
+                          weeks.push(week)
+                        }
+
+                        const weekDays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
+
+                        return (
+                          <div className="space-y-1">
+                            <div className="grid grid-cols-7 gap-1 mb-2">
+                              {weekDays.map((day, idx) => (
+                                <div
+                                  key={day}
+                                  className={`text-xs font-medium text-center py-2 ${idx >= 5 ? theme.textMuted : theme.textSecondary}`}
+                                >
+                                  {day}
+                                </div>
+                              ))}
+                            </div>
+
+                            {weeks.map((week, wIdx) => (
+                              <div key={wIdx} className="grid grid-cols-7 gap-1">
+                                {week.map((day) => (
+                                  <div
+                                    key={day.dateStr}
+                                    onClick={() => canWriteCurrentCalendar() && openEventModal(null, day.date)}
+                                    className={`
+                                      min-h-24 p-1 rounded-lg border transition-colors
+                                      ${day.isCurrentMonth ? theme.panel : `${theme.panel} opacity-40`}
+                                      ${day.isToday ? 'border-emerald-500/50' : theme.border}
+                                      ${canWriteCurrentCalendar() ? 'cursor-pointer ' + theme.bgHover : ''}
+                                    `}
+                                  >
+                                    <div
+                                      className={`text-xs font-medium mb-1 ${
+                                        day.isToday ? theme.accentText : day.isCurrentMonth ? theme.text : theme.textMuted
+                                      }`}
+                                    >
+                                      {day.date.getDate()}
+                                    </div>
+
+                                    <div className="space-y-0.5">
+                                      {day.events.slice(0, 3).map((event) => (
+                                        <div
+                                          key={event.id}
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            openEventModal(event)
+                                          }}
+                                          className="text-[10px] px-1.5 py-0.5 rounded truncate text-white cursor-pointer hover:opacity-80"
+                                          style={{ backgroundColor: getEventColor(event) }}
+                                          title={event.title}
+                                        >
+                                          {!event.all_day && (
+                                            <span className="opacity-75 mr-1">
+                                              {new Date(event.start_time).toLocaleTimeString('de-DE', {
+                                                hour: '2-digit',
+                                                minute: '2-digit',
+                                              })}
+                                            </span>
+                                          )}
+                                          {event.title}
+                                        </div>
+                                      ))}
+                                      {day.events.length > 3 && (
+                                        <div className={`text-[10px] ${theme.textMuted}`}>+{day.events.length - 3} weitere</div>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ))}
+                          </div>
+                        )
+                      })()}
+
+                      {/* Wochenansicht */}
+                      {calendarViewMode === 'week' && (() => {
+                        const today = new Date()
+                        // Lokales Datum formatieren (ohne Zeitzonenkonvertierung)
+                        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+
+                        const startOfWeek = new Date(calendarViewDate)
+                        startOfWeek.setDate(calendarViewDate.getDate() - ((calendarViewDate.getDay() + 6) % 7))
+
+                        const days = []
+                        for (let i = 0; i < 7; i++) {
+                          const d = new Date(startOfWeek)
+                          d.setDate(startOfWeek.getDate() + i)
+                          // Lokales Datum formatieren (ohne Zeitzonenkonvertierung)
+                          const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+                          const dayEvents = calendarEvents.filter((e) => e.start_time.substring(0, 10) === dateStr)
+                          days.push({ date: d, dateStr, isToday: dateStr === todayStr, events: dayEvents })
+                        }
+
+                        const weekDays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
+
+                        return (
+                          <div className="grid grid-cols-7 gap-2">
+                            {days.map((day, idx) => (
+                              <div
+                                key={day.dateStr}
+                                className={`min-h-48 p-2 rounded-lg border ${day.isToday ? 'border-emerald-500/50' : theme.border} ${theme.panel}`}
+                              >
+                                <div className={`text-xs font-medium mb-2 ${day.isToday ? theme.accentText : theme.textSecondary}`}>
+                                  {weekDays[idx]} {day.date.getDate()}
+                                </div>
+                                <div className="space-y-1">
+                                  {day.events.map((event) => (
+                                    <div
+                                      key={event.id}
+                                      onClick={() => openEventModal(event)}
+                                      className="text-[10px] px-1.5 py-1 rounded text-white cursor-pointer hover:opacity-80"
+                                      style={{ backgroundColor: getEventColor(event) }}
+                                    >
+                                      {!event.all_day && (
+                                        <div className="opacity-75">
+                                          {new Date(event.start_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+                                        </div>
+                                      )}
+                                      <div className="truncate">{event.title}</div>
+                                    </div>
+                                  ))}
+                                </div>
+                                {canWriteCurrentCalendar() && (
+                                  <button
+                                    type="button"
+                                    onClick={() => openEventModal(null, day.date)}
+                                    className={`mt-2 w-full text-[10px] py-1 rounded ${theme.bgHover} ${theme.textMuted}`}
+                                  >
+                                    + Termin
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )
+                      })()}
+
+                      {/* Tagesansicht */}
+                      {calendarViewMode === 'day' && (() => {
+                        // Lokales Datum formatieren (ohne Zeitzonenkonvertierung)
+                        const dateStr = `${calendarViewDate.getFullYear()}-${String(calendarViewDate.getMonth() + 1).padStart(2, '0')}-${String(calendarViewDate.getDate()).padStart(2, '0')}`
+                        const dayEvents = calendarEvents.filter((e) => e.start_time.substring(0, 10) === dateStr)
+
+                        return (
+                          <div className="space-y-2">
+                            {dayEvents.length === 0 ? (
+                              <p className={theme.textMuted}>Keine Termine an diesem Tag.</p>
+                            ) : (
+                              dayEvents.map((event) => (
+                                <div
+                                  key={event.id}
+                                  onClick={() => openEventModal(event)}
+                                  className={`p-3 rounded-xl border ${theme.border} cursor-pointer ${theme.bgHover}`}
+                                >
+                                  <div className="flex items-start gap-3">
+                                    <div className="w-1 h-12 rounded" style={{ backgroundColor: getEventColor(event) }} />
+                                    <div>
+                                      <p className={`font-medium ${theme.text}`}>{event.title}</p>
+                                      <p className={`text-xs ${theme.textMuted}`}>
+                                        {event.all_day
+                                          ? 'Ganztaegig'
+                                          : `${new Date(event.start_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} - ${new Date(event.end_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`}
+                                      </p>
+                                      {event.location && <p className={`text-xs ${theme.textMuted}`}>{event.location}</p>}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))
+                            )}
+                            {canWriteCurrentCalendar() && (
+                              <button
+                                type="button"
+                                onClick={() => openEventModal(null, calendarViewDate)}
+                                className={`w-full py-2 rounded-xl border ${theme.border} ${theme.bgHover} ${theme.textMuted} text-sm`}
+                              >
+                                + Neuer Termin
+                              </button>
+                            )}
+                          </div>
+                        )
+                      })()}
+                    </div>
+                  )}
+
+                  {/* Floating Add Button */}
+                  {canWriteCurrentCalendar() && calendars.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => openEventModal()}
+                      className={`fixed bottom-6 right-6 p-4 rounded-full ${theme.accent} text-white shadow-lg hover:scale-105 transition-transform z-30`}
+                      title="Neuer Termin"
+                    >
+                      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                      </svg>
+                    </button>
                   )}
                 </>
               )}
@@ -2684,6 +3778,577 @@ function App() {
                 >
                   {photoSaving ? 'Speichere...' : 'Als Kopie speichern'}
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {selectedApoMessage && (
+          <div
+            className={`fixed inset-0 ${theme.overlay} z-50 flex items-center justify-center p-4`}
+            onClick={() => setSelectedApoMessage(null)}
+          >
+            <div
+              className={`${theme.panel} rounded-2xl border ${theme.border} ${theme.cardShadow} w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className={`flex items-start justify-between p-4 border-b ${theme.border}`}>
+                <div className="flex-1 pr-4">
+                  <h3 className={`text-lg font-semibold ${theme.text}`}>
+                    {selectedApoMessage.type === 'lav'
+                      ? (selectedApoMessage.subject || `LAV-Info ${selectedApoMessage.ausgabe}`)
+                      : selectedApoMessage.title}
+                  </h3>
+                  <div className="flex items-center gap-3 mt-1">
+                    <span className={`text-sm ${theme.textMuted}`}>
+                      {selectedApoMessage.type === 'lav'
+                        ? (selectedApoMessage.datum ? new Date(selectedApoMessage.datum).toLocaleDateString('de-DE') : '')
+                        : (selectedApoMessage.date ? new Date(selectedApoMessage.date).toLocaleDateString('de-DE') : '')}
+                    </span>
+                    {selectedApoMessage.type === 'lav' && selectedApoMessage.ausgabe && (
+                      <span className={`text-xs px-2 py-0.5 rounded ${theme.surface} ${theme.textMuted}`}>
+                        Ausgabe {selectedApoMessage.ausgabe}
+                      </span>
+                    )}
+                    {selectedApoMessage.category && (
+                      <span className={`text-xs px-2 py-0.5 rounded ${theme.surface} ${theme.textMuted}`}>
+                        {selectedApoMessage.category}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedApoMessage(null)}
+                  className={`${theme.textMuted} ${theme.bgHover} p-2 rounded-lg flex-shrink-0`}
+                >
+                  <Icons.X />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-auto p-4">
+                {selectedApoMessage.type === 'amk' && selectedApoMessage.institution && (
+                  <p className={`text-sm ${theme.textSecondary} mb-3`}>
+                    <strong>Institution:</strong> {selectedApoMessage.institution}
+                  </p>
+                )}
+                {selectedApoMessage.type === 'recall' && selectedApoMessage.product_name && (
+                  <p className={`text-sm ${theme.textSecondary} mb-3`}>
+                    <strong>Produkt:</strong> {selectedApoMessage.product_name}
+                  </p>
+                )}
+                {selectedApoMessage.type === 'recall' && selectedApoMessage.recall_number && (
+                  <p className={`text-sm ${theme.textSecondary} mb-3`}>
+                    <strong>Rueckrufnummer:</strong> {selectedApoMessage.recall_number}
+                  </p>
+                )}
+
+                {/* AI-Analyse Felder für Rückrufe */}
+                {selectedApoMessage.type === 'recall' && selectedApoMessage.ai_zusammenfassung && (
+                  <div className={`mb-4 p-3 rounded-lg ${theme.surface} border ${theme.border}`}>
+                    <p className={`text-sm font-medium ${theme.accentText} mb-1`}>KI-Zusammenfassung:</p>
+                    <p className={`text-sm ${theme.text}`}>{selectedApoMessage.ai_zusammenfassung}</p>
+                    {selectedApoMessage.ai_analysiert_am && (
+                      <p className={`text-xs ${theme.textMuted} mt-2`}>
+                        Analysiert am: {new Date(selectedApoMessage.ai_analysiert_am).toLocaleString('de-DE')}
+                      </p>
+                    )}
+                  </div>
+                )}
+                {selectedApoMessage.type === 'recall' && selectedApoMessage.ai_chargen_alle !== null && (
+                  <p className={`text-sm ${theme.textSecondary} mb-3`}>
+                    <strong>Alle Chargen betroffen:</strong> {selectedApoMessage.ai_chargen_alle ? 'Ja' : 'Nein'}
+                  </p>
+                )}
+                {selectedApoMessage.type === 'recall' && selectedApoMessage.ai_chargen_liste && selectedApoMessage.ai_chargen_liste.length > 0 && (
+                  <div className="mb-4">
+                    <p className={`text-sm font-medium ${theme.textSecondary} mb-1`}>Betroffene Chargen:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {selectedApoMessage.ai_chargen_liste.map((charge, i) => (
+                        <span key={i} className={`text-xs px-2 py-1 rounded ${theme.surface} ${theme.text} border ${theme.border}`}>
+                          {charge}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {selectedApoMessage.type === 'recall' && selectedApoMessage.ai_pzn_betroffen && selectedApoMessage.ai_pzn_betroffen.length > 0 && (
+                  <div className="mb-4">
+                    <p className={`text-sm font-medium ${theme.textSecondary} mb-1`}>Betroffene PZN:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {selectedApoMessage.ai_pzn_betroffen.map((pzn, i) => (
+                        <span key={i} className={`text-xs px-2 py-1 rounded ${theme.accent} text-white font-mono`}>
+                          {pzn}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {selectedApoMessage.type === 'recall' && selectedApoMessage.ai_packungsgroessen && selectedApoMessage.ai_packungsgroessen.length > 0 && (
+                  <div className="mb-4">
+                    <p className={`text-sm font-medium ${theme.textSecondary} mb-1`}>Packungsgroessen:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {selectedApoMessage.ai_packungsgroessen.map((groesse, i) => (
+                        <span key={i} className={`text-xs px-2 py-1 rounded ${theme.surface} ${theme.text} border ${theme.border}`}>
+                          {groesse}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* LAV-Info Themen */}
+                {selectedApoMessage.type === 'lav' && selectedApoMessage.lav_themes && selectedApoMessage.lav_themes.length > 0 && (
+                  <div className="mb-4">
+                    <p className={`text-sm font-medium ${theme.textSecondary} mb-2`}>Themen dieser Ausgabe:</p>
+                    <div className="space-y-2">
+                      {selectedApoMessage.lav_themes
+                        .sort((a, b) => (a.punkt_nr || 0) - (b.punkt_nr || 0))
+                        .map((thema) => (
+                          <details
+                            key={thema.id}
+                            className={`${theme.surface} border ${theme.border} rounded-lg overflow-hidden`}
+                          >
+                            <summary className={`px-3 py-2 cursor-pointer ${theme.bgHover} flex items-center gap-2`}>
+                              {thema.punkt_nr && (
+                                <span className={`text-xs px-1.5 py-0.5 rounded ${theme.accent} text-white font-medium`}>
+                                  {thema.punkt_nr}
+                                </span>
+                              )}
+                              <span className={`text-sm font-medium ${theme.text}`}>{thema.titel || 'Kein Titel'}</span>
+                              {thema.ist_arbeitsrecht && (
+                                <span className={`text-xs px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400`}>
+                                  Arbeitsrecht
+                                </span>
+                              )}
+                            </summary>
+                            {thema.volltext && (
+                              <div className={`px-3 py-2 border-t ${theme.border}`}>
+                                <p className={`text-sm ${theme.text} whitespace-pre-wrap`}>{thema.volltext}</p>
+                              </div>
+                            )}
+                          </details>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* LAV-Info PDF Links */}
+                {selectedApoMessage.type === 'lav' && selectedApoMessage.main_pdf_url && (
+                  <div className="mb-4">
+                    <a
+                      href={`${supabaseUrl}${selectedApoMessage.main_pdf_url}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`inline-flex items-center gap-2 text-sm ${theme.accentText} hover:underline`}
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      </svg>
+                      PDF herunterladen
+                    </a>
+                  </div>
+                )}
+
+                {selectedApoMessage.type === 'lav' && selectedApoMessage.attachment_urls && selectedApoMessage.attachment_urls.length > 0 && (
+                  <div className="mb-4">
+                    <p className={`text-sm font-medium ${theme.textSecondary} mb-1`}>Anhaenge:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedApoMessage.attachment_urls.map((url, i) => (
+                        <a
+                          key={i}
+                          href={`${supabaseUrl}${url}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded ${theme.surface} ${theme.accentText} hover:underline border ${theme.border}`}
+                        >
+                          Anhang {i + 1}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {selectedApoMessage.description && (
+                  <div className="mb-4">
+                    <p className={`text-sm font-medium ${theme.textSecondary} mb-1`}>Beschreibung:</p>
+                    <p className={`text-sm ${theme.text}`}>{selectedApoMessage.description}</p>
+                  </div>
+                )}
+                {selectedApoMessage.affected_products && selectedApoMessage.affected_products.length > 0 && (
+                  <div className="mb-4">
+                    <p className={`text-sm font-medium ${theme.textSecondary} mb-1`}>Betroffene Produkte:</p>
+                    <ul className={`text-sm ${theme.text} list-disc list-inside`}>
+                      {selectedApoMessage.affected_products.map((p, i) => (
+                        <li key={i}>{p}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {selectedApoMessage.important_info && selectedApoMessage.important_info.length > 0 && (
+                  <div className="mb-4">
+                    <p className={`text-sm font-medium ${theme.textSecondary} mb-1`}>Wichtige Informationen:</p>
+                    <ul className={`text-sm ${theme.text} list-disc list-inside`}>
+                      {selectedApoMessage.important_info.map((info, i) => (
+                        <li key={i}>{info}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {selectedApoMessage.full_text && (
+                  <div>
+                    <p className={`text-sm font-medium ${theme.textSecondary} mb-1`}>Vollstaendiger Text:</p>
+                    <div className={`text-sm ${theme.text} whitespace-pre-wrap ${theme.input} border rounded-lg p-3`}>
+                      {selectedApoMessage.full_text}
+                    </div>
+                  </div>
+                )}
+                {selectedApoMessage.message_url && (
+                  <a
+                    href={selectedApoMessage.message_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`inline-block mt-4 text-sm ${theme.accentText} hover:underline`}
+                  >
+                    Zur Originalquelle →
+                  </a>
+                )}
+                {selectedApoMessage.recall_url && (
+                  <a
+                    href={selectedApoMessage.recall_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`inline-block mt-4 text-sm ${theme.accentText} hover:underline`}
+                  >
+                    Zur Originalquelle →
+                  </a>
+                )}
+              </div>
+
+              <div className={`flex justify-end p-4 border-t ${theme.border}`}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedApoMessage(null)}
+                  className={`px-4 py-2.5 rounded-lg ${theme.accent} text-white font-medium`}
+                >
+                  Schliessen
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Event Modal */}
+        {editingEvent && (
+          <div className={`fixed inset-0 ${theme.overlay} flex items-center justify-center z-50 p-4`}>
+            <div className={`${theme.panel} rounded-2xl p-6 border ${theme.border} ${theme.cardShadow} w-full max-w-md`}>
+              <div className="flex items-center justify-between mb-6">
+                <h3 className={`text-xl font-semibold ${theme.text}`}>
+                  {editingEvent.id ? 'Termin bearbeiten' : 'Neuer Termin'}
+                </h3>
+                <button
+                  type="button"
+                  onClick={closeEventModal}
+                  className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
+                >
+                  <Icons.X />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className={`block text-sm font-medium mb-1.5 ${theme.textSecondary}`}>Titel *</label>
+                  <input
+                    type="text"
+                    value={eventForm.title}
+                    onChange={(e) => setEventForm((prev) => ({ ...prev, title: e.target.value }))}
+                    className={`w-full px-4 py-2.5 rounded-xl border ${theme.input} ${theme.inputPlaceholder} ${theme.text}`}
+                    placeholder="Terminname"
+                  />
+                </div>
+
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={eventForm.allDay}
+                    onChange={(e) => setEventForm((prev) => ({ ...prev, allDay: e.target.checked }))}
+                    className="rounded border-zinc-600"
+                  />
+                  <span className={`text-sm ${theme.textSecondary}`}>Ganztaegig</span>
+                </label>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={`block text-sm font-medium mb-1.5 ${theme.textSecondary}`}>Start</label>
+                    <input
+                      type="date"
+                      value={eventForm.startDate}
+                      onChange={(e) =>
+                        setEventForm((prev) => ({
+                          ...prev,
+                          startDate: e.target.value,
+                          endDate: prev.endDate || e.target.value,
+                        }))
+                      }
+                      className={`w-full px-3 py-2 rounded-xl border ${theme.input} text-sm ${theme.text}`}
+                    />
+                    {!eventForm.allDay && (
+                      <input
+                        type="time"
+                        value={eventForm.startTime}
+                        onChange={(e) => setEventForm((prev) => ({ ...prev, startTime: e.target.value }))}
+                        className={`w-full px-3 py-2 rounded-xl border ${theme.input} text-sm mt-2 ${theme.text}`}
+                      />
+                    )}
+                  </div>
+                  <div>
+                    <label className={`block text-sm font-medium mb-1.5 ${theme.textSecondary}`}>Ende</label>
+                    <input
+                      type="date"
+                      value={eventForm.endDate}
+                      onChange={(e) => setEventForm((prev) => ({ ...prev, endDate: e.target.value }))}
+                      className={`w-full px-3 py-2 rounded-xl border ${theme.input} text-sm ${theme.text}`}
+                    />
+                    {!eventForm.allDay && (
+                      <input
+                        type="time"
+                        value={eventForm.endTime}
+                        onChange={(e) => setEventForm((prev) => ({ ...prev, endTime: e.target.value }))}
+                        className={`w-full px-3 py-2 rounded-xl border ${theme.input} text-sm mt-2 ${theme.text}`}
+                      />
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label className={`block text-sm font-medium mb-1.5 ${theme.textSecondary}`}>Ort</label>
+                  <input
+                    type="text"
+                    value={eventForm.location}
+                    onChange={(e) => setEventForm((prev) => ({ ...prev, location: e.target.value }))}
+                    className={`w-full px-4 py-2.5 rounded-xl border ${theme.input} ${theme.inputPlaceholder} ${theme.text}`}
+                    placeholder="Optional"
+                  />
+                </div>
+
+                <div>
+                  <label className={`block text-sm font-medium mb-1.5 ${theme.textSecondary}`}>Beschreibung</label>
+                  <textarea
+                    value={eventForm.description}
+                    onChange={(e) => setEventForm((prev) => ({ ...prev, description: e.target.value }))}
+                    rows={3}
+                    className={`w-full px-4 py-2.5 rounded-xl border ${theme.input} ${theme.inputPlaceholder} resize-none ${theme.text}`}
+                    placeholder="Optional"
+                  />
+                </div>
+
+                {eventError && (
+                  <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3">
+                    <p className="text-rose-400 text-sm">{eventError}</p>
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-2">
+                  {editingEvent.id && canWriteCurrentCalendar() && (
+                    <button
+                      type="button"
+                      onClick={() => deleteEvent(editingEvent.id)}
+                      className={`px-4 py-2.5 rounded-xl text-sm font-medium ${theme.danger} border ${theme.border}`}
+                    >
+                      Loeschen
+                    </button>
+                  )}
+                  <div className="flex-1" />
+                  <button
+                    type="button"
+                    onClick={closeEventModal}
+                    className={`px-4 py-2.5 rounded-xl text-sm font-medium ${theme.textMuted} ${theme.bgHover}`}
+                  >
+                    Abbrechen
+                  </button>
+                  {canWriteCurrentCalendar() && (
+                    <button
+                      type="button"
+                      onClick={() => (editingEvent.id ? updateEvent(editingEvent.id) : createEvent())}
+                      disabled={eventSaving || !eventForm.title.trim()}
+                      className={`px-5 py-2.5 rounded-xl text-sm font-semibold ${theme.accent} text-white disabled:opacity-40`}
+                    >
+                      {eventSaving ? 'Speichern...' : 'Speichern'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Kalender erstellen/bearbeiten Modal (Admin) */}
+        {editingCalendar && (
+          <div className={`fixed inset-0 ${theme.overlay} flex items-center justify-center z-50 p-4`}>
+            <div className={`${theme.panel} rounded-2xl p-6 border ${theme.border} ${theme.cardShadow} w-full max-w-md`}>
+              <div className="flex items-center justify-between mb-6">
+                <h3 className={`text-xl font-semibold ${theme.text}`}>
+                  {editingCalendar.id ? 'Kalender bearbeiten' : 'Neuer Kalender'}
+                </h3>
+                <button
+                  type="button"
+                  onClick={closeCalendarModal}
+                  className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
+                >
+                  <Icons.X />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className={`block text-sm font-medium mb-1.5 ${theme.textSecondary}`}>Name *</label>
+                  <input
+                    type="text"
+                    value={calendarForm.name}
+                    onChange={(e) => setCalendarForm((prev) => ({ ...prev, name: e.target.value }))}
+                    className={`w-full px-4 py-2.5 rounded-xl border ${theme.input} ${theme.inputPlaceholder} ${theme.text}`}
+                    placeholder="Kalendername"
+                  />
+                </div>
+
+                <div>
+                  <label className={`block text-sm font-medium mb-1.5 ${theme.textSecondary}`}>Beschreibung</label>
+                  <textarea
+                    value={calendarForm.description}
+                    onChange={(e) => setCalendarForm((prev) => ({ ...prev, description: e.target.value }))}
+                    rows={2}
+                    className={`w-full px-4 py-2.5 rounded-xl border ${theme.input} ${theme.inputPlaceholder} resize-none ${theme.text}`}
+                    placeholder="Optional"
+                  />
+                </div>
+
+                <div>
+                  <label className={`block text-sm font-medium mb-1.5 ${theme.textSecondary}`}>Farbe</label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      value={calendarForm.color}
+                      onChange={(e) => setCalendarForm((prev) => ({ ...prev, color: e.target.value }))}
+                      className="w-10 h-10 rounded-lg cursor-pointer border-0"
+                    />
+                    <div className="flex gap-2">
+                      {['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'].map((color) => (
+                        <button
+                          key={color}
+                          type="button"
+                          onClick={() => setCalendarForm((prev) => ({ ...prev, color }))}
+                          className={`w-8 h-8 rounded-lg border-2 ${calendarForm.color === color ? 'border-white' : 'border-transparent'}`}
+                          style={{ backgroundColor: color }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <div className="flex-1" />
+                  <button
+                    type="button"
+                    onClick={closeCalendarModal}
+                    className={`px-4 py-2.5 rounded-xl text-sm font-medium ${theme.textMuted} ${theme.bgHover}`}
+                  >
+                    Abbrechen
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => (editingCalendar.id ? updateCalendar(editingCalendar.id) : createCalendar())}
+                    disabled={calendarSaving || !calendarForm.name.trim()}
+                    className={`px-5 py-2.5 rounded-xl text-sm font-semibold ${theme.accent} text-white disabled:opacity-40`}
+                  >
+                    {calendarSaving ? 'Speichern...' : 'Speichern'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Berechtigungen Modal (Admin) */}
+        {permissionsModalOpen && (
+          <div className={`fixed inset-0 ${theme.overlay} flex items-center justify-center z-50 p-4`}>
+            <div className={`${theme.panel} rounded-2xl p-6 border ${theme.border} ${theme.cardShadow} w-full max-w-lg max-h-[80vh] overflow-auto`}>
+              <div className="flex items-center justify-between mb-6">
+                <h3 className={`text-xl font-semibold ${theme.text}`}>Berechtigungen verwalten</h3>
+                <button
+                  type="button"
+                  onClick={() => setPermissionsModalOpen(false)}
+                  className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
+                >
+                  <Icons.X />
+                </button>
+              </div>
+
+              <div className={`p-4 rounded-xl border ${theme.border} mb-6`}>
+                <h4 className={`text-sm font-medium mb-3 ${theme.textSecondary}`}>Berechtigung hinzufuegen</h4>
+                <div className="flex gap-2">
+                  <select id="newPermUser" className={`flex-1 px-3 py-2 rounded-lg border ${theme.input} text-sm ${theme.text}`}>
+                    <option value="">Mitarbeiter waehlen...</option>
+                    {staff
+                      .filter((s) => s.auth_user_id && !calendarPermissions.some((p) => p.user_id === s.auth_user_id))
+                      .map((s) => (
+                        <option key={s.id} value={s.auth_user_id}>
+                          {s.first_name} {s.last_name}
+                        </option>
+                      ))}
+                  </select>
+                  <select id="newPermLevel" className={`px-3 py-2 rounded-lg border ${theme.input} text-sm ${theme.text}`}>
+                    <option value="read">Lesen</option>
+                    <option value="write">Schreiben</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const userId = document.getElementById('newPermUser').value
+                      const perm = document.getElementById('newPermLevel').value
+                      if (userId) addCalendarPermission(selectedCalendarId, userId, perm)
+                    }}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium ${theme.accent} text-white`}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {permissionsLoading ? (
+                  <p className={theme.textMuted}>Laden...</p>
+                ) : calendarPermissions.length === 0 ? (
+                  <p className={theme.textMuted}>Keine Berechtigungen vergeben.</p>
+                ) : (
+                  calendarPermissions.map((perm) => (
+                    <div key={perm.id} className={`flex items-center justify-between p-3 rounded-xl border ${theme.border}`}>
+                      <div>
+                        <p className={`font-medium ${theme.text}`}>
+                          {perm.staffMember?.first_name} {perm.staffMember?.last_name}
+                        </p>
+                        <p className={`text-xs ${theme.textMuted}`}>{perm.staffMember?.email}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={perm.permission}
+                          onChange={(e) => addCalendarPermission(selectedCalendarId, perm.user_id, e.target.value)}
+                          className={`px-2 py-1 rounded-lg border ${theme.input} text-xs ${theme.text}`}
+                        >
+                          <option value="read">Lesen</option>
+                          <option value="write">Schreiben</option>
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => removeCalendarPermission(perm.id, selectedCalendarId)}
+                          className={`p-1.5 rounded-lg ${theme.danger}`}
+                          title="Berechtigung entfernen"
+                        >
+                          <Icons.X />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
