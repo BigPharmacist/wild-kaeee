@@ -4,9 +4,8 @@ import ReactCrop from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 import { jsPDF } from 'jspdf'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
-// AMK Logo als Base64
-const AMK_LOGO_BASE64 = '/9j/4AAQSkZJRgABAQEAAAAAAAD/4QBCRXhpZgAATU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAkAAAAMAAAABAJQAAEABAAEAAAABAAAAAAAAAAAAAP/bAEMACwkJBwkJBwkJCQkLCQkJCQkJCwkLCwwLCwsMDRAMEQ4NDgwSGRIlGh0lHRkfHCkpFiU3NTYaKjI+LSkwGTshE//bAEMBBwgICwkLFQsLFSwdGR0sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLP/AABEIANwB2gMBIgACEQEDEQH/xAAfAAABBQEBAQEBAQAAAAAAAAAAAQIDBAUGBwgJCgv/xAC1EAACAQMDAgQDBQUEBAAAAX0BAgMABBEFEiExQQYTUWEHInEUMoGRoQgjQrHBFVLR8CQzYnKCCQoWFxgZGiUmJygpKjQ1Njc4OTpDREVGR0hJSlNUVVZXWFlaY2RlZmdoaWpzdHV2d3h5eoOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4eLj5OXm5+jp6vHy8/T19vf4+fr/xAAfAQADAQEBAQEBAQEBAAAAAAAAAQIDBAUGBwgJCgv/xAC1EQACAQIEBAMEBwUEBAABAncAAQIDEQQFITEGEkFRB2FxEyIygQgUQpGhscEJIzNS8BVictEKFiQ04SXxFxgZGiYnKCkqNTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqCg4SFhoeIiYqSk5SVlpeYmZqio6Slpqeoqaqys7S1tre4ubrCw8TFxsfIycrS09TV1tfY2dri4+Tl5ufo6ery8/T19vf4+fr/2gAMAwEAAhEDEQA/APXKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAopGZUVnchVVSzE8AKBkkmvJfD/AMR9W1LxbHY3MkP9j313c21ogiRXj3Fvs+XHzEnAB/3qAPW6KKKACiiudh1Sa0urmOXdJb/aJeOrR/OeVz29qAOiopkUsU6LJE4dG6EfyNPoAKKKKACiiigAoorL1DVo7bdFBh5+hPVI/r7+1AGpRWdo0kkto8kjs7tPKWZjknpV+RxGkjkZCIzkDvtGaA3HUVxY+IGnnH/Euu/++4f8aP8AhYGn/wDQOu/++4f8a5/rNLuex/YeYf8APp/h/mdpRXF/8LA0/wD6B13/AN/If8aP+Fgaf/0Drv8A7+Q/40fWaXcf9h5h/wA+n+H+Z2lFU9NvJr+1jupLSW1EvzRxzlTIUPRiF6Z7VcrdO6ujyJwcJOMt0FFFFMkKK5/w94ms9fufEVvBtB0nUGtUKnPnQY2rNz6sHH0A9a6CgAorl7/X/EK65d6NpGkWl41rZW17LJc3xtvlmZkAC+W3p60+x8S3g1C20rX9Ik0q8vN4sJBPHdWV2yDcUjmQDD+xH8+QDpaKr3sl9Fa3Elhbx3F2qgwQzS+THI2QMNJg44z2rn/7R+Iv/QtaV/4OP/tNAHUUVxGpeKPGulCy+1eHNOMt9dRWdpDDqxkmmmk7Igh6D+I9BXS6pqM2laNfanNCkktlZm5mhjchGZFDOiORn1wcUAaVFUdJ1bTdbsLbUdPmElvOPo8bj70ci9mHcf0OTeoAKKyvEerPoWi6nqyQLO1mkbiJnMYffKkeCwB9c9K01bdGr46oGx9RnFADqK4rTPEnjfWLG31Gx8Oac1rcGXymk1Uo5EcjRHKmH1BrZ0288YTXSR6notjaWhRy00Go/aHDAfKBH5S9frQBuUVj32sSWmueG9IWBXTV01N3mLkND9jiWUBVxg5zjqK2KACisfw7rkGv2El3HtWSC8u7O4jU5CSQyFQef7y7W/H2rYoAKKiurm3s7a6u7hwkFtDJPM56LHGpdjVHQdT/ALZ0fTdU2CP7bEZdgOQnzsu3PtigDTorH1DWJLLWvDGlLArprJ1IPKXIaH7JAJhtUDBz06im6pd+LYLlU0rR7K8tvKVjLcah9mcSEkFdnltwOOc9/agDaorirbxL43ur/VtNh8OaabnS/sn2sNq2FH2qMyx7W8nnjrWr9u8b/YjL/YWn/b/tQjFv/af7r7N5efN83yuueMY980AdBRXE3PiXxva3+k6bN4c00XOqfa/sgXVsqfssYlk3N5PHHStzTLvxdPclNV0exs7Xy3YTW+ofaX8wEYXy/LXg8857UAbVFcpceIPEsmta3pOkaLZ3a6ULEzS3N+bYt9rh81cJ5bdOR17e9SpqHxCLoH8OaWqFlDsNXyVUnkgeTQB01FZHiTV5NB0a91SOBZ3tmtlETuUVvNnSHlgD03Z6VrjoKACiiigAooooAKKKKAOT+IWrf2T4X1NkbbPfAadb4ODmcEOR9FDGvnaCaW3mguIWKywSxzRMOqvGwZT+Yr1H4pXN5quqRaRZKZI9D02XVL8KeEMhXLN/urt/77ryqgD6t0q/i1TTdN1GLGy9tYbgAfwl1BZfwOQfpVyvOfhLq32vQ7vTHbMul3JMYJ5+z3OZF/Jg9ejUAFcXdf8AHzd/9d5f/QzXaVxd1/x83f8A13l/9DNAD7S8uLN98TfKcb42+449x6+9dPZ31vepujOHAG+NvvL/APW964+nxySxOskTlHU5Vl60AdvRWZp+rRXO2KbEdx0HZJP93Pf2rToAKRmVQWYgKoySTgADuSajuLiC2jMszhVHT1Y+ij1rmL7UZ707eUgB+WMHr7uaALeoaw0m6G0JVOjSjhm9k9B71jUUUAdNof8Ax5H/AK7yf0rQuP8Aj3uf+uMv/oJrP0P/AI8j/wBd5P6VoXH/AB73P/XGX/0E0nsVH4keGDoPpS0g6D6UtfOH7kFdz4W8LbvJ1PVIuOJLO2kH4iWVT/46PxNHhXwtnydT1OLjiSztpB17iWUH/wAdH4mu9r0sNhvtzPhc9z298LhX6v8ARfqwooor0j4UKwfF2qS6Vod7LbZN9dlNO05F+813dHyk2+4yW/4DW9Xn2v6lNdeL9Mgh0zUdTs/DMX226i02OOQrqN0h8jzPMZR8q/MOepoAP7Mi8Gaj4Hu4sC0ntk8M6w44VppSZobhser7sk9jivQa4LxBql5ruj6lpjeEfE6PcQ/6PIbe1xFcIRJFJkT54YDPtXReFdWbWtC029lyLpUNtfKwwyXdufKkDA9MkZ/GgDPs/wDkffEX/YA0v/0dJUPjeSGV/COnQlW1SfxFptzaRqQZY47dmaWfA5CgZyf8OMXxDpGoav4n8Trpt5eWuoW2gaZcWv2W5kt1nZZpMwymMg4YcDng81u+DbDwtLaprWnW039oTB7a9k1CeW5vraeP5Zbd3mJIwfQDIwe9AHXU2SSKGOWWV1SKJGkkdyAqIo3FmJ7CnVyHiGWXX9Tg8I2bstsFjvfEs8ZIMVlnMdoGH8cp6+3qDQAnh+OXxBqk/i27RhaIstl4agkBBjtM7ZLwqf4pT09vXg1peMv+RV8Uf9gy6/8AQK3IoooY4oYkVIokSOJEGFREG1VUDsKw/GX/ACKvij/sGXX/AKBQBgnT9R0GDT/EugwtNFNYWT6/pMXAu41hXN1bKOBMvU/3vr97sNN1LT9XsrbULCZZra4XcjDqD0KOOoYdCKTSf+QVo/8A2D7L/wBErXM6jYXvha9ufEGiQvNply/m+INJhH/fV9Zr0Djq47j81ALXxB/5E7xH/wBcLf8A9KYq6WP/AFEf/XJf/Qa5HxnfWWpeA9avrKZJrW4tbaSKRDwQbmLgjqCOhHauuj/1Ef8A1yX/ANBoA5LwDeWEXhPRY5bq2jdTfbkkmjVhm8mPIJzXVxXdlM2yG5t5HwW2xSo7YHfCnNcH4J8M+FtQ8M6ReXukWNxdTG9Ms00QZ3K3cyDcT7AD8K62w8O+G9Ln+06dpdna3GxovNgjCvsYglcjtwKAMjWv+R0+Hn/XHxF/6TR109zKILa6nPSGCWU/RELVzGtf8jp8PP8Arj4i/wDSaOtTxRObbw34lmBwU0q+C/7zQsg/U0AcH4KEvh9vC9xIzfYPF9o8dwWJKxatHLJJC3PTzEO0D1HtXqlckdBOoeB9K0uM7LyDSdOuLGUcNDfQRJLG4Pb5uD7E1qaDrcWq6Ha6pOVhdIZF1FX+X7PcW+VnVgegBBP0xQBl+K2bVbvRfCULMBqcn23V2Q4aPSrVgzAkcjzGwoPsfWl+HrEeGba2b71he6nZEenl3UhA/IijwjHJqEmseK7lGEutzeXp6uMNDpVsSkK4PQvy7evBpvgvMMvjexP/AC7eKdRkQekdwElX+tADtd/5G/4cf73iD/0jWusrk9d/5G/4cf73iD/0jWusoA5PQv8AkcPiP9fD3/pG1dZXJ6F/yOHxH+vh7/0jausoA5PXf+Rw+HH18Q/+ka11lcnrv/I4fDj6+If/AEjWusoA4/Sbi1g8ZfEPz54YtyeHtvmyIm7Fo+cbiK6gX+msVVb20LMQFAniJJPAAANcZa6Nomr+MfH39p2Ftd+QmgeT9oQP5e+0bdtz64GfpW/H4Q8GwyRTRaHpySxOkkbrCoZXQ7lYH1FAFD4h/wDIo6z/AL+n/wDpZDXVjoPoK5T4h/8AIo6z/v6f/wClkNdWOg+goAKKKKACiiigApk0sUEU08rBYoY3lkY9FRFLMT9KfXGfEjVG0/w1cW0JP2rV5Y9NgVc7isnzSYA/2QV/4FQBk+ArIa6PGniK/jJXxBc3FhErdRZ4IZR7cqv/AACvGtSsZtN1DUNPmB82zuZrZ89zG5XcPr1FfTXh7S00bRdI0xQN1raxrKR/FO3zyN+LE1478WNJ+x6/BqMa4i1W2VmIHH2i3xE/6bD+NAFH4Z6r/Zvii0hdsQapG9hJnp5jYeI/XcAP+BV9CV8lQTS209vcQttlgljmiYfwvGwdT+Yr6p0q/i1TTdN1GLGy9tYbgAfwl1BK/gcj8KALlcXdf8fN3/13l/8AQzXaVxd1/wAfN3/13l/9DNAENFFFABWva61NDE0c6GUqv7p84bPo5P8AOsiigCa4ubi6kMkzZPRQOFQeiioaKKACiiigDptD/wCPI/8AXeT+laFx/wAe9z/1xl/9BNZ+h/8AHkf+u8n9K0Lj/j3uf+uMv/oJpPYqPxI8MHQfSu68LeFt3k6pqcXHElnbSDr3Esqn/wAdH40eFPCu4QanqkXHyyWdtIOvcSyqf/HR+Jrva87DYb7cz7fPc9vfC4V+r/Rfqwooor0j4YKKKKAK9/eQafZXt9PnybS3luJMDJKxqWwAO56Cuf8ABNlcw6S+p3qkajr9zLrF5uByonOYo+ecKuMDtk11FFABXHaYraJ4w1vS9pFh4hi/tuxIB2JeJ8lzGCOMt9/8BXY0UAcrZhv+E78Qtg7ToGlgHBxnzpO9VtUWTwrrY8QW6OdF1iSK38QRRgkW1wTtiv1Ve3aT8+SeOzooAxvEeuwaDo91qW3zpNoSyiQFvPncHYvy9u5PoD+PK+G/EvgzR7F/tWqyz6rfytfatc/YdQJlupeSqnyfup91fp716HRQBy//AAn3gn/oIy/+AOof/GaseLHWfwl4ikiyyzaTO8eAQWV49w4PNdBRQBT0nI0rRweD/Z9nnP8A1xWrlFFAHmXjXQdS0nTPEEuhx79G1VFfVtOUEizmWRJPttqq9AcYkX8eg+T0mP8A1Ef/AFxX/wBBqQgEEEAgjBB6EUcDAHQcCgDzjwd4t8M6T4d0vT9Qu5obu3N4JojZ3r7S91LIvzRxFehB611em+K/DOr3S2VhePLcsjyKjWt3ECqDJO6WNV/WtyigDlNZDHxn8PiFYgQ+IskAkDNtHjJp3j9pB4U1mKJWaS5+yWqBQSSZrmNDwPbNdTRQAyGMQwwRDpFGkY+iqFrzjXdP1a31q88P6erLpnjiaK5nlQ4+xtBg6gVGMfvE2k/XFelUhVCysVUsudrEAlc8HBoAZBDDbQwW8CBIYIo4YkXgJGihVUfQVy+gq9v4t+IVuVYRzto19EcEKd9syPg9OorrKKAOU10MfF3w5IViFbxBuIBIGbNcZNdXRRQBwMeu6PoXjDx02qTyQLdpoX2ci3uZRJ5VoQ+DCjdMithPHfgyR4401CUvI6og+w34yzHaBkw4rpqKAOV+IQZvCWshVZjusDhQWOBeQk8Dmprbxt4Qup7a1gv5GnuJY4IVNlfKGkchVBZ4go/E10lFABRRRQAUUUUAFeb6r/xUXxG0XSx89l4at/7Quh1X7QdsoB7dfKH516Fd3MFla3d5O22G1gluJWPZI1Ln+VcH8M7aa5g8QeJrtf8ASdd1GZkJ5xBG7EhT6biR/wAAFAHoVcR8TtJ/tHwxcXCLmfSpUvkx18r/AFco+mDuP+7Xb1HcQQ3Vvc20y7obiGSCVT/EkilGH5GgD5Kr3T4Tat9r0K60x2zLpdyfLBPP2e5zIv5NvrxfU7GbTNR1HT5s+ZZXU1uxP8XlsVDD6jBH1rqvhlqv9m+J7WB2xBqkb2D56eY3zxH67gFH+9QB9B1xd1/x83f/AF3l/wDQzXaVxd1/x83f/XeX/wBDNAENFFFABRRRQAUUUUAFFFFAHTaH/wAeR/67yf0rTdgiOzdFVmOOTgDNZmh/8eR/67yf0rQn/wBRcf8AXKT/ANBNDGld2GWl3a31vDdWsiyQSqGRl/UEeo7ip68i0DXrrRJ8jdJZSsPtMGfw8yPP8Q/X9R6taXdrfW8N1ayrJDKu5GX9QR2I7iuehXVVeZ7Ga5VUy+p3g9n+j8yeiiiug8YKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAOG+Jmoy2+hQ6VbZN5rt5DYRIv3mjDBnx9TtX/gVUNNtPjDpVhZadZ2vhtbazhWGIM0hYgdWYhxyeSeO9JMf+Ei+JltCPnsfCtqZX7r9qOG/Pcy/9+69JoA4LzfjZ/wA+/hn85f8A45R5vxs/59/DP5y//HK72igD508daZ4ottSi1LX7exiuNTU4bTiTC7W6pGSwJOGxtzzXKwTy209vcQttlt5Y5omH8LxsHU/mK9/+Juk/2l4Yup0XM+lyJfpjr5Y/dyj6bSW/4DXz5QB9W6Xfw6pp2m6jDjy721huAB/CXUMV/A5B+lcvdf8AHzd/9d5f/QzWd8JtW+16FdabI2ZdKuTsBPP2e5zIv/j2+tG6/wCPm7/67y/+hmgCGiiigAooooAKKKKACiiigDptD/48j/13k/pWhP8A6i4/65Sf+gms/Q/+PI/9d5P6VoT/AOouP+uUn/oJpPYqPxI8MHQUtICuByPzoyvqPzr50/cha2dA1+60S4yN0llKw+0wZ/DzI8/xD9f1GLlfUfnRlfUfnTjJxd4mOIw9PE03SqpXTPb7S7tb23hurWVZIZV3Iy/qCPUdxU9eRaBr11olx/FJZSsPtMGfw8yPP8Q/X9R6taXdrfW8N1ayrJDKu5GX+RHqO4r2aFdVV5n5Xm2VVMvqd4PZ/o/MnryqdI1KTxH4s8RaWq3V9outIV0256WEL2cXmeSSMrNj7p9sV6lXL+Gv+Qx8Qf+w5D/AOkcNdB4xr6NrGn65YxX1k5KMTHNFINtvMvDwzJ1DD/6/Q1h+LyLe+8CajJ/x7WviCOGdj92MXcTQq7ewP8AOk1rSdR0q+l8TeHIt9wwB1rS14j1OFeNkYHSZecHHP8AePIg0Q+g+NNAnSNzJZX8RikHCz20ykNhlPR0OD+HcHkA3aK4uz8R3vhtY9M8XpLH5OIbTW4opJLG9iHCGdkBKSdNwP1z66U/jfwTBH5n9tWcpP3I7RjcTOx6KscILZP0oAj8eTJF4V1xCN0l1FFZW6Dlppplj0VYjrYYtYaOxc/NZaaSx94YOT+lcda22q+KNTsNX1S0lsdE0yT7TpGn3Qxd3V1jC3l2n8IX+Bf8tr+LZzbfGesSeT9uvNMisLfc32i50u4iuN+3pH9nMyAn0yQPfrQB1Go65baNot3q93/rII/9HhHDT3Un+qhQdyxwPoa5Cy1TSvE9j4kXWNUurVr27msNNXRzG00CWcrRJJGHhYPJIy5d9xHOeOlW4dE1DVvEFrrfiIW4tdLSVdE0xJDOI55htku7mUDBcr91AOMfn5/q3hnw9H4h8aQ2mj2UEB0bRGjhhtoo0T7RcTJIQqqBllUAn2FAHr0cccUcccahI40VI0UYVEUYVVA9KdWdoupS6tolnqUsaRGfzkkjjJ2KYJng+UHnBKE/jWd4k1u8s5tL0TSPKGq6y8/kzzKWisrO2AM905UgsRuCqO5/EgG3RWHr8es6Totw9hYabqN3E0KfZby6e0dI/MAdojHFJuKjLdPwr5d17xZ4s0fxJrsVpqdxFDb6rfxwxbIn8pUuXVQm9Dt4A7UAe+UVx+keJdVXWbfQPEtlb2t9ewST6Xe2ErSWV8IfvxESfMkg9D+XTP8Awm3hH/oI/wDkpcf/ABFAC+H/APkc/iV/u+Hv/SO4roNd1K40fw/rWq28cc09jZS3EUUpIjdlHCuRyBXAaZ4z8PW/i7x7cy3LrDONAEEhtrg+Z5dlIr42xk4BIGDW3r3inwnrOg69plnq1vJd3mn3EEEYSXLyOhCjJQAdfWgB+j6LDYaXo1teJDeXltYWoupZ4InPnvGHlKblO0Fzjj0rpK4Twz4k8M2fhnw3a3WsWMNzBpVjFNC8wDxusKhlYHoQa6HSdf0HW2uV0q+iujbBDOI1dfL8wHZncBzwelAGrUNzbW15BNa3MSSwTIUkjcZVgfT0PcHtU1FAHAXtlqfgi4nvtHt5LzwvNIZb/SoFJm0xnOXubNf4o+7x9u3qz+hQTw3EMFxbyLJDPGksUinIZHGVYfjXKePMn/hCEGf+Rw0oYBP/AD7XNa3haCa18N6FBMpSVLOMyIeqMxLbT7jOKANiuR8WXdpp+r/D+6vrmG1to9fmDzTusaAtp1wBliQO9ddXP+KNF0zWJvCkeoQicWniWxvIfmZdjxRSqG+Ugng0AbM+p6VbIXnv7OJAMlpLiJAPxY1z+saz4P1/T7rS5tb04Q3XliQwzxyyrsljlXaykY5Ud64bx/4d8LaLp2kTaXpFpazvrEUUjxJhniMLlkPP3TgVlXvgvwlplxp8M+mW22+kkiiuRNdfZoGjQOTdOkpCjB6nH6ZoA6T/AIR3wJ/0MX/lU1D/AON0f8I74E/6GL/yqah/8brnP+Fe+Cf+gdb/APgXef8Ax2j/AIV74J/6B1v/AOBd5/8AHaAOj/4R3wJ/0MX/AJVNQ/8AjdH/AAjvgT/oYv8Ayqah/wDG65z/AIV74J/6B1v/AOBd5/8AHaP+Fe+Cf+gdb/8AgXef/HaAOa1S20fw9qHjjT9Iu2nI8OaJLG32ia4YfaL2USAs7MeCgIHrXpeleH9B/snSWOkaaTJp9oWJsrckk26Ek/LXCaZ4P8IxeJ/GcMmj2csUY0ERxSIXRA9jIz4DEjkgE16NpNnbafpunWdpCtvaQWsKW8CDCRptBKge1AGH4h0bQLLw14kurbSNOguLbSL6aCaGzgjkikSB2V0dVBBBGQRV7QfDmjRaH4feXS7J5jpGntI72sLO7G2QlmZlJJJ5JPetTXLK41Hw/r2n2xUXF7pl5awlztUSyxMi7j6DIrA8OeJ/DNn4a8N2tzrFjDcwaVYxTQvMA8brCgZWB6EGgDa0fRbKGGTUIbG0hfU7y91KdYbeJCfNmZkBKqM7UCqPYVuVS0u/s9U0+y1G0YvbXkKTwsRglG6Aj0I6EetXaACuG8RXlpp/iz4f3N9cwWttHq+oGSed1jjUHS7gDLMQO9dzXOeKNE0vWpvC0WoweelvEljrEI3Mu17SO4jjfKkchZM4oA6OiiigArk/GUrStoGhQsVfWNWto5CDgi0tT9ouCD2yBiusrifEVxNLqF1r0Ub/ANnaHDdaDYOvHnarcD9/MuehSPgfiKAOv/4R3wJ/0MX/AJVNQ/8AjdH/AAjvgT/oYv8Ayqah/wDG65z/AIV74J/6B1v/AOBd5/8AHaP+Fe+Cf+gdb/8AgXef/HaAOj/4R3wJ/wBDF/5VNQ/+N0f8I74E/wChi/8AKpqH/wAbrnP+Fe+Cf+gdb/8AgXef/HaP+Fe+Cf8AoHW//gXef/HaAOj/AOEd8Cf9DF/5VNQ/+N1zeuxeHPCmr+FtT0/WZJn1HUptK1CDULlriK4t3gklZhHKPlZdg5HQGpP+Fe+Cf+gdb/8AgXef/Ha5TxD4T8Jx+I/AcMWi2UcMh1wSRJEQkhSxDJuGeu0kfQ0Adp/wjvgT/oYv/KpqH/xuj/hHfAn/AEMX/lU1D/43XOf8K98E/wDQOt//AALvP/jtH/CvfBP/AEDrf/wLvP8A47QB0f8AwjvgT/oYv/KpqH/xunR+F/AsciSJ4gZo3VkdT4h1DCspyDj7PWL/AMK98E/9A63/APAu8/8AjtdFofhrw9oQnOk2C2v2jZ55WWZ9+zdtzvY9NxoAs3mmaPd2l7bz6dYSwT2ssU0UlpAySIyEMrKVwQQa8c8NaH4fl+FNpqLaVp7XaaXq00dybSAzrJHJcrG4k27gVUAAg8V7rXlsPhzwnF8M/wC2I9Gs1v5NF1a8S8EeJkuIZ7lYZFYdCgUYHvQB1XhHTdLPhfw1cHS7I3B0fT2eY2sBlZjAhJaTbuJz3J5ra0Tw/oiWM5fSNODnV9cQ4soBmOPVrtI0+5wqoAqjsKb4S/5FPwt/2BdN/wDSdK3KAP/Z'
 
 // SVG Icons as components for modern look
 const Icons = {
@@ -93,6 +92,59 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
     </svg>
   ),
+  // Wetter-Icons
+  Cloud: ({ className = "w-5 h-5" }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15a4.5 4.5 0 004.5 4.5H18a3.75 3.75 0 001.332-7.257 3 3 0 00-3.758-3.848 5.25 5.25 0 00-10.233 2.33A4.502 4.502 0 002.25 15z" />
+    </svg>
+  ),
+  CloudSun: ({ className = "w-5 h-5" }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15a4.5 4.5 0 004.5 4.5H18a3.75 3.75 0 001.332-7.257 3 3 0 00-3.758-3.848 5.25 5.25 0 00-10.233 2.33A4.502 4.502 0 002.25 15z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 0V3m4.22 1.78l-.707.707m.707-.707l-.707.707M21 12h-1m1 0h-1m-1.78 4.22l-.707-.707" />
+    </svg>
+  ),
+  CloudRain: ({ className = "w-5 h-5" }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15a4.5 4.5 0 004.5 4.5H18a3.75 3.75 0 001.332-7.257 3 3 0 00-3.758-3.848 5.25 5.25 0 00-10.233 2.33A4.502 4.502 0 002.25 15z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 19v2m4-2v2m4-2v2" />
+    </svg>
+  ),
+  CloudSnow: ({ className = "w-5 h-5" }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15a4.5 4.5 0 004.5 4.5H18a3.75 3.75 0 001.332-7.257 3 3 0 00-3.758-3.848 5.25 5.25 0 00-10.233 2.33A4.502 4.502 0 002.25 15z" />
+      <circle cx="8" cy="20" r="1" fill="currentColor" />
+      <circle cx="12" cy="21" r="1" fill="currentColor" />
+      <circle cx="16" cy="20" r="1" fill="currentColor" />
+    </svg>
+  ),
+  CloudFog: ({ className = "w-5 h-5" }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15a4.5 4.5 0 004.5 4.5H18a3.75 3.75 0 001.332-7.257 3 3 0 00-3.758-3.848 5.25 5.25 0 00-10.233 2.33A4.502 4.502 0 002.25 15z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 21h18M6 18h12" />
+    </svg>
+  ),
+  CloudBolt: ({ className = "w-5 h-5" }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15a4.5 4.5 0 004.5 4.5H18a3.75 3.75 0 001.332-7.257 3 3 0 00-3.758-3.848 5.25 5.25 0 00-10.233 2.33A4.502 4.502 0 002.25 15z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M13 11l-2 4h3l-2 4" />
+    </svg>
+  ),
+  Droplet: ({ className = "w-5 h-5" }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 21.5c-3.5 0-6.5-2.5-6.5-6.5 0-4.5 6.5-11 6.5-11s6.5 6.5 6.5 11c0 4-3 6.5-6.5 6.5z" />
+    </svg>
+  ),
+  SunLarge: ({ className = "w-5 h-5" }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+    </svg>
+  ),
+  Search: ({ className = "w-5 h-5" }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+    </svg>
+  ),
 }
 
 function App() {
@@ -174,12 +226,22 @@ function App() {
     notes: '',
     shared: true,
     businessCardUrl: '',
+    status: 'aktiv',
+    predecessorId: null,
+    transitionDate: null,
   })
   const [contactSaveLoading, setContactSaveLoading] = useState(false)
   const [contactSaveMessage, setContactSaveMessage] = useState('')
   const [contactCardFile, setContactCardFile] = useState(null)
   const [contactCardPreview, setContactCardPreview] = useState('')
+  const [contactCardRotation, setContactCardRotation] = useState(0)
   const contactCardInputRef = useRef(null)
+  const businessCardScanRef = useRef(null)
+  const mobileNavTimerRef = useRef(null)
+  const [businessCardScanning, setBusinessCardScanning] = useState(false)
+  const [businessCardOcrResult, setBusinessCardOcrResult] = useState(null)
+  const [duplicateCheckResult, setDuplicateCheckResult] = useState(null) // { type: 'email'|'phone'|'company', matches: [], ocrData: {} }
+  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false)
   const [contactSearch, setContactSearch] = useState('')
   const [contactViewMode, setContactViewMode] = useState('cards') // 'cards' | 'list'
   const [selectedContact, setSelectedContact] = useState(null) // Für Detail-Ansicht
@@ -202,6 +264,8 @@ function App() {
   const [photoUploading, setPhotoUploading] = useState(false)
   const [allPhotos, setAllPhotos] = useState([])
   const [photosLoading, setPhotosLoading] = useState(false)
+  const [businessCards, setBusinessCards] = useState([])
+  const [businessCardsLoading, setBusinessCardsLoading] = useState(false)
   const [selectedPhoto, setSelectedPhoto] = useState(null)
   const [photoEditorOpen, setPhotoEditorOpen] = useState(false)
   const [crop, setCrop] = useState()
@@ -214,10 +278,8 @@ function App() {
   const [mistralApiKey, setMistralApiKey] = useState(null)
   const [ocrProcessing, setOcrProcessing] = useState({})
   const [apoTab, setApoTab] = useState('amk')
-  const [apoMonth, setApoMonth] = useState(() => {
-    const now = new Date()
-    return { year: now.getFullYear(), month: now.getMonth() }
-  })
+  const [apoYear, setApoYear] = useState(() => new Date().getFullYear())
+  const [apoSearch, setApoSearch] = useState('')
   const [amkMessages, setAmkMessages] = useState([])
   const [amkLoading, setAmkLoading] = useState(false)
   const [recallMessages, setRecallMessages] = useState([])
@@ -311,7 +373,6 @@ function App() {
     { id: 'plan', icon: Icons.Calendar, label: 'Plan' },
     { id: 'calendar', icon: Icons.Calendar, label: 'Kalender' },
     { id: 'chat', icon: Icons.Chat, label: 'Chat' },
-    { id: 'stats', icon: Icons.Chart, label: 'Statistiken' },
     { id: 'settings', icon: Icons.Settings, label: 'Einstellungen' },
   ]
 
@@ -325,6 +386,7 @@ function App() {
       { id: 'uploads', label: 'Uploads' },
       { id: 'library', label: 'Archiv' },
       { id: 'ocr', label: 'OCR' },
+      { id: 'visitenkarten', label: 'Visitenkarten' },
     ],
     apo: [
       { id: 'amk', label: 'AMK' },
@@ -336,18 +398,11 @@ function App() {
     ],
     calendar: [
       { id: 'calendars', label: 'Kalender' },
-      { id: 'events', label: 'Termine' },
-      { id: 'permissions', label: 'Freigaben' },
     ],
     chat: [
       { id: 'inbox', label: 'Inbox' },
       { id: 'team', label: 'Team' },
       { id: 'settings', label: 'Einstellungen' },
-    ],
-    stats: [
-      { id: 'kpis', label: 'KPIs' },
-      { id: 'charts', label: 'Charts' },
-      { id: 'exports', label: 'Exports' },
     ],
     settings: [
       { id: 'pharmacies', label: 'Apotheken' },
@@ -364,9 +419,25 @@ function App() {
     }
   }, [activeView])
 
+  // Mobile Nav: Nach 3 Sekunden automatisch schließen wenn primärer Punkt gewählt
   useEffect(() => {
-    setMobileNavOpen(false)
-  }, [activeView])
+    // Timer abbrechen wenn vorhanden
+    if (mobileNavTimerRef.current) {
+      clearTimeout(mobileNavTimerRef.current)
+      mobileNavTimerRef.current = null
+    }
+    // Nur Timer starten wenn Menü offen ist
+    if (mobileNavOpen) {
+      mobileNavTimerRef.current = setTimeout(() => {
+        setMobileNavOpen(false)
+      }, 2000)
+    }
+    return () => {
+      if (mobileNavTimerRef.current) {
+        clearTimeout(mobileNavTimerRef.current)
+      }
+    }
+  }, [activeView, mobileNavOpen])
 
   useEffect(() => {
     document.body.style.overflow = mobileNavOpen ? 'hidden' : ''
@@ -401,7 +472,7 @@ function App() {
   )
 
   // PDF-Download für AMK-Meldungen
-  const downloadAmkPdf = (msg) => {
+  const downloadAmkPdf = async (msg) => {
     const doc = new jsPDF()
     const pageWidth = doc.internal.pageSize.getWidth()
     const pageHeight = doc.internal.pageSize.getHeight()
@@ -409,9 +480,17 @@ function App() {
     const maxWidth = pageWidth - margin * 2
     let y = 20
 
-    // Logo hinzufügen
+    // Logo laden und einfügen
     try {
-      doc.addImage(AMK_LOGO_BASE64, 'JPEG', margin, y, 60, 28)
+      const logoUrl = `${supabaseUrl}/storage/v1/object/public/assets/AMK-Logo.jpg`
+      const response = await fetch(logoUrl)
+      const blob = await response.blob()
+      const base64 = await new Promise((resolve) => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(reader.result.split(',')[1])
+        reader.readAsDataURL(blob)
+      })
+      doc.addImage(base64, 'JPEG', margin, y, 60, 28)
       y += 38
     } catch (e) {
       y += 10
@@ -458,11 +537,21 @@ function App() {
     doc.line(margin, y, pageWidth - margin, y)
     y += 8
 
-    // Volltext
+    // Volltext (ohne doppelten Titel/Datum am Anfang)
     if (msg.full_text) {
       doc.setFontSize(10)
       doc.setFont('helvetica', 'normal')
-      const textLines = doc.splitTextToSize(msg.full_text, maxWidth)
+
+      // Entferne Titel und Datum am Anfang des Textes, falls vorhanden
+      let cleanedText = msg.full_text
+      if (msg.title && cleanedText.startsWith(msg.title)) {
+        cleanedText = cleanedText.substring(msg.title.length).trim()
+      }
+      // Entferne Datumszeile am Anfang (Format: dd.mm.yyyy oder yyyy-mm-dd)
+      cleanedText = cleanedText.replace(/^\d{1,2}\.\d{1,2}\.\d{4}\s*\n?/, '').trim()
+      cleanedText = cleanedText.replace(/^\d{4}-\d{2}-\d{2}\s*\n?/, '').trim()
+
+      const textLines = doc.splitTextToSize(cleanedText, maxWidth)
 
       for (let i = 0; i < textLines.length; i++) {
         if (y > pageHeight - 40) {
@@ -506,6 +595,202 @@ function App() {
 
     // Download
     const filename = `AMK_${msg.title?.substring(0, 30).replace(/[^a-zA-Z0-9äöüÄÖÜß]/g, '_') || 'Meldung'}.pdf`
+    doc.save(filename)
+  }
+
+  // PDF-Download für Rückrufe
+  const downloadRecallPdf = async (msg) => {
+    const doc = new jsPDF()
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
+    const margin = 20
+    const maxWidth = pageWidth - margin * 2
+    let y = 20
+
+    // Logo laden und einfügen (AMK-Logo)
+    try {
+      const logoUrl = `${supabaseUrl}/storage/v1/object/public/assets/AMK-Logo.jpg`
+      const response = await fetch(logoUrl)
+      const blob = await response.blob()
+      const base64 = await new Promise((resolve) => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(reader.result.split(',')[1])
+        reader.readAsDataURL(blob)
+      })
+      doc.addImage(base64, 'JPEG', margin, y, 60, 28)
+      y += 38
+    } catch (e) {
+      y += 10
+    }
+
+    // Rückruf-Badge
+    doc.setFillColor(239, 68, 68)
+    doc.roundedRect(margin, y, 30, 8, 2, 2, 'F')
+    doc.setFontSize(8)
+    doc.setTextColor(255)
+    doc.setFont('helvetica', 'bold')
+    doc.text('RÜCKRUF', margin + 3, y + 5.5)
+    y += 14
+
+    doc.setTextColor(0)
+
+    // Titel
+    doc.setFontSize(14)
+    doc.setFont('helvetica', 'bold')
+    const titleLines = doc.splitTextToSize(msg.title || '', maxWidth)
+    doc.text(titleLines, margin, y)
+    y += titleLines.length * 7 + 5
+
+    // Produktname
+    if (msg.product_name) {
+      doc.setFontSize(11)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(220, 38, 38)
+      doc.text(msg.product_name, margin, y)
+      y += 8
+    }
+
+    doc.setTextColor(0)
+
+    // Rückrufnummer und Datum in einer Zeile
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(100)
+    let infoLine = ''
+    if (msg.recall_number) infoLine += `Rückrufnummer: ${msg.recall_number}`
+    if (msg.date) {
+      if (infoLine) infoLine += '  |  '
+      infoLine += new Date(msg.date).toLocaleDateString('de-DE')
+    }
+    if (infoLine) {
+      doc.text(infoLine, margin, y)
+      y += 8
+    }
+
+    doc.setTextColor(0)
+
+    // Trennlinie
+    doc.setDrawColor(200)
+    doc.line(margin, y, pageWidth - margin, y)
+    y += 8
+
+    // KI-Zusammenfassung (falls vorhanden)
+    if (msg.ai_zusammenfassung) {
+      doc.setFillColor(240, 249, 255)
+      const summaryLines = doc.splitTextToSize(msg.ai_zusammenfassung.replace(/[*#]/g, ''), maxWidth - 10)
+      const boxHeight = summaryLines.length * 5 + 12
+      doc.roundedRect(margin, y, maxWidth, boxHeight, 3, 3, 'F')
+
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(59, 130, 246)
+      doc.text('KI-Zusammenfassung:', margin + 5, y + 6)
+
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(0)
+      doc.setFontSize(9)
+      doc.text(summaryLines, margin + 5, y + 12)
+      y += boxHeight + 8
+    }
+
+    // Chargen-Info
+    if (msg.ai_chargen_alle !== null || (msg.ai_chargen_liste && msg.ai_chargen_liste.length > 0)) {
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Betroffene Chargen:', margin, y)
+      y += 6
+      doc.setFont('helvetica', 'normal')
+
+      if (msg.ai_chargen_alle) {
+        doc.setTextColor(220, 38, 38)
+        doc.text('ALLE CHARGEN BETROFFEN', margin, y)
+        doc.setTextColor(0)
+        y += 6
+      } else if (msg.ai_chargen_liste && msg.ai_chargen_liste.length > 0) {
+        const chargenText = msg.ai_chargen_liste.join(', ')
+        const chargenLines = doc.splitTextToSize(chargenText, maxWidth)
+        doc.text(chargenLines, margin, y)
+        y += chargenLines.length * 5 + 2
+      }
+      y += 4
+    }
+
+    // PZN-Info
+    if (msg.ai_pzn_betroffen && msg.ai_pzn_betroffen.length > 0) {
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Betroffene PZN:', margin, y)
+      y += 6
+      doc.setFont('helvetica', 'normal')
+      const pznText = msg.ai_pzn_betroffen.join(', ')
+      const pznLines = doc.splitTextToSize(pznText, maxWidth)
+      doc.text(pznLines, margin, y)
+      y += pznLines.length * 5 + 6
+    }
+
+    // Trennlinie vor Volltext
+    if (msg.full_text) {
+      doc.setDrawColor(200)
+      doc.line(margin, y, pageWidth - margin, y)
+      y += 8
+    }
+
+    // Volltext
+    if (msg.full_text) {
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+
+      let cleanedText = msg.full_text
+      if (msg.title && cleanedText.startsWith(msg.title)) {
+        cleanedText = cleanedText.substring(msg.title.length).trim()
+      }
+      cleanedText = cleanedText.replace(/^\d{1,2}\.\d{1,2}\.\d{4}\s*\n?/, '').trim()
+      cleanedText = cleanedText.replace(/^\d{4}-\d{2}-\d{2}\s*\n?/, '').trim()
+
+      const textLines = doc.splitTextToSize(cleanedText, maxWidth)
+
+      for (let i = 0; i < textLines.length; i++) {
+        if (y > pageHeight - 40) {
+          doc.addPage()
+          y = 20
+        }
+        doc.text(textLines[i], margin, y)
+        y += 5
+      }
+      y += 10
+    }
+
+    // Fußzeile mit Unterschriftsfeldern
+    if (y > pageHeight - 80) {
+      doc.addPage()
+      y = 20
+    }
+
+    doc.setDrawColor(200)
+    doc.line(margin, y, pageWidth - margin, y)
+    y += 10
+
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    doc.text('Bearbeitet durch:', margin, y)
+    doc.line(margin + 35, y, margin + 100, y)
+    y += 8
+    doc.text('Bearbeitet am:', margin, y)
+    doc.line(margin + 35, y, margin + 100, y)
+    y += 12
+
+    doc.setFont('helvetica', 'bold')
+    doc.text('Zur Kenntnis genommen:', margin, y)
+    y += 8
+    doc.setFont('helvetica', 'normal')
+    for (let i = 0; i < 5; i++) {
+      doc.text('Name / Datum:', margin, y)
+      doc.line(margin + 30, y, margin + 100, y)
+      y += 8
+    }
+
+    // Download
+    const filename = `Rueckruf_${msg.product_name?.substring(0, 30).replace(/[^a-zA-Z0-9äöüÄÖÜß]/g, '_') || msg.title?.substring(0, 30).replace(/[^a-zA-Z0-9äöüÄÖÜß]/g, '_') || 'Meldung'}.pdf`
     doc.save(filename)
   }
 
@@ -590,6 +875,7 @@ function App() {
     })
     setContactCardFile(null)
     setContactCardPreview(contact?.business_card_url || '')
+    setContactCardRotation(0)
   }
 
   const closeContactModal = () => {
@@ -597,10 +883,70 @@ function App() {
     setContactSaveMessage('')
     setContactCardFile(null)
     setContactCardPreview('')
+    setContactCardRotation(0)
   }
 
   const handleContactInput = (field, value) => {
     setContactForm((prev) => ({ ...prev, [field]: value }))
+  }
+
+  // Bild komprimieren (max 800px Breite, 70% Qualität)
+  const compressImage = (file, maxWidth = 800, quality = 0.7) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const img = new Image()
+        img.onload = () => {
+          const canvas = document.createElement('canvas')
+          let width = img.width
+          let height = img.height
+
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width
+            width = maxWidth
+          }
+
+          canvas.width = width
+          canvas.height = height
+          const ctx = canvas.getContext('2d')
+          ctx.drawImage(img, 0, 0, width, height)
+
+          canvas.toBlob((blob) => {
+            resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }))
+          }, 'image/jpeg', quality)
+        }
+        img.src = e.target.result
+      }
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const rotateImage = (file, degrees) => {
+    return new Promise((resolve) => {
+      if (degrees === 0) {
+        resolve(file)
+        return
+      }
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const img = new Image()
+        img.onload = () => {
+          const canvas = document.createElement('canvas')
+          const isRotated90or270 = degrees === 90 || degrees === 270
+          canvas.width = isRotated90or270 ? img.height : img.width
+          canvas.height = isRotated90or270 ? img.width : img.height
+          const ctx = canvas.getContext('2d')
+          ctx.translate(canvas.width / 2, canvas.height / 2)
+          ctx.rotate((degrees * Math.PI) / 180)
+          ctx.drawImage(img, -img.width / 2, -img.height / 2)
+          canvas.toBlob((blob) => {
+            resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }))
+          }, 'image/jpeg', 0.9)
+        }
+        img.src = e.target.result
+      }
+      reader.readAsDataURL(file)
+    })
   }
 
   const handleContactCardChange = (event) => {
@@ -608,6 +954,247 @@ function App() {
     if (!file) return
     setContactCardFile(file)
     setContactCardPreview(URL.createObjectURL(file))
+    setContactCardRotation(0)
+  }
+
+  // Duplikat-Prüfung für Kontakte
+  const checkContactDuplicates = async (ocrData) => {
+    const checks = []
+
+    // 1. Prüfe E-Mail
+    if (ocrData.email?.trim()) {
+      const { data: emailMatches } = await supabase
+        .from('contacts')
+        .select('*')
+        .ilike('email', ocrData.email.trim())
+        .eq('status', 'aktiv')
+      if (emailMatches?.length > 0) {
+        checks.push({ type: 'email', matches: emailMatches, field: ocrData.email })
+      }
+    }
+
+    // 2. Prüfe Telefon/Mobil
+    const phoneToCheck = ocrData.phone?.trim() || ocrData.mobile?.trim()
+    if (phoneToCheck) {
+      const normalizedPhone = phoneToCheck.replace(/[\s\-\/]/g, '')
+      const { data: phoneMatches } = await supabase
+        .from('contacts')
+        .select('*')
+        .eq('status', 'aktiv')
+        .or(`phone.ilike.%${normalizedPhone}%,mobile.ilike.%${normalizedPhone}%`)
+      if (phoneMatches?.length > 0) {
+        checks.push({ type: 'phone', matches: phoneMatches, field: phoneToCheck })
+      }
+    }
+
+    // 3. Prüfe Firma (für Vertreterwechsel)
+    if (ocrData.company?.trim()) {
+      const { data: companyMatches } = await supabase
+        .from('contacts')
+        .select('*')
+        .ilike('company', ocrData.company.trim())
+        .eq('status', 'aktiv')
+
+      // Nur wenn andere Person bei gleicher Firma
+      const differentPerson = companyMatches?.filter((c) =>
+        c.first_name?.toLowerCase() !== ocrData.firstName?.toLowerCase() ||
+        c.last_name?.toLowerCase() !== ocrData.lastName?.toLowerCase()
+      )
+      if (differentPerson?.length > 0) {
+        checks.push({ type: 'company', matches: differentPerson, field: ocrData.company })
+      }
+    }
+
+    return checks
+  }
+
+  // Visitenkarte scannen und OCR durchführen
+  const handleBusinessCardScan = async (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    setBusinessCardScanning(true)
+    setBusinessCardOcrResult(null)
+    setDuplicateCheckResult(null)
+
+    try {
+      // Bild komprimieren
+      const compressedFile = await compressImage(file, 1200, 0.8)
+      setContactCardFile(compressedFile)
+      setContactCardPreview(URL.createObjectURL(compressedFile))
+      setContactCardRotation(0)
+
+      // API Key holen
+      let apiKey = mistralApiKey
+      if (!apiKey) {
+        apiKey = await fetchMistralApiKey()
+      }
+      if (!apiKey) {
+        throw new Error('Mistral API Key nicht gefunden')
+      }
+
+      // Bild als Base64 für OCR
+      const base64 = await new Promise((resolve) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result.split(',')[1])
+        reader.readAsDataURL(compressedFile)
+      })
+
+      // OCR durchführen
+      const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'pixtral-12b-2409',
+          messages: [{
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: `Analysiere diese Visitenkarte und extrahiere die Daten als JSON. Antworte NUR mit dem JSON-Objekt, ohne Erklärung:
+{
+  "firstName": "",
+  "lastName": "",
+  "company": "",
+  "position": "",
+  "email": "",
+  "phone": "",
+  "mobile": "",
+  "website": "",
+  "street": "",
+  "postalCode": "",
+  "city": ""
+}
+Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder leer.`
+              },
+              {
+                type: 'image_url',
+                image_url: { url: `data:image/jpeg;base64,${base64}` }
+              }
+            ]
+          }],
+          max_tokens: 500,
+        }),
+      })
+
+      const result = await response.json()
+      const content = result.choices?.[0]?.message?.content || ''
+
+      // JSON extrahieren
+      const jsonMatch = content.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0])
+        setBusinessCardOcrResult(parsed)
+
+        // Duplikat-Prüfung
+        const duplicates = await checkContactDuplicates(parsed)
+
+        if (duplicates.length > 0) {
+          // Duplikate gefunden - Dialog zeigen
+          setDuplicateCheckResult({ checks: duplicates, ocrData: parsed })
+          setDuplicateDialogOpen(true)
+        } else {
+          // Kein Duplikat - direkt Formular öffnen
+          openContactFormWithOcrData(parsed)
+        }
+      }
+    } catch (err) {
+      console.error('Visitenkarten-Scan fehlgeschlagen:', err)
+      setContactSaveMessage('OCR fehlgeschlagen: ' + (err.message || 'Unbekannter Fehler'))
+    } finally {
+      setBusinessCardScanning(false)
+      // Input zurücksetzen für erneuten Scan
+      event.target.value = ''
+    }
+  }
+
+  // Kontaktformular mit OCR-Daten öffnen
+  const openContactFormWithOcrData = (ocrData, predecessorId = null, transitionDate = null) => {
+    setEditingContact({ id: null })
+    setContactSaveMessage('')
+    setContactForm({
+      firstName: ocrData.firstName || '',
+      lastName: ocrData.lastName || '',
+      company: ocrData.company || '',
+      position: ocrData.position || '',
+      email: ocrData.email || '',
+      phone: ocrData.phone || '',
+      mobile: ocrData.mobile || '',
+      website: ocrData.website || '',
+      street: ocrData.street || '',
+      postalCode: ocrData.postalCode || '',
+      city: ocrData.city || '',
+      country: 'DE',
+      contactType: 'business',
+      tags: [],
+      notes: '',
+      shared: true,
+      businessCardUrl: '',
+      status: 'aktiv',
+      predecessorId: predecessorId,
+      transitionDate: transitionDate,
+    })
+    setDuplicateDialogOpen(false)
+  }
+
+  // Duplikat-Dialog: Bestehenden Kontakt aktualisieren
+  const handleDuplicateUpdate = async (existingContact) => {
+    setEditingContact(existingContact)
+    setContactSaveMessage('')
+    const ocrData = duplicateCheckResult?.ocrData || {}
+    // Behalte das neue Foto (contactCardFile bleibt unverändert aus dem Scan)
+    // Preview zeigt das neue Foto, businessCardUrl bleibt leer damit das neue Foto hochgeladen wird
+    setContactForm({
+      firstName: ocrData.firstName || existingContact.first_name || '',
+      lastName: ocrData.lastName || existingContact.last_name || '',
+      company: ocrData.company || existingContact.company || '',
+      position: ocrData.position || existingContact.position || '',
+      email: ocrData.email || existingContact.email || '',
+      phone: ocrData.phone || existingContact.phone || '',
+      mobile: ocrData.mobile || existingContact.mobile || '',
+      website: ocrData.website || existingContact.website || '',
+      street: ocrData.street || existingContact.street || '',
+      postalCode: ocrData.postalCode || existingContact.postal_code || '',
+      city: ocrData.city || existingContact.city || '',
+      country: existingContact.country || 'DE',
+      contactType: existingContact.contact_type || 'business',
+      tags: existingContact.tags || [],
+      notes: existingContact.notes || '',
+      shared: existingContact.shared ?? true,
+      businessCardUrl: '', // Leer lassen - neues Foto wird beim Speichern hochgeladen
+      status: existingContact.status || 'aktiv',
+      predecessorId: existingContact.predecessor_id || null,
+      transitionDate: existingContact.transition_date || null,
+    })
+    // Preview zeigt das neue gescannte Foto (wurde in handleBusinessCardScan gesetzt)
+    setDuplicateDialogOpen(false)
+  }
+
+  // Duplikat-Dialog: Neuer Vertreter (Vorgänger wird inaktiv)
+  const handleNewRepresentative = async (predecessorContact) => {
+    const today = new Date().toISOString().split('T')[0]
+
+    // Alten Kontakt auf inaktiv setzen
+    await supabase
+      .from('contacts')
+      .update({ status: 'inaktiv' })
+      .eq('id', predecessorContact.id)
+
+    // Neuen Kontakt mit Vorgänger-Referenz öffnen
+    const ocrData = duplicateCheckResult?.ocrData || {}
+    openContactFormWithOcrData(ocrData, predecessorContact.id, today)
+
+    // Kontakte neu laden
+    fetchContacts()
+  }
+
+  // Duplikat-Dialog: Komplett neuen Kontakt erstellen
+  const handleCreateNewContact = () => {
+    const ocrData = duplicateCheckResult?.ocrData || {}
+    openContactFormWithOcrData(ocrData)
   }
 
   const handleContactSubmit = async (e) => {
@@ -644,16 +1231,22 @@ function App() {
       notes: contactForm.notes.trim(),
       shared: contactForm.shared,
       business_card_url: contactForm.businessCardUrl || null,
+      status: contactForm.status || 'aktiv',
+      predecessor_id: contactForm.predecessorId || null,
+      transition_date: contactForm.transitionDate || null,
     }
 
     const uploadBusinessCard = async (contactId) => {
       if (!contactCardFile) return null
-      const fileExt = contactCardFile.name.split('.').pop() || 'jpg'
-      const filePath = `${contactId}/${Date.now()}.${fileExt}`
+      // Bild drehen falls nötig
+      const fileToUpload = contactCardRotation !== 0
+        ? await rotateImage(contactCardFile, contactCardRotation)
+        : contactCardFile
+      const filePath = `${contactId}/${Date.now()}.jpg`
       const { error: uploadError } = await supabase
         .storage
         .from('business-cards')
-        .upload(filePath, contactCardFile, { upsert: true })
+        .upload(filePath, fileToUpload, { upsert: true })
 
       if (uploadError) {
         throw new Error(uploadError.message)
@@ -1332,6 +1925,20 @@ function App() {
     return map[code] || 'Wetter'
   }
 
+  const WeatherIcon = ({ code, className = "w-5 h-5" }) => {
+    // 0: Klar, 1-3: Bewölkt, 45-48: Nebel, 51-55: Niesel, 61-65: Regen, 71-75: Schnee, 80-82: Schauer, 95: Gewitter
+    if (code === 0) return <Icons.SunLarge className={className} />
+    if (code === 1 || code === 2) return <Icons.CloudSun className={className} />
+    if (code === 3) return <Icons.Cloud className={className} />
+    if (code === 45 || code === 48) return <Icons.CloudFog className={className} />
+    if (code >= 51 && code <= 55) return <Icons.CloudRain className={className} />
+    if (code >= 61 && code <= 65) return <Icons.CloudRain className={className} />
+    if (code >= 71 && code <= 75) return <Icons.CloudSnow className={className} />
+    if (code >= 80 && code <= 82) return <Icons.CloudRain className={className} />
+    if (code === 95) return <Icons.CloudBolt className={className} />
+    return <Icons.Cloud className={className} />
+  }
+
   const fetchWeather = async (location) => {
     if (!location) return
     setWeatherLoading(true)
@@ -1359,7 +1966,7 @@ function App() {
       if (!result) throw new Error('Ort nicht gefunden.')
 
       const weatherResponse = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${result.latitude}&longitude=${result.longitude}&current=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,weathercode,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,sunrise,sunset&forecast_days=5&timezone=auto`,
+        `https://api.open-meteo.com/v1/forecast?latitude=${result.latitude}&longitude=${result.longitude}&current=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,weathercode,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,weathercode,sunrise,sunset&forecast_days=5&timezone=auto`,
       )
       if (!weatherResponse.ok) throw new Error('Wetterdaten konnten nicht geladen werden.')
       const weatherJson = await weatherResponse.json()
@@ -1369,6 +1976,8 @@ function App() {
         min: daily.temperature_2m_min?.[index],
         max: daily.temperature_2m_max?.[index],
         precipitation: daily.precipitation_sum?.[index],
+        precipitationProbability: daily.precipitation_probability_max?.[index],
+        weatherCode: daily.weathercode?.[index],
         sunrise: daily.sunrise?.[index],
         sunset: daily.sunset?.[index],
       }))
@@ -1581,6 +2190,70 @@ function App() {
     await fetchLatestPhoto()
   }
 
+  const fetchBusinessCards = async () => {
+    setBusinessCardsLoading(true)
+    try {
+      // Hole alle Kontakte mit Visitenkarten-URL
+      const { data: contactsWithCards, error } = await supabase
+        .from('contacts')
+        .select('id, first_name, last_name, company, business_card_url, created_at')
+        .not('business_card_url', 'is', null)
+        .neq('business_card_url', '')
+        .order('created_at', { ascending: false })
+
+      if (error || !contactsWithCards) {
+        console.error('Fehler beim Laden der Visitenkarten:', error)
+        setBusinessCards([])
+        setBusinessCardsLoading(false)
+        return
+      }
+
+      const cards = contactsWithCards.map((contact) => {
+        const url = contact.business_card_url
+        const ext = url.split('.').pop()?.toUpperCase() || 'JPG'
+        return {
+          id: contact.id,
+          contactName: [contact.first_name, contact.last_name].filter(Boolean).join(' ') || 'Unbekannt',
+          company: contact.company || '',
+          url: url,
+          createdAt: contact.created_at,
+          format: ext,
+        }
+      })
+      setBusinessCards(cards)
+    } catch (err) {
+      console.error('Fehler beim Laden der Visitenkarten:', err)
+      setBusinessCards([])
+    }
+    setBusinessCardsLoading(false)
+  }
+
+  const deleteBusinessCard = async (card, event) => {
+    event.stopPropagation()
+    if (!confirm(`Visitenkarte von "${card.contactName}" unwiderruflich löschen?`)) return
+
+    // Lösche die URL aus dem Kontakt
+    const { error } = await supabase
+      .from('contacts')
+      .update({ business_card_url: null })
+      .eq('id', card.id)
+
+    if (error) {
+      alert('Löschen fehlgeschlagen: ' + error.message)
+      return
+    }
+
+    // Optional: Versuche auch die Datei aus dem Storage zu löschen (falls im eigenen Bucket)
+    if (card.url.includes('/business-cards/')) {
+      const pathMatch = card.url.match(/business-cards\/(.+)$/)
+      if (pathMatch) {
+        await supabase.storage.from('business-cards').remove([pathMatch[1]])
+      }
+    }
+
+    setBusinessCards((prev) => prev.filter((c) => c.id !== card.id))
+  }
+
   const fetchMistralApiKey = async () => {
     const { data, error } = await supabase
       .from('api_keys')
@@ -1696,10 +2369,10 @@ function App() {
     setCompletedCrop(undefined)
   }
 
-  const fetchAmkMessages = async (year, month) => {
+  const fetchAmkMessages = async (year) => {
     setAmkLoading(true)
-    const startDate = new Date(year, month, 1).toISOString().split('T')[0]
-    const endDate = new Date(year, month + 1, 0).toISOString().split('T')[0]
+    const startDate = `${year}-01-01`
+    const endDate = `${year}-12-31`
     const { data, error } = await supabase
       .from('abda_amk_messages')
       .select('*')
@@ -1714,10 +2387,10 @@ function App() {
     setAmkLoading(false)
   }
 
-  const fetchRecallMessages = async (year, month) => {
+  const fetchRecallMessages = async (year) => {
     setRecallLoading(true)
-    const startDate = new Date(year, month, 1).toISOString().split('T')[0]
-    const endDate = new Date(year, month + 1, 0).toISOString().split('T')[0]
+    const startDate = `${year}-01-01`
+    const endDate = `${year}-12-31`
     const { data, error } = await supabase
       .from('abda_recall')
       .select('*')
@@ -1732,10 +2405,10 @@ function App() {
     setRecallLoading(false)
   }
 
-  const fetchLavAusgaben = async (year, month) => {
+  const fetchLavAusgaben = async (year) => {
     setLavLoading(true)
-    const startDate = new Date(year, month, 1).toISOString().split('T')[0]
-    const endDate = new Date(year, month + 1, 0).toISOString().split('T')[0]
+    const startDate = `${year}-01-01`
+    const endDate = `${year}-12-31`
     const { data, error } = await supabase
       .from('lav_ausgaben')
       .select(`
@@ -1753,22 +2426,49 @@ function App() {
     setLavLoading(false)
   }
 
-  const changeApoMonth = (delta) => {
-    setApoMonth((prev) => {
-      let newMonth = prev.month + delta
-      let newYear = prev.year
-      if (newMonth < 0) {
-        newMonth = 11
-        newYear -= 1
-      } else if (newMonth > 11) {
-        newMonth = 0
-        newYear += 1
-      }
-      return { year: newYear, month: newMonth }
-    })
+  const changeApoYear = (delta) => {
+    setApoYear((prev) => prev + delta)
   }
 
   const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']
+
+  const groupByMonth = (items, dateField) => {
+    const groups = {}
+    items.forEach((item) => {
+      const dateValue = item[dateField]
+      if (dateValue) {
+        const month = new Date(dateValue).getMonth()
+        if (!groups[month]) groups[month] = []
+        groups[month].push(item)
+      }
+    })
+    return [11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
+      .filter((m) => groups[m] && groups[m].length > 0)
+      .map((m) => ({ month: m, items: groups[m] }))
+  }
+
+  const filterApoItems = (items, searchTerm, type) => {
+    if (!searchTerm.trim()) return items
+    const term = searchTerm.toLowerCase()
+    return items.filter((item) => {
+      if (type === 'amk' || type === 'recall') {
+        return (
+          item.title?.toLowerCase().includes(term) ||
+          item.description?.toLowerCase().includes(term) ||
+          item.full_text?.toLowerCase().includes(term) ||
+          item.category?.toLowerCase().includes(term) ||
+          item.product_name?.toLowerCase().includes(term)
+        )
+      } else if (type === 'lav') {
+        const themeMatch = item.lav_themes?.some((t) => t.titel?.toLowerCase().includes(term))
+        return (
+          item.subject?.toLowerCase().includes(term) ||
+          themeMatch
+        )
+      }
+      return false
+    })
+  }
 
   const saveEditedPhoto = async () => {
     if (!selectedPhoto || !photoImgRef.current) return
@@ -2085,16 +2785,22 @@ function App() {
   }, [session])
 
   useEffect(() => {
+    if (session && activeView === 'photos' && secondaryTab === 'visitenkarten') {
+      fetchBusinessCards()
+    }
+  }, [session, activeView, secondaryTab])
+
+  useEffect(() => {
     if (session && activeView === 'apo') {
       if (apoTab === 'amk') {
-        fetchAmkMessages(apoMonth.year, apoMonth.month)
+        fetchAmkMessages(apoYear)
       } else if (apoTab === 'recall') {
-        fetchRecallMessages(apoMonth.year, apoMonth.month)
+        fetchRecallMessages(apoYear)
       } else if (apoTab === 'lav') {
-        fetchLavAusgaben(apoMonth.year, apoMonth.month)
+        fetchLavAusgaben(apoYear)
       }
     }
-  }, [session, activeView, apoTab, apoMonth])
+  }, [session, activeView, apoTab, apoYear])
 
   useEffect(() => {
     if (session?.user?.id) {
@@ -2340,14 +3046,27 @@ function App() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4">
-            {/* Camera button */}
+            {/* Camera button - kontextabhängig */}
             <button
-              onClick={() => cameraInputRef.current?.click()}
-              className={`p-2 rounded-[6px] hover:bg-[#F5F7FA] ${theme.textSecondary} transition-colors ${photoUploading ? 'opacity-50' : ''}`}
-              title="Foto aufnehmen"
-              disabled={photoUploading}
+              onClick={() => {
+                if (activeView === 'settings' && settingsTab === 'contacts') {
+                  businessCardScanRef.current?.click()
+                } else {
+                  cameraInputRef.current?.click()
+                }
+              }}
+              className={`p-2 rounded-[6px] hover:bg-[#F5F7FA] ${theme.textSecondary} transition-colors ${(photoUploading || businessCardScanning) ? 'opacity-50' : ''}`}
+              title={(activeView === 'settings' && settingsTab === 'contacts') ? 'Visitenkarte scannen' : 'Foto aufnehmen'}
+              disabled={photoUploading || businessCardScanning}
             >
-              <Icons.Camera />
+              {businessCardScanning ? (
+                <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              ) : (
+                <Icons.Camera />
+              )}
             </button>
             <input
               ref={cameraInputRef}
@@ -2355,6 +3074,15 @@ function App() {
               accept="image/*"
               capture="environment"
               onChange={handleCameraCapture}
+              className="hidden"
+            />
+            {/* Separater Input für Visitenkarten-Scan (Header) */}
+            <input
+              ref={businessCardScanRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handleBusinessCardScan}
               className="hidden"
             />
 
@@ -2396,8 +3124,9 @@ function App() {
           {/* Mobile nav drawer */}
           <aside
             className={`
+              mobile-nav-drawer
               ${theme.sidebarBg} text-white fixed inset-y-0 left-0 z-50 w-[85%] max-w-[320px]
-              transform ${mobileNavOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-200 ease-out
+              transform ${mobileNavOpen ? 'translate-x-0 duration-200' : '-translate-x-full duration-700'} transition-transform ease-out
               lg:hidden
             `}
           >
@@ -2529,28 +3258,12 @@ function App() {
             <div className={activeView === 'chat' ? 'w-full' : 'max-w-5xl'}>
               {activeView === 'dashboard' && (
                 <>
-                      <h2 className="text-2xl lg:text-3xl font-semibold mb-6 tracking-tight">Dashboard</h2>
+                  <h2 className="text-2xl lg:text-3xl font-semibold mb-6 tracking-tight">Dashboard</h2>
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    <div className={`${theme.panel} rounded-2xl p-6 border ${theme.border} ${theme.cardShadow}`}>
-                      <h3 className={`text-lg font-medium mb-2 ${theme.text}`}>Willkommen bei Kaeee</h3>
-                      <p className={theme.textMuted}>
-                        Dein persönliches Dashboard ist bereit.
-                      </p>
-                    </div>
-                    <div className={`${theme.panel} rounded-2xl p-6 border ${theme.border} ${theme.cardShadow}`}>
-                      <h3 className={`text-lg font-medium mb-2 ${theme.text}`}>Nächste Schritte</h3>
-                      <p className={theme.textMuted}>
-                        Verknüpfe Daten, um Live-Statistiken zu sehen.
-                      </p>
-                    </div>
-                    <div className={`${theme.panel} rounded-2xl p-4 border ${theme.border} ${theme.cardShadow} flex flex-col gap-3`}>
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <h3 className={`text-lg font-medium ${theme.text}`}>Wetter</h3>
-                          <p className={`text-xs ${theme.textMuted}`}>
-                            {weatherData?.name || weatherLocation || 'Ort wählen'}
-                          </p>
-                        </div>
+                    {/* Wetter-Widget */}
+                    <div className={`${theme.panel} rounded-2xl p-5 border ${theme.border} ${theme.cardShadow}`}>
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className={`text-lg font-medium ${theme.text}`}>Wetter</h3>
                         <button
                           type="button"
                           onClick={openWeatherModal}
@@ -2560,61 +3273,69 @@ function App() {
                           <Icons.Settings />
                         </button>
                       </div>
+
                       {weatherLoading && (
-                        <p className={`text-xs ${theme.textMuted}`}>Wetterdaten werden geladen...</p>
+                        <p className={`text-sm ${theme.textMuted}`}>Wetterdaten werden geladen...</p>
                       )}
                       {!weatherLoading && weatherError && (
-                        <p className="text-rose-400 text-xs">{weatherError}</p>
+                        <p className="text-rose-400 text-sm">{weatherError}</p>
                       )}
                       {!weatherLoading && !weatherError && weatherData && (
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-2xl font-semibold">
-                                {Math.round(weatherData.temperature)}°
+                        <div className="space-y-4">
+                          {/* Kopfbereich: Icon links, Daten rechts */}
+                          <div className="flex items-start gap-4">
+                            {/* Großes Wetter-Icon */}
+                            <div className={`${theme.textSecondary} flex-shrink-0`}>
+                              <WeatherIcon code={weatherData.weatherCode} className="w-16 h-16" />
+                            </div>
+                            {/* Textblock rechts */}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-4xl font-semibold tracking-tight">
+                                {Math.round(weatherData.temperature)}°C
                               </p>
-                              <p className={`text-xs ${theme.textMuted}`}>
+                              <p className={`text-sm font-medium ${theme.primary}`}>
+                                {weatherData.name || weatherLocation}
+                              </p>
+                              <p className={`text-sm ${theme.text}`}>
                                 {weatherDescription(weatherData.weatherCode)}
                               </p>
-                            </div>
-                            <div className="text-right text-xs">
-                              <p className={theme.textMuted}>Wind</p>
-                              <p className={theme.text}>
-                                {Math.round(weatherData.wind)} km/h
+                              <p className={`text-xs ${theme.textMuted}`}>
+                                Gefühlt {Math.round(weatherData.feelsLike ?? weatherData.temperature)}°C
                               </p>
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-2 gap-2 text-xs">
-                            <div className={`rounded-lg border ${theme.border} px-2.5 py-2`}>
-                              <p className={theme.textMuted}>Gefühlt</p>
-                              <p className={theme.text}>{Math.round(weatherData.feelsLike ?? weatherData.temperature)}°</p>
-                            </div>
-                            <div className={`rounded-lg border ${theme.border} px-2.5 py-2`}>
-                              <p className={theme.textMuted}>Luftfeuchte</p>
-                              <p className={theme.text}>{Math.round(weatherData.humidity ?? 0)}%</p>
-                            </div>
-                            <div className={`rounded-lg border ${theme.border} px-2.5 py-2`}>
-                              <p className={theme.textMuted}>Niederschlag</p>
-                              <p className={theme.text}>{Math.round(weatherData.precipitation ?? 0)} mm</p>
-                            </div>
-                            <div className={`rounded-lg border ${theme.border} px-2.5 py-2`}>
-                              <p className={theme.textMuted}>Heute</p>
-                              <p className={theme.text}>
-                                {Math.round(weatherData.daily?.[0]?.min ?? 0)}° / {Math.round(weatherData.daily?.[0]?.max ?? 0)}°
-                              </p>
+                          {/* Min/Max und Niederschlag */}
+                          <div className="flex items-center justify-between text-sm">
+                            <p className={theme.textSecondary}>
+                              Min {Math.round(weatherData.daily?.[0]?.min ?? 0)}°C · Max {Math.round(weatherData.daily?.[0]?.max ?? 0)}°C
+                            </p>
+                            <div className={`flex items-center gap-1 ${theme.textSecondary}`}>
+                              <Icons.Droplet className="w-4 h-4" />
+                              <span>{weatherData.daily?.[0]?.precipitationProbability ?? 0}%</span>
                             </div>
                           </div>
 
-                          <div className="flex flex-wrap gap-2 text-xs">
-                            {weatherData.daily?.slice(0, 5).map((day) => {
-                              const weekday = new Date(day.date).toLocaleDateString('de-DE', { weekday: 'short' })
+                          {/* 3-Tage-Vorschau */}
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            {weatherData.daily?.slice(0, 3).map((day, index) => {
+                              const dayLabel = index === 0 ? 'Heute' : index === 1 ? 'Morgen' : new Date(day.date).toLocaleDateString('de-DE', { weekday: 'short' })
                               return (
-                                <div key={day.date} className={`rounded-full border ${theme.border} px-2.5 py-1.5`}>
-                                  <span className={theme.textMuted}>{weekday}</span>{' '}
-                                  <span className={theme.text}>
-                                    {Math.round(day.min ?? 0)}°/{Math.round(day.max ?? 0)}°
-                                  </span>
+                                <div key={day.date} className={`bg-[#F0F2F5] rounded-xl p-3 text-center`}>
+                                  <p className={`text-xs font-medium ${theme.textSecondary} mb-2`}>{dayLabel}</p>
+                                  <div className={`flex justify-center mb-2 ${theme.textSecondary}`}>
+                                    <WeatherIcon code={day.weatherCode ?? weatherData.weatherCode} className="w-8 h-8" />
+                                  </div>
+                                  <p className={`text-base font-semibold ${theme.text}`}>
+                                    {Math.round(day.max ?? 0)}°
+                                  </p>
+                                  <p className={`text-sm ${theme.textMuted}`}>
+                                    {Math.round(day.min ?? 0)}°
+                                  </p>
+                                  <div className={`flex items-center justify-center gap-1 mt-1 text-xs ${theme.textMuted}`}>
+                                    <Icons.Droplet className="w-3 h-3" />
+                                    <span>{day.precipitationProbability ?? 0}%</span>
+                                  </div>
                                 </div>
                               )
                             })}
@@ -2628,7 +3349,7 @@ function App() {
                       )}
                     </div>
                     {/* Kalender Widget */}
-                    <div className={`${theme.panel} rounded-2xl p-4 border ${theme.border} ${theme.cardShadow} flex flex-col gap-3 sm:col-span-2`}>
+                    <div className={`${theme.panel} rounded-2xl p-4 border ${theme.border} ${theme.cardShadow} flex flex-col gap-3`}>
                       <div className="flex items-center justify-between">
                         <h3 className={`text-lg font-medium ${theme.text}`}>Termine</h3>
                         <button
@@ -2763,209 +3484,334 @@ function App() {
 
               {activeView === 'photos' && (
                 <>
-                  <h2 className="text-2xl lg:text-3xl font-semibold mb-6 tracking-tight">Fotos</h2>
-                  {photosLoading ? (
-                    <p className={theme.textMuted}>Fotos werden geladen...</p>
-                  ) : allPhotos.length === 0 ? (
-                    <p className={theme.textMuted}>Keine Fotos vorhanden. Nutze das Kamera-Symbol oben.</p>
-                  ) : (
-                    <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
-                      {allPhotos.map((photo) => (
-                        <div
-                          key={photo.name}
-                          className={`${theme.panel} rounded-xl border ${theme.border} ${theme.cardShadow} overflow-hidden hover:ring-2 hover:ring-[#6AA9F0] transition-all relative group`}
-                        >
-                          <button
-                            type="button"
-                            onClick={(e) => deletePhoto(photo.name, e)}
-                            className={`absolute top-2 right-2 p-1.5 rounded-lg ${theme.panel} border ${theme.border} opacity-0 group-hover:opacity-100 transition-opacity ${theme.danger} z-10`}
-                            title="Foto löschen"
-                          >
-                            <Icons.X />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => openPhotoEditor(photo)}
-                            className="w-full text-left"
-                          >
-                            <img
-                              src={photo.url}
-                              alt={photo.name}
-                              className="w-full h-32 object-cover"
-                            />
-                            <div className="p-2 space-y-1">
-                              <p className={`text-xs ${theme.textMuted} truncate`}>
-                                {photo.createdAt
-                                  ? new Date(photo.createdAt).toLocaleDateString('de-DE')
-                                  : photo.name}
-                              </p>
-                              <p className={`text-xs ${theme.textMuted}`}>
-                                {photo.format}{photo.sizeKB ? ` · ${photo.sizeKB} KB` : ''}
-                              </p>
-                              {ocrProcessing[photo.name] && (
-                                <p className={`text-xs ${theme.accentText}`}>OCR läuft...</p>
-                              )}
-                              {!ocrProcessing[photo.name] && photoOcrData[photo.name]?.status === 'completed' && (
-                                <p className={`text-xs ${theme.textMuted} line-clamp-2`}>
-                                  {photoOcrData[photo.name].text}
-                                </p>
-                              )}
-                              {!ocrProcessing[photo.name] && photoOcrData[photo.name]?.status === 'error' && (
-                                <p className="text-xs text-rose-400">OCR fehlgeschlagen</p>
-                              )}
-                              {!ocrProcessing[photo.name] && !photoOcrData[photo.name] && (
+                  <h2 className="text-2xl lg:text-3xl font-semibold mb-6 tracking-tight">
+                    {secondaryTab === 'visitenkarten' ? 'Visitenkarten' : 'Fotos'}
+                  </h2>
+
+                  {/* Uploads Tab */}
+                  {(secondaryTab === 'uploads' || secondaryTab === 'library' || secondaryTab === 'ocr') && (
+                    <>
+                      {photosLoading ? (
+                        <p className={theme.textMuted}>Fotos werden geladen...</p>
+                      ) : allPhotos.length === 0 ? (
+                        <p className={theme.textMuted}>Keine Fotos vorhanden. Nutze das Kamera-Symbol oben.</p>
+                      ) : (
+                        <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+                          {allPhotos.map((photo) => (
+                            <div
+                              key={photo.name}
+                              className={`${theme.panel} rounded-xl border ${theme.border} ${theme.cardShadow} overflow-hidden hover:ring-2 hover:ring-[#6AA9F0] transition-all relative group`}
+                            >
+                              <button
+                                type="button"
+                                onClick={(e) => deletePhoto(photo.name, e)}
+                                className={`absolute top-2 right-2 p-1.5 rounded-lg ${theme.panel} border ${theme.border} opacity-0 group-hover:opacity-100 transition-opacity ${theme.danger} z-10`}
+                                title="Foto löschen"
+                              >
+                                <Icons.X />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => openPhotoEditor(photo)}
+                                className="w-full text-left"
+                              >
+                                <img
+                                  src={photo.url}
+                                  alt={photo.name}
+                                  className="w-full h-32 object-cover"
+                                />
+                                <div className="p-2 space-y-1">
+                                  <p className={`text-xs ${theme.textMuted} truncate`}>
+                                    {photo.createdAt
+                                      ? new Date(photo.createdAt).toLocaleDateString('de-DE')
+                                      : photo.name}
+                                  </p>
+                                  <p className={`text-xs ${theme.textMuted}`}>
+                                    {photo.format}{photo.sizeKB ? ` · ${photo.sizeKB} KB` : ''}
+                                  </p>
+                                  {ocrProcessing[photo.name] && (
+                                    <p className={`text-xs ${theme.accentText}`}>OCR läuft...</p>
+                                  )}
+                                  {!ocrProcessing[photo.name] && photoOcrData[photo.name]?.status === 'completed' && (
+                                    <p className={`text-xs ${theme.textMuted} line-clamp-2`}>
+                                      {photoOcrData[photo.name].text}
+                                    </p>
+                                  )}
+                                  {!ocrProcessing[photo.name] && photoOcrData[photo.name]?.status === 'error' && (
+                                    <p className="text-xs text-rose-400">OCR fehlgeschlagen</p>
+                                  )}
+                                  {!ocrProcessing[photo.name] && !photoOcrData[photo.name] && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => { e.stopPropagation(); runOcrForPhoto(photo.name, photo.url); }}
+                                      className={`text-xs ${theme.accentText} hover:underline`}
+                                    >
+                                      OCR starten
+                                    </button>
+                                  )}
+                                </div>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* Visitenkarten Tab */}
+                  {secondaryTab === 'visitenkarten' && (
+                    <>
+                      {businessCardsLoading ? (
+                        <p className={theme.textMuted}>Visitenkarten werden geladen...</p>
+                      ) : businessCards.length === 0 ? (
+                        <p className={theme.textMuted}>Keine Visitenkarten vorhanden. Importiere Kontakte mit Visitenkarten-Scan.</p>
+                      ) : (
+                        <>
+                          <p className={`text-sm ${theme.textMuted} mb-4`}>{businessCards.length} Visitenkarten</p>
+                          <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+                            {businessCards.map((card) => (
+                              <div
+                                key={card.id}
+                                className={`${theme.panel} rounded-xl border ${theme.border} ${theme.cardShadow} overflow-hidden hover:ring-2 hover:ring-[#6AA9F0] transition-all relative group`}
+                              >
                                 <button
                                   type="button"
-                                  onClick={(e) => { e.stopPropagation(); runOcrForPhoto(photo.name, photo.url); }}
-                                  className={`text-xs ${theme.accentText} hover:underline`}
+                                  onClick={(e) => deleteBusinessCard(card, e)}
+                                  className={`absolute top-2 right-2 p-1.5 rounded-lg ${theme.panel} border ${theme.border} opacity-0 group-hover:opacity-100 transition-opacity ${theme.danger} z-10`}
+                                  title="Visitenkarte löschen"
                                 >
-                                  OCR starten
+                                  <Icons.X />
                                 </button>
-                              )}
-                            </div>
-                          </button>
-                        </div>
-                      ))}
-                    </div>
+                                <a
+                                  href={card.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="block"
+                                >
+                                  <img
+                                    src={card.url}
+                                    alt={card.contactName}
+                                    className="w-full h-32 object-cover"
+                                  />
+                                  <div className="p-2 space-y-1">
+                                    <p className={`text-sm font-medium ${theme.text} truncate`}>
+                                      {card.contactName}
+                                    </p>
+                                    {card.company && (
+                                      <p className={`text-xs ${theme.textMuted} truncate`}>
+                                        {card.company}
+                                      </p>
+                                    )}
+                                    <p className={`text-xs ${theme.textMuted}`}>
+                                      {card.createdAt
+                                        ? new Date(card.createdAt).toLocaleDateString('de-DE')
+                                        : ''} · {card.format}
+                                    </p>
+                                  </div>
+                                </a>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </>
                   )}
                 </>
               )}
 
               {activeView === 'apo' && (
                 <>
-                  <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center justify-between mb-4">
                     <h2 className="text-2xl lg:text-3xl font-semibold tracking-tight">Apo</h2>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => changeApoMonth(-1)}
+                        onClick={() => changeApoYear(-1)}
                         className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
-                        title="Vorheriger Monat"
+                        title="Vorheriges Jahr"
                       >
                         <Icons.ChevronLeft />
                       </button>
-                      <span className={`text-sm font-medium ${theme.text} min-w-[140px] text-center`}>
-                        {monthNames[apoMonth.month]} {apoMonth.year}
+                      <span className={`text-sm font-medium ${theme.text} min-w-[80px] text-center`}>
+                        {apoYear}
                       </span>
                       <button
                         type="button"
-                        onClick={() => changeApoMonth(1)}
+                        onClick={() => changeApoYear(1)}
                         className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
-                        title="Nächster Monat"
+                        title="Nächstes Jahr"
                       >
                         <Icons.ChevronRight />
                       </button>
                     </div>
                   </div>
 
+                  <div className="mb-6">
+                    <div className="relative">
+                      <Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <input
+                        type="text"
+                        value={apoSearch}
+                        onChange={(e) => setApoSearch(e.target.value)}
+                        placeholder="Suchen..."
+                        className={`w-full pl-10 pr-4 py-2.5 rounded-xl border ${theme.border} ${theme.input} text-sm`}
+                      />
+                      {apoSearch && (
+                        <button
+                          type="button"
+                          onClick={() => setApoSearch('')}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          title="Suche löschen"
+                        >
+                          <Icons.X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
 
                   {apoTab === 'amk' && (
-                    <div className="space-y-3">
+                    <div>
                       {amkLoading ? (
                         <p className={theme.textMuted}>AMK-Meldungen werden geladen...</p>
                       ) : amkMessages.length === 0 ? (
-                        <p className={theme.textMuted}>Keine AMK-Meldungen in diesem Monat.</p>
+                        <p className={theme.textMuted}>Keine AMK-Meldungen in diesem Jahr.</p>
+                      ) : filterApoItems(amkMessages, apoSearch, 'amk').length === 0 ? (
+                        <p className={theme.textMuted}>Keine Treffer für „{apoSearch}".</p>
                       ) : (
-                        amkMessages.map((msg) => (
-                          <button
-                            key={msg.id}
-                            type="button"
-                            onClick={() => setSelectedApoMessage({ ...msg, type: 'amk' })}
-                            className={`w-full text-left ${theme.panel} rounded-xl border ${theme.border} p-4 hover:ring-2 hover:ring-[#6AA9F0] transition-all`}
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              <h3 className={`font-medium ${theme.text} line-clamp-2`}>{msg.title}</h3>
-                              <span className={`text-xs ${theme.textMuted} whitespace-nowrap`}>
-                                {msg.date ? new Date(msg.date).toLocaleDateString('de-DE') : ''}
-                              </span>
+                        <div className="space-y-8">
+                          {groupByMonth(filterApoItems(amkMessages, apoSearch, 'amk'), 'date').map((group) => (
+                            <div key={group.month}>
+                              <h3 className={`text-lg font-semibold ${theme.text} mb-4`}>{monthNames[group.month]}</h3>
+                              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                                {group.items.map((msg) => (
+                                  <button
+                                    key={msg.id}
+                                    type="button"
+                                    onClick={() => setSelectedApoMessage({ ...msg, type: 'amk' })}
+                                    className={`text-left ${theme.panel} rounded-2xl border ${theme.border} p-5 ${theme.cardShadow} ${theme.cardHoverShadow} hover:border-[#6AA9F0] transition-all flex flex-col h-full`}
+                                  >
+                                    <div className="flex items-center gap-2 mb-3">
+                                      <span className="w-2 h-2 rounded-full bg-amber-500" />
+                                      <span className={`text-xs ${theme.textMuted}`}>
+                                        {msg.date ? new Date(msg.date).toLocaleDateString('de-DE') : ''}
+                                      </span>
+                                    </div>
+                                    <h3 className={`font-semibold ${theme.text} line-clamp-2 mb-2`}>{msg.title}</h3>
+                                    <p className={`text-sm ${theme.textMuted} line-clamp-3 flex-grow`}>
+                                      {msg.description || msg.full_text?.substring(0, 150) || ''}
+                                    </p>
+                                    {msg.category && (
+                                      <span className={`inline-block mt-3 text-xs px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 font-medium`}>
+                                        {msg.category}
+                                      </span>
+                                    )}
+                                  </button>
+                                ))}
+                              </div>
                             </div>
-                            <p className={`text-sm ${theme.textMuted} mt-2 line-clamp-2`}>
-                              {msg.description || msg.full_text?.substring(0, 150) || ''}
-                            </p>
-                            {msg.category && (
-                              <span className={`inline-block mt-2 text-xs px-2 py-1 rounded ${theme.surface} ${theme.textMuted}`}>
-                                {msg.category}
-                              </span>
-                            )}
-                          </button>
-                        ))
+                          ))}
+                        </div>
                       )}
                     </div>
                   )}
 
                   {apoTab === 'recall' && (
-                    <div className="space-y-3">
+                    <div>
                       {recallLoading ? (
                         <p className={theme.textMuted}>Rückrufe werden geladen...</p>
                       ) : recallMessages.length === 0 ? (
-                        <p className={theme.textMuted}>Keine Rückrufe in diesem Monat.</p>
+                        <p className={theme.textMuted}>Keine Rückrufe in diesem Jahr.</p>
+                      ) : filterApoItems(recallMessages, apoSearch, 'recall').length === 0 ? (
+                        <p className={theme.textMuted}>Keine Treffer für „{apoSearch}".</p>
                       ) : (
-                        recallMessages.map((msg) => (
-                          <button
-                            key={msg.id}
-                            type="button"
-                            onClick={() => setSelectedApoMessage({ ...msg, type: 'recall' })}
-                            className={`w-full text-left ${theme.panel} rounded-xl border ${theme.border} p-4 hover:ring-2 hover:ring-[#6AA9F0] transition-all`}
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              <h3 className={`font-medium ${theme.text} line-clamp-2`}>{msg.title}</h3>
-                              <span className={`text-xs ${theme.textMuted} whitespace-nowrap`}>
-                                {msg.date ? new Date(msg.date).toLocaleDateString('de-DE') : ''}
-                              </span>
+                        <div className="space-y-8">
+                          {groupByMonth(filterApoItems(recallMessages, apoSearch, 'recall'), 'date').map((group) => (
+                            <div key={group.month}>
+                              <h3 className={`text-lg font-semibold ${theme.text} mb-4`}>{monthNames[group.month]}</h3>
+                              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                                {group.items.map((msg) => (
+                                  <button
+                                    key={msg.id}
+                                    type="button"
+                                    onClick={() => setSelectedApoMessage({ ...msg, type: 'recall' })}
+                                    className={`text-left ${theme.panel} rounded-2xl border ${theme.border} p-5 ${theme.cardShadow} ${theme.cardHoverShadow} hover:border-[#6AA9F0] transition-all flex flex-col h-full`}
+                                  >
+                                    <div className="flex items-center gap-2 mb-3">
+                                      <span className="w-2 h-2 rounded-full bg-red-500" />
+                                      <span className={`text-xs ${theme.textMuted}`}>
+                                        {msg.date ? new Date(msg.date).toLocaleDateString('de-DE') : ''}
+                                      </span>
+                                    </div>
+                                    <h3 className={`font-semibold ${theme.text} line-clamp-2 mb-2`}>{msg.title}</h3>
+                                    <p className={`text-sm ${theme.textMuted} line-clamp-3 flex-grow`}>
+                                      {msg.description || msg.full_text?.substring(0, 150) || ''}
+                                    </p>
+                                    {msg.product_name && (
+                                      <span className={`inline-block mt-3 text-xs px-2.5 py-1 rounded-lg bg-red-50 text-red-700 font-medium`}>
+                                        {msg.product_name}
+                                      </span>
+                                    )}
+                                  </button>
+                                ))}
+                              </div>
                             </div>
-                            <p className={`text-sm ${theme.textMuted} mt-2 line-clamp-2`}>
-                              {msg.description || msg.full_text?.substring(0, 150) || ''}
-                            </p>
-                            {msg.product_name && (
-                              <span className={`inline-block mt-2 text-xs px-2 py-1 rounded ${theme.surface} ${theme.textMuted}`}>
-                                {msg.product_name}
-                              </span>
-                            )}
-                          </button>
-                        ))
+                          ))}
+                        </div>
                       )}
                     </div>
                   )}
 
                   {apoTab === 'lav' && (
-                    <div className="space-y-3">
+                    <div>
                       {lavLoading ? (
                         <p className={theme.textMuted}>LAK-Infos werden geladen...</p>
                       ) : lavAusgaben.length === 0 ? (
-                        <p className={theme.textMuted}>Keine LAK-Infos in diesem Monat.</p>
+                        <p className={theme.textMuted}>Keine LAK-Infos in diesem Jahr.</p>
+                      ) : filterApoItems(lavAusgaben, apoSearch, 'lav').length === 0 ? (
+                        <p className={theme.textMuted}>Keine Treffer für „{apoSearch}".</p>
                       ) : (
-                        lavAusgaben.map((ausgabe) => (
-                          <button
-                            key={ausgabe.id}
-                            type="button"
-                            onClick={() => setSelectedApoMessage({ ...ausgabe, type: 'lav' })}
-                            className={`w-full text-left ${theme.panel} rounded-xl border ${theme.border} p-4 hover:ring-2 hover:ring-[#6AA9F0] transition-all`}
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              <h3 className={`font-medium ${theme.text} line-clamp-2`}>{ausgabe.subject || `LAV-Info ${ausgabe.ausgabe}`}</h3>
-                              <span className={`text-xs ${theme.textMuted} whitespace-nowrap`}>
-                                {ausgabe.datum ? new Date(ausgabe.datum).toLocaleDateString('de-DE') : ''}
-                              </span>
-                            </div>
-                            <p className={`text-sm ${theme.textMuted} mt-2`}>
-                              Ausgabe {ausgabe.ausgabe} - {ausgabe.lav_themes?.length || 0} Themen
-                            </p>
-                            {ausgabe.lav_themes && ausgabe.lav_themes.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mt-2">
-                                {ausgabe.lav_themes.slice(0, 3).map((t) => (
-                                  <span key={t.id} className={`text-xs px-2 py-1 rounded ${theme.surface} ${theme.textMuted}`}>
-                                    {t.titel?.substring(0, 30) || 'Thema'}{t.titel?.length > 30 ? '...' : ''}
-                                  </span>
+                        <div className="space-y-8">
+                          {groupByMonth(filterApoItems(lavAusgaben, apoSearch, 'lav'), 'datum').map((group) => (
+                            <div key={group.month}>
+                              <h3 className={`text-lg font-semibold ${theme.text} mb-4`}>{monthNames[group.month]}</h3>
+                              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                                {group.items.map((ausgabe) => (
+                                  <button
+                                    key={ausgabe.id}
+                                    type="button"
+                                    onClick={() => setSelectedApoMessage({ ...ausgabe, type: 'lav' })}
+                                    className={`text-left ${theme.panel} rounded-2xl border ${theme.border} p-5 ${theme.cardShadow} ${theme.cardHoverShadow} hover:border-[#6AA9F0] transition-all flex flex-col h-full`}
+                                  >
+                                    <div className="flex items-center gap-2 mb-3">
+                                      <span className="w-2 h-2 rounded-full bg-blue-500" />
+                                      <span className={`text-xs ${theme.textMuted}`}>
+                                        {ausgabe.datum ? new Date(ausgabe.datum).toLocaleDateString('de-DE') : ''}
+                                      </span>
+                                    </div>
+                                    <h3 className={`font-semibold ${theme.text} line-clamp-2 mb-2`}>{ausgabe.subject || `LAV-Info ${ausgabe.ausgabe}`}</h3>
+                                    <p className={`text-sm ${theme.textMuted} mb-3`}>
+                                      Ausgabe {ausgabe.ausgabe} - {ausgabe.lav_themes?.length || 0} Themen
+                                    </p>
+                                    {ausgabe.lav_themes && ausgabe.lav_themes.length > 0 && (
+                                      <div className="flex flex-wrap gap-1.5 mt-auto">
+                                        {ausgabe.lav_themes.slice(0, 2).map((t) => (
+                                          <span key={t.id} className={`text-xs px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 font-medium`}>
+                                            {t.titel?.substring(0, 25) || 'Thema'}{t.titel?.length > 25 ? '...' : ''}
+                                          </span>
+                                        ))}
+                                        {ausgabe.lav_themes.length > 2 && (
+                                          <span className={`text-xs px-2.5 py-1 rounded-lg bg-gray-100 text-gray-600 font-medium`}>
+                                            +{ausgabe.lav_themes.length - 2}
+                                          </span>
+                                        )}
+                                      </div>
+                                    )}
+                                  </button>
                                 ))}
-                                {ausgabe.lav_themes.length > 3 && (
-                                  <span className={`text-xs px-2 py-1 rounded ${theme.surface} ${theme.textMuted}`}>
-                                    +{ausgabe.lav_themes.length - 3} weitere
-                                  </span>
-                                )}
                               </div>
-                            )}
-                          </button>
-                        ))
+                            </div>
+                          ))}
+                        </div>
                       )}
                     </div>
                   )}
@@ -3805,17 +4651,6 @@ function App() {
                       </svg>
                     </button>
                   )}
-                </>
-              )}
-
-              {activeView === 'stats' && (
-                <>
-                  <h2 className="text-2xl lg:text-3xl font-semibold mb-6 tracking-tight">Statistiken</h2>
-                  <div className={`${theme.panel} rounded-2xl p-6 border ${theme.border} ${theme.cardShadow}`}>
-                    <p className={theme.textMuted}>
-                      Hier entstehen bald deine Live-Auswertungen.
-                    </p>
-                  </div>
                 </>
               )}
 
@@ -4887,6 +5722,92 @@ function App() {
           </div>
         )}
 
+        {/* Duplikat-Dialog */}
+        {duplicateDialogOpen && duplicateCheckResult && (
+          <div
+            className={`fixed inset-0 z-50 ${theme.overlay} flex items-center justify-center p-4`}
+            onClick={() => setDuplicateDialogOpen(false)}
+          >
+            <div
+              className={`${theme.panel} rounded-2xl border ${theme.border} ${theme.cardShadow} w-full max-w-lg max-h-[90vh] overflow-y-auto`}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className={`px-5 py-4 border-b ${theme.border}`}>
+                <h3 className="text-base font-semibold">Mögliche Duplikate gefunden</h3>
+                <p className={`text-xs ${theme.textMuted} mt-1`}>
+                  Erkannt: {duplicateCheckResult.ocrData.firstName} {duplicateCheckResult.ocrData.lastName}
+                  {duplicateCheckResult.ocrData.company && ` bei ${duplicateCheckResult.ocrData.company}`}
+                </p>
+              </div>
+
+              <div className="p-5 space-y-4">
+                {duplicateCheckResult.checks.map((check, idx) => (
+                  <div key={idx} className={`p-4 rounded-xl border ${theme.border} space-y-3`}>
+                    <div className={`text-xs font-medium ${theme.textSecondary}`}>
+                      {check.type === 'email' && `Gleiche E-Mail: ${check.field}`}
+                      {check.type === 'phone' && `Gleiche Telefonnummer: ${check.field}`}
+                      {check.type === 'company' && `Bereits Kontakt bei: ${check.field}`}
+                    </div>
+
+                    {check.matches.map((match) => (
+                      <div key={match.id} className={`p-3 rounded-lg ${theme.bg} space-y-2`}>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className={`font-medium ${theme.text}`}>
+                              {match.first_name} {match.last_name}
+                            </p>
+                            <p className={`text-xs ${theme.textMuted}`}>
+                              {match.position}{match.position && match.company && ' bei '}{match.company}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          {check.type !== 'company' && (
+                            <button
+                              type="button"
+                              onClick={() => handleDuplicateUpdate(match)}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-medium ${theme.accent} text-white`}
+                            >
+                              Aktualisieren
+                            </button>
+                          )}
+                          {check.type === 'company' && (
+                            <button
+                              type="button"
+                              onClick={() => handleNewRepresentative(match)}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-500 hover:bg-amber-400 text-white`}
+                            >
+                              Neuer Vertreter (ersetzt {match.first_name})
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+
+                <div className={`pt-4 border-t ${theme.border} flex flex-wrap gap-2 justify-end`}>
+                  <button
+                    type="button"
+                    onClick={() => setDuplicateDialogOpen(false)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium border ${theme.border} ${theme.bgHover}`}
+                  >
+                    Abbrechen
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCreateNewContact}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium ${theme.accent} text-white`}
+                  >
+                    Trotzdem neu anlegen
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {editingContact && (
           <div
             className={`fixed inset-0 z-50 ${theme.overlay} flex items-center justify-center p-4`}
@@ -4940,11 +5861,37 @@ function App() {
                   </label>
                   <div className="flex items-center gap-4">
                     {contactCardPreview ? (
-                      <img
-                        src={contactCardPreview}
-                        alt="Visitenkarte Vorschau"
-                        className={`h-20 w-32 rounded-lg object-cover border ${theme.border}`}
-                      />
+                      <div className="relative">
+                        <img
+                          src={contactCardPreview}
+                          alt="Visitenkarte Vorschau"
+                          className={`h-20 w-32 rounded-lg object-cover border ${theme.border}`}
+                          style={{ transform: `rotate(${contactCardRotation}deg)` }}
+                        />
+                        {/* Dreh-Buttons */}
+                        <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 flex gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setContactCardRotation((r) => (r - 90 + 360) % 360)}
+                            className={`p-1 rounded ${theme.surface} border ${theme.border} ${theme.bgHover}`}
+                            title="90° nach links drehen"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                            </svg>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setContactCardRotation((r) => (r + 90) % 360)}
+                            className={`p-1 rounded ${theme.surface} border ${theme.border} ${theme.bgHover}`}
+                            title="90° nach rechts drehen"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 10H11a8 8 0 00-8 8v2m18-10l-6 6m6-6l-6-6" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
                     ) : (
                       <div className={`h-20 w-32 rounded-lg border-2 border-dashed ${theme.border} flex items-center justify-center ${theme.textMuted}`}>
                         <Icons.Photo />
@@ -4971,6 +5918,7 @@ function App() {
                           onClick={() => {
                             setContactCardFile(null)
                             setContactCardPreview('')
+                            setContactCardRotation(0)
                             handleContactInput('businessCardUrl', '')
                           }}
                           className={`px-3 py-1.5 rounded-lg text-xs font-medium ${theme.danger}`}
@@ -5395,6 +6343,16 @@ function App() {
                       <Icons.Download />
                     </button>
                   )}
+                  {selectedApoMessage.type === 'recall' && (
+                    <button
+                      type="button"
+                      onClick={() => downloadRecallPdf(selectedApoMessage)}
+                      className={`${theme.accentText} ${theme.bgHover} p-2 rounded-lg`}
+                      title="Als PDF herunterladen"
+                    >
+                      <Icons.Download />
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => setSelectedApoMessage(null)}
@@ -5427,7 +6385,7 @@ function App() {
                   <div className={`mb-4 p-3 rounded-lg ${theme.surface} border ${theme.border}`}>
                     <p className={`text-sm font-medium ${theme.accentText} mb-1`}>KI-Zusammenfassung:</p>
                     <div className={`text-sm ${theme.text} markdown-content`}>
-                      <ReactMarkdown>{selectedApoMessage.ai_zusammenfassung}</ReactMarkdown>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedApoMessage.ai_zusammenfassung}</ReactMarkdown>
                     </div>
                     {selectedApoMessage.ai_analysiert_am && (
                       <p className={`text-xs ${theme.textMuted} mt-2`}>
@@ -5486,11 +6444,35 @@ function App() {
                       {selectedApoMessage.lav_themes
                         .sort((a, b) => (a.punkt_nr || 0) - (b.punkt_nr || 0))
                         .map((thema) => (
-                          <details
-                            key={thema.id}
-                            className={`${theme.surface} border ${theme.border} rounded-lg overflow-hidden`}
-                          >
-                            <summary className={`px-3 py-2 cursor-pointer ${theme.bgHover} flex items-center gap-2`}>
+                          thema.volltext ? (
+                            <details
+                              key={thema.id}
+                              className={`${theme.surface} border ${theme.border} rounded-lg overflow-hidden`}
+                            >
+                              <summary className={`px-3 py-2 cursor-pointer ${theme.bgHover} flex items-center gap-2`}>
+                                {thema.punkt_nr && (
+                                  <span className={`text-xs px-1.5 py-0.5 rounded ${theme.accent} text-white font-medium`}>
+                                    {thema.punkt_nr}
+                                  </span>
+                                )}
+                                <span className={`text-sm font-medium ${theme.text}`}>{thema.titel || 'Kein Titel'}</span>
+                                {thema.ist_arbeitsrecht && (
+                                  <span className={`text-xs px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400`}>
+                                    Arbeitsrecht
+                                  </span>
+                                )}
+                              </summary>
+                              <div className={`px-3 py-2 border-t ${theme.border}`}>
+                                <div className={`text-sm ${theme.text} markdown-content`}>
+                                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{thema.volltext}</ReactMarkdown>
+                                </div>
+                              </div>
+                            </details>
+                          ) : (
+                            <div
+                              key={thema.id}
+                              className={`${theme.surface} border ${theme.border} rounded-lg px-3 py-2 flex items-center gap-2`}
+                            >
                               {thema.punkt_nr && (
                                 <span className={`text-xs px-1.5 py-0.5 rounded ${theme.accent} text-white font-medium`}>
                                   {thema.punkt_nr}
@@ -5502,15 +6484,8 @@ function App() {
                                   Arbeitsrecht
                                 </span>
                               )}
-                            </summary>
-                            {thema.volltext && (
-                              <div className={`px-3 py-2 border-t ${theme.border}`}>
-                                <div className={`text-sm ${theme.text} markdown-content`}>
-                                  <ReactMarkdown>{thema.volltext}</ReactMarkdown>
-                                </div>
-                              </div>
-                            )}
-                          </details>
+                            </div>
+                          )
                         ))}
                     </div>
                   </div>
@@ -5557,7 +6532,7 @@ function App() {
                   <div className="mb-4">
                     <p className={`text-sm font-medium ${theme.textSecondary} mb-1`}>Beschreibung:</p>
                     <div className={`text-sm ${theme.text} markdown-content`}>
-                      <ReactMarkdown>{selectedApoMessage.description}</ReactMarkdown>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedApoMessage.description}</ReactMarkdown>
                     </div>
                   </div>
                 )}
@@ -5566,7 +6541,7 @@ function App() {
                     <p className={`text-sm font-medium ${theme.textSecondary} mb-1`}>Betroffene Produkte:</p>
                     <ul className={`text-sm ${theme.text} list-disc list-inside space-y-1`}>
                       {selectedApoMessage.affected_products.map((p, i) => (
-                        <li key={i} className="markdown-content"><ReactMarkdown>{p}</ReactMarkdown></li>
+                        <li key={i} className="markdown-content"><ReactMarkdown remarkPlugins={[remarkGfm]}>{p}</ReactMarkdown></li>
                       ))}
                     </ul>
                   </div>
@@ -5576,7 +6551,7 @@ function App() {
                     <p className={`text-sm font-medium ${theme.textSecondary} mb-1`}>Wichtige Informationen:</p>
                     <ul className={`text-sm ${theme.text} list-disc list-inside space-y-1`}>
                       {selectedApoMessage.important_info.map((info, i) => (
-                        <li key={i} className="markdown-content"><ReactMarkdown>{info}</ReactMarkdown></li>
+                        <li key={i} className="markdown-content"><ReactMarkdown remarkPlugins={[remarkGfm]}>{info}</ReactMarkdown></li>
                       ))}
                     </ul>
                   </div>
@@ -5587,7 +6562,7 @@ function App() {
                       <p className={`text-sm font-medium ${theme.textSecondary} mb-1`}>Vollständiger Text:</p>
                     )}
                     <div className={`text-sm ${theme.text} markdown-content`}>
-                      <ReactMarkdown>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
                         {selectedApoMessage.type === 'amk'
                           ? selectedApoMessage.full_text.replace(/^#[^\n]*\n+/, '')
                           : selectedApoMessage.full_text}

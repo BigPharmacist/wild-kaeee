@@ -124,6 +124,16 @@ Lokale Supabase Tabelle `staff` für Kollegium:
 id (uuid), pharmacy_id (uuid), first_name, last_name, street, postal_code, city, mobile, email, role, auth_user_id (uuid), is_admin (bool), avatar_url (text), employed_since (date)
 ```
 
+Lokale Supabase Tabelle `contacts` für Geschäftskontakte:
+```text
+id (uuid), owner_id (uuid), first_name, last_name, company, position, email, phone, mobile, website, street, postal_code, city, country, contact_type, tags (jsonb), notes, shared (bool), business_card_url, status ('aktiv'|'inaktiv'), predecessor_id (uuid), transition_date (date)
+```
+
+**Vertreterwechsel-Logik:**
+- `status`: 'aktiv' = aktueller Ansprechpartner, 'inaktiv' = ehemaliger Vertreter
+- `predecessor_id`: Verweis auf Vorgänger-Kontakt bei gleicher Firma
+- `transition_date`: Datum des Vertreterwechsels
+
 ---
 
 ## Design System
