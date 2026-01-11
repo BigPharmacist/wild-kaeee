@@ -2,6 +2,11 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase, supabaseUrl } from './lib/supabase'
 import ReactCrop from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
+import { jsPDF } from 'jspdf'
+import ReactMarkdown from 'react-markdown'
+
+// AMK Logo als Base64
+const AMK_LOGO_BASE64 = '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'
 
 // SVG Icons as components for modern look
 const Icons = {
@@ -57,6 +62,11 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
     </svg>
   ),
+  Download: () => (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+    </svg>
+  ),
   Camera: () => (
     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
@@ -89,11 +99,14 @@ function App() {
   const [session, setSession] = useState(null)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
-  const [sidebarWidth, setSidebarWidth] = useState(256)
-  const [darkMode, setDarkMode] = useState(true)
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [authView, setAuthView] = useState('login') // 'login' | 'forgot' | 'resetPassword'
+  const [successMessage, setSuccessMessage] = useState('')
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const [secondaryTab, setSecondaryTab] = useState('overview')
   const [activeView, setActiveView] = useState('dashboard')
   const [settingsTab, setSettingsTab] = useState('pharmacies')
   const [pharmacies, setPharmacies] = useState([])
@@ -134,7 +147,41 @@ function App() {
   })
   const [staffSaveLoading, setStaffSaveLoading] = useState(false)
   const [staffSaveMessage, setStaffSaveMessage] = useState('')
+  const [staffInviteLoading, setStaffInviteLoading] = useState(false)
+  const [staffInviteMessage, setStaffInviteMessage] = useState('')
   const [staffAvatarFile, setStaffAvatarFile] = useState(null)
+  // Contacts state
+  const [contacts, setContacts] = useState([])
+  const [contactsLoading, setContactsLoading] = useState(false)
+  const [contactsMessage, setContactsMessage] = useState('')
+  const [editingContact, setEditingContact] = useState(null)
+  const [contactForm, setContactForm] = useState({
+    firstName: '',
+    lastName: '',
+    company: '',
+    position: '',
+    email: '',
+    phone: '',
+    mobile: '',
+    website: '',
+    street: '',
+    postalCode: '',
+    city: '',
+    country: 'DE',
+    contactType: 'business',
+    tags: [],
+    notes: '',
+    shared: true,
+    businessCardUrl: '',
+  })
+  const [contactSaveLoading, setContactSaveLoading] = useState(false)
+  const [contactSaveMessage, setContactSaveMessage] = useState('')
+  const [contactCardFile, setContactCardFile] = useState(null)
+  const [contactCardPreview, setContactCardPreview] = useState('')
+  const contactCardInputRef = useRef(null)
+  const [contactSearch, setContactSearch] = useState('')
+  const [contactViewMode, setContactViewMode] = useState('cards') // 'cards' | 'list'
+  const [selectedContact, setSelectedContact] = useState(null) // Für Detail-Ansicht
   const [staffAvatarPreview, setStaffAvatarPreview] = useState('')
   const [weatherLocation, setWeatherLocation] = useState('')
   const [weatherInput, setWeatherInput] = useState('')
@@ -149,7 +196,6 @@ function App() {
   const [chatInput, setChatInput] = useState('')
   const [chatSending, setChatSending] = useState(false)
   const chatEndRef = useRef(null)
-  const isResizing = useRef(false)
   const cameraInputRef = useRef(null)
   const [latestPhoto, setLatestPhoto] = useState(null)
   const [photoUploading, setPhotoUploading] = useState(false)
@@ -219,89 +265,39 @@ function App() {
   const [calendarPermissions, setCalendarPermissions] = useState([])
   const [permissionsLoading, setPermissionsLoading] = useState(false)
 
-  // Modern minimalist palette with graphite neutrals + emerald accent
-  const theme = darkMode ? {
-    // Backgrounds
-    bg: 'bg-zinc-950',
-    bgPattern: 'bg-[radial-gradient(120%_70%_at_0%_0%,rgba(16,185,129,0.12),transparent_60%),radial-gradient(70%_60%_at_100%_0%,rgba(234,179,8,0.08),transparent_60%)]',
-    surface: 'bg-zinc-900/65 backdrop-blur',
-    panel: 'bg-zinc-900/80',
-    bgHover: 'hover:bg-zinc-900/70',
-    // Borders
-    border: 'border-zinc-800/80',
-    borderLight: 'border-zinc-700/80',
-    // Text
-    text: 'text-zinc-50',
-    textSecondary: 'text-zinc-300',
-    textMuted: 'text-zinc-400',
-    // Navigation
-    navActive: 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20',
-    navHover: 'hover:bg-zinc-900/70 hover:text-zinc-200',
-    // Inputs
-    input: 'bg-zinc-900/60 border-zinc-800 focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400',
-    inputPlaceholder: 'placeholder-zinc-500',
-    // Accent
-    accent: 'bg-emerald-500 hover:bg-emerald-400',
-    accentText: 'text-emerald-400',
-    // Resize handle
-    resizeHandle: 'bg-zinc-800 hover:bg-emerald-400',
-    // Danger
-    danger: 'text-rose-400 hover:text-rose-300 hover:bg-rose-500/10',
-    // Card
-    cardShadow: 'shadow-[0_30px_60px_-35px_rgba(0,0,0,0.8)]',
-    // Overlay
-    overlay: 'bg-black/45',
-  } : {
-    // Backgrounds
-    bg: 'bg-zinc-50',
-    bgPattern: 'bg-[radial-gradient(120%_70%_at_0%_0%,rgba(16,185,129,0.14),transparent_60%),radial-gradient(70%_60%_at_100%_0%,rgba(234,179,8,0.10),transparent_60%)]',
-    surface: 'bg-white/80 backdrop-blur',
+  const theme = {
+    bgApp: 'bg-[#F5F7FA]',
+    bg: 'bg-[#F5F7FA]',
+    surface: 'bg-white',
     panel: 'bg-white',
-    bgHover: 'hover:bg-zinc-100',
-    // Borders
-    border: 'border-zinc-200',
-    borderLight: 'border-zinc-300',
-    // Text
-    text: 'text-zinc-900',
-    textSecondary: 'text-zinc-600',
-    textMuted: 'text-zinc-500',
-    // Navigation
-    navActive: 'bg-emerald-500/10 text-emerald-700 border border-emerald-500/20',
-    navHover: 'hover:bg-zinc-100 hover:text-zinc-900',
-    // Inputs
-    input: 'bg-white border-zinc-300 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500',
-    inputPlaceholder: 'placeholder-zinc-400',
-    // Accent
-    accent: 'bg-emerald-600 hover:bg-emerald-700',
-    accentText: 'text-emerald-700',
-    // Resize handle
-    resizeHandle: 'bg-zinc-200 hover:bg-emerald-400',
-    // Danger
-    danger: 'text-rose-600 hover:text-rose-700 hover:bg-rose-50',
-    // Card
-    cardShadow: 'shadow-[0_20px_50px_-30px_rgba(24,24,27,0.35)]',
-    // Overlay
-    overlay: 'bg-zinc-900/40',
-  }
-
-  const startResizing = () => {
-    isResizing.current = true
-    document.addEventListener('mousemove', handleMouseMove)
-    document.addEventListener('mouseup', stopResizing)
-  }
-
-  const handleMouseMove = (e) => {
-    if (!isResizing.current) return
-    const newWidth = e.clientX
-    if (newWidth >= 64 && newWidth <= 320) {
-      setSidebarWidth(newWidth)
-    }
-  }
-
-  const stopResizing = () => {
-    isResizing.current = false
-    document.removeEventListener('mousemove', handleMouseMove)
-    document.removeEventListener('mouseup', stopResizing)
+    bgHover: 'hover:bg-[#F5F7FA]',
+    bgCard: 'bg-white',
+    textPrimary: 'text-[#1F2937]',
+    text: 'text-[#1F2937]',
+    textSecondary: 'text-[#6B7280]',
+    textMuted: 'text-[#9CA3AF]',
+    border: 'border-[#E5E7EB]',
+    navActive: 'bg-[#EEF4FD] text-[#1F2937] border border-[#D6E6FB]',
+    navHover: 'hover:bg-[#F5F7FA] hover:text-[#1F2937]',
+    accent: 'bg-[#4A90E2] hover:bg-[#6AA9F0]',
+    accentText: 'text-[#4A90E2]',
+    primary: 'text-[#4A90E2]',
+    primaryBg: 'bg-[#4A90E2]',
+    primaryHover: 'hover:bg-[#6AA9F0]',
+    secondary: 'text-[#7B6CF6]',
+    sidebarBg: 'bg-[#3c4255]',
+    sidebarHover: 'hover:bg-[#4a5066]',
+    sidebarActive: 'border-white bg-transparent',
+    sidebarText: 'text-[#E5E7EB]',
+    sidebarTextActive: 'text-[#E5E7EB]',
+    secondarySidebarBg: 'bg-[#4f5469]',
+    secondaryActive: 'border-l-4 border-[#4A90E2] bg-[#3c4255] text-[#E5E7EB]',
+    input: 'bg-white border-[#E5E7EB] focus:border-[#4A90E2] focus:ring-1 focus:ring-[#4A90E2]',
+    inputPlaceholder: 'placeholder-[#9CA3AF]',
+    cardShadow: 'shadow-[0_4px_12px_rgba(0,0,0,0.05)]',
+    cardHoverShadow: 'hover:shadow-[0_8px_20px_rgba(0,0,0,0.08)]',
+    overlay: 'bg-[#1F2937]/30',
+    danger: 'text-[#EF4444] hover:text-[#DC2626] hover:bg-[#FEE2E2]',
   }
 
   const navItems = [
@@ -315,6 +311,84 @@ function App() {
     { id: 'settings', icon: Icons.Settings, label: 'Einstellungen' },
   ]
 
+  const secondaryNavMap = {
+    dashboard: [
+      { id: 'overview', label: 'Übersicht' },
+      { id: 'insights', label: 'Insights' },
+      { id: 'reports', label: 'Reports' },
+    ],
+    photos: [
+      { id: 'uploads', label: 'Uploads' },
+      { id: 'library', label: 'Archiv' },
+      { id: 'ocr', label: 'OCR' },
+    ],
+    apo: [
+      { id: 'amk', label: 'AMK' },
+      { id: 'recall', label: 'Rückrufe' },
+      { id: 'lav', label: 'LAV' },
+    ],
+    plan: [
+      { id: 'timeline', label: 'Zeitplan' },
+      { id: 'team', label: 'Team' },
+      { id: 'shift', label: 'Schichten' },
+    ],
+    calendar: [
+      { id: 'calendars', label: 'Kalender' },
+      { id: 'events', label: 'Termine' },
+      { id: 'permissions', label: 'Freigaben' },
+    ],
+    chat: [
+      { id: 'inbox', label: 'Inbox' },
+      { id: 'team', label: 'Team' },
+      { id: 'settings', label: 'Einstellungen' },
+    ],
+    stats: [
+      { id: 'kpis', label: 'KPIs' },
+      { id: 'charts', label: 'Charts' },
+      { id: 'exports', label: 'Exports' },
+    ],
+    settings: [
+      { id: 'pharmacies', label: 'Apotheken' },
+      { id: 'staff', label: 'Kollegium' },
+      { id: 'contacts', label: 'Kontakte' },
+    ],
+  }
+
+  useEffect(() => {
+    if (activeView === 'settings' || activeView === 'apo') return
+    const nextItems = secondaryNavMap[activeView] || []
+    if (nextItems.length) {
+      setSecondaryTab(nextItems[0].id)
+    }
+  }, [activeView])
+
+  useEffect(() => {
+    setMobileNavOpen(false)
+  }, [activeView])
+
+  useEffect(() => {
+    document.body.style.overflow = mobileNavOpen ? 'hidden' : ''
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [mobileNavOpen])
+
+  const getActiveSecondaryId = () => {
+    if (activeView === 'settings') return settingsTab
+    if (activeView === 'apo') return apoTab
+    return secondaryTab
+  }
+
+  const handleSecondarySelect = (itemId) => {
+    if (activeView === 'settings') {
+      setSettingsTab(itemId)
+    } else if (activeView === 'apo') {
+      setApoTab(itemId)
+    } else {
+      setSecondaryTab(itemId)
+    }
+  }
+
   const pharmacyLookup = Object.fromEntries(
     pharmacies.map((pharmacy) => [pharmacy.id, pharmacy.name]),
   )
@@ -323,6 +397,115 @@ function App() {
       .filter((member) => member.auth_user_id)
       .map((member) => [member.auth_user_id, member]),
   )
+
+  // PDF-Download für AMK-Meldungen
+  const downloadAmkPdf = (msg) => {
+    const doc = new jsPDF()
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
+    const margin = 20
+    const maxWidth = pageWidth - margin * 2
+    let y = 20
+
+    // Logo hinzufügen
+    try {
+      doc.addImage(AMK_LOGO_BASE64, 'JPEG', margin, y, 60, 28)
+      y += 38
+    } catch (e) {
+      y += 10
+    }
+
+    // Titel
+    doc.setFontSize(14)
+    doc.setFont('helvetica', 'bold')
+    const titleLines = doc.splitTextToSize(msg.title || '', maxWidth)
+    doc.text(titleLines, margin, y)
+    y += titleLines.length * 7 + 5
+
+    // Kategorie
+    if (msg.category) {
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(100)
+      doc.text(msg.category, margin, y)
+      y += 6
+    }
+
+    // Datum
+    if (msg.date) {
+      doc.setFontSize(10)
+      doc.setTextColor(100)
+      doc.text(new Date(msg.date).toLocaleDateString('de-DE'), margin, y)
+      y += 10
+    }
+
+    doc.setTextColor(0)
+
+    // Institution
+    if (msg.institution) {
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Institution:', margin, y)
+      doc.setFont('helvetica', 'normal')
+      doc.text(msg.institution, margin + 25, y)
+      y += 8
+    }
+
+    // Trennlinie
+    doc.setDrawColor(200)
+    doc.line(margin, y, pageWidth - margin, y)
+    y += 8
+
+    // Volltext
+    if (msg.full_text) {
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+      const textLines = doc.splitTextToSize(msg.full_text, maxWidth)
+
+      for (let i = 0; i < textLines.length; i++) {
+        if (y > pageHeight - 40) {
+          doc.addPage()
+          y = 20
+        }
+        doc.text(textLines[i], margin, y)
+        y += 5
+      }
+      y += 10
+    }
+
+    // Fußzeile mit Unterschriftsfeldern
+    if (y > pageHeight - 80) {
+      doc.addPage()
+      y = 20
+    }
+
+    doc.setDrawColor(200)
+    doc.line(margin, y, pageWidth - margin, y)
+    y += 10
+
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    doc.text('Bearbeitet durch:', margin, y)
+    doc.line(margin + 35, y, margin + 100, y)
+    y += 8
+    doc.text('Bearbeitet am:', margin, y)
+    doc.line(margin + 35, y, margin + 100, y)
+    y += 12
+
+    doc.setFont('helvetica', 'bold')
+    doc.text('Zur Kenntnis genommen:', margin, y)
+    y += 8
+    doc.setFont('helvetica', 'normal')
+    for (let i = 0; i < 5; i++) {
+      doc.text('Name / Datum:', margin, y)
+      doc.line(margin + 30, y, margin + 100, y)
+      y += 8
+    }
+
+    // Download
+    const filename = `AMK_${msg.title?.substring(0, 30).replace(/[^a-zA-Z0-9äöüÄÖÜß]/g, '_') || 'Meldung'}.pdf`
+    doc.save(filename)
+  }
 
   const fetchPharmacies = async () => {
     setPharmaciesLoading(true)
@@ -361,6 +544,210 @@ function App() {
     }
     setStaffLoading(false)
   }
+
+  // Contacts functions
+  const fetchContacts = async () => {
+    setContactsLoading(true)
+    const { data, error } = await supabase
+      .from('contacts')
+      .select('*')
+      .order('company', { ascending: true })
+      .order('last_name', { ascending: true })
+
+    if (error) {
+      setContactsMessage(error.message)
+      setContacts([])
+    } else {
+      setContactsMessage('')
+      setContacts(data || [])
+    }
+    setContactsLoading(false)
+  }
+
+  const openContactModal = (contact = null) => {
+    setEditingContact(contact || { id: null })
+    setContactSaveMessage('')
+    setContactForm({
+      firstName: contact?.first_name || '',
+      lastName: contact?.last_name || '',
+      company: contact?.company || '',
+      position: contact?.position || '',
+      email: contact?.email || '',
+      phone: contact?.phone || '',
+      mobile: contact?.mobile || '',
+      website: contact?.website || '',
+      street: contact?.street || '',
+      postalCode: contact?.postal_code || '',
+      city: contact?.city || '',
+      country: contact?.country || 'DE',
+      contactType: contact?.contact_type || 'business',
+      tags: contact?.tags || [],
+      notes: contact?.notes || '',
+      shared: contact?.shared ?? true,
+      businessCardUrl: contact?.business_card_url || '',
+    })
+    setContactCardFile(null)
+    setContactCardPreview(contact?.business_card_url || '')
+  }
+
+  const closeContactModal = () => {
+    setEditingContact(null)
+    setContactSaveMessage('')
+    setContactCardFile(null)
+    setContactCardPreview('')
+  }
+
+  const handleContactInput = (field, value) => {
+    setContactForm((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const handleContactCardChange = (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    setContactCardFile(file)
+    setContactCardPreview(URL.createObjectURL(file))
+  }
+
+  const handleContactSubmit = async (e) => {
+    e.preventDefault()
+    if (!editingContact) return
+    if (!contactForm.firstName.trim() && !contactForm.lastName.trim() && !contactForm.company.trim()) {
+      setContactSaveMessage('Bitte mindestens Name oder Firma eingeben.')
+      return
+    }
+
+    // Find current staff member for owner_id
+    if (!currentStaff?.id) {
+      setContactSaveMessage('Kein Mitarbeiter-Profil gefunden.')
+      return
+    }
+
+    setContactSaveLoading(true)
+    const payload = {
+      owner_id: editingContact.owner_id || currentStaff.id,
+      first_name: contactForm.firstName.trim(),
+      last_name: contactForm.lastName.trim(),
+      company: contactForm.company.trim(),
+      position: contactForm.position.trim(),
+      email: contactForm.email.trim(),
+      phone: contactForm.phone.trim(),
+      mobile: contactForm.mobile.trim(),
+      website: contactForm.website.trim(),
+      street: contactForm.street.trim(),
+      postal_code: contactForm.postalCode.trim(),
+      city: contactForm.city.trim(),
+      country: contactForm.country.trim() || 'DE',
+      contact_type: contactForm.contactType,
+      tags: contactForm.tags,
+      notes: contactForm.notes.trim(),
+      shared: contactForm.shared,
+      business_card_url: contactForm.businessCardUrl || null,
+    }
+
+    const uploadBusinessCard = async (contactId) => {
+      if (!contactCardFile) return null
+      const fileExt = contactCardFile.name.split('.').pop() || 'jpg'
+      const filePath = `${contactId}/${Date.now()}.${fileExt}`
+      const { error: uploadError } = await supabase
+        .storage
+        .from('business-cards')
+        .upload(filePath, contactCardFile, { upsert: true })
+
+      if (uploadError) {
+        throw new Error(uploadError.message)
+      }
+
+      const { data } = supabase
+        .storage
+        .from('business-cards')
+        .getPublicUrl(filePath)
+      return data.publicUrl
+    }
+
+    let saveError = null
+    let savedId = editingContact.id
+    if (editingContact.id) {
+      const { error } = await supabase
+        .from('contacts')
+        .update(payload)
+        .eq('id', editingContact.id)
+      saveError = error
+    } else {
+      const { data, error } = await supabase
+        .from('contacts')
+        .insert(payload)
+        .select('id')
+        .single()
+      saveError = error
+      savedId = data?.id
+    }
+
+    if (saveError) {
+      setContactSaveMessage(saveError.message)
+      setContactSaveLoading(false)
+      return
+    }
+
+    if (contactCardFile && savedId) {
+      try {
+        const cardUrl = await uploadBusinessCard(savedId)
+        if (cardUrl) {
+          await supabase
+            .from('contacts')
+            .update({ business_card_url: cardUrl })
+            .eq('id', savedId)
+        }
+      } catch (error) {
+        setContactSaveMessage(error.message || 'Visitenkarte konnte nicht gespeichert werden.')
+        setContactSaveLoading(false)
+        return
+      }
+    }
+
+    await fetchContacts()
+    setContactSaveLoading(false)
+    closeContactModal()
+  }
+
+  const deleteContact = async (contactId) => {
+    if (!window.confirm('Kontakt wirklich löschen?')) return
+    const { error } = await supabase
+      .from('contacts')
+      .delete()
+      .eq('id', contactId)
+    if (error) {
+      setContactsMessage(error.message)
+    } else {
+      await fetchContacts()
+    }
+  }
+
+  const contactTypeLabels = {
+    business: 'Geschäftlich',
+    supplier: 'Lieferant',
+    customer: 'Kunde',
+    employee: 'Mitarbeiter',
+    other: 'Sonstige',
+  }
+
+  // Kontakte filtern nach Suchbegriff
+  const filteredContacts = contacts.filter((contact) => {
+    if (!contactSearch.trim()) return true
+    const search = contactSearch.toLowerCase()
+    return (
+      (contact.first_name || '').toLowerCase().includes(search) ||
+      (contact.last_name || '').toLowerCase().includes(search) ||
+      (contact.company || '').toLowerCase().includes(search) ||
+      (contact.position || '').toLowerCase().includes(search) ||
+      (contact.email || '').toLowerCase().includes(search) ||
+      (contact.phone || '').toLowerCase().includes(search) ||
+      (contact.mobile || '').toLowerCase().includes(search) ||
+      (contact.street || '').toLowerCase().includes(search) ||
+      (contact.postal_code || '').toLowerCase().includes(search) ||
+      (contact.city || '').toLowerCase().includes(search) ||
+      (contact.notes || '').toLowerCase().includes(search)
+    )
+  })
 
   const fetchChatMessages = async () => {
     setChatLoading(true)
@@ -590,7 +977,7 @@ function App() {
       .lte('end_time', endDate.toISOString())
       .order('start_time', { ascending: true })
 
-    // Bei "all" alle Kalender laden, sonst nur den ausgewaehlten
+    // Bei "all" alle Kalender laden, sonst nur den ausgewählten
     if (calendarId !== 'all') {
       query = query.eq('calendar_id', calendarId)
     }
@@ -751,7 +1138,7 @@ function App() {
   }
 
   const deleteEvent = async (eventId) => {
-    if (!confirm('Termin unwiderruflich loeschen?')) return
+    if (!confirm('Termin unwiderruflich löschen?')) return
 
     const { error } = await supabase
       .from('calendar_events')
@@ -808,7 +1195,7 @@ function App() {
       // Datum direkt aus String extrahieren (vermeidet Zeitzonenprobleme)
       const startDate = event.start_time.substring(0, 10)
       const endDate = event.end_time.substring(0, 10)
-      // Zeit aus Date-Objekt fuer lokale Anzeige
+      // Zeit aus Date-Objekt für lokale Anzeige
       const start = new Date(event.start_time)
       const end = new Date(event.end_time)
       setEditingEvent(event)
@@ -862,7 +1249,7 @@ function App() {
   }
 
   const currentCalendarPermission = () => {
-    // Bei "Alle Kalender" keine Schreibberechtigung (man muss einen spezifischen Kalender waehlen)
+    // Bei "Alle Kalender" keine Schreibberechtigung (man muss einen spezifischen Kalender wählen)
     if (selectedCalendarId === 'all') return null
     if (currentStaff?.is_admin) return 'write'
     const cal = calendars.find((c) => c.id === selectedCalendarId)
@@ -871,7 +1258,7 @@ function App() {
 
   const canWriteCurrentCalendar = () => currentCalendarPermission() === 'write'
 
-  // Hilfsfunktion: Farbe fuer ein Event basierend auf seinem Kalender
+  // Hilfsfunktion: Farbe für ein Event basierend auf seinem Kalender
   const getEventColor = (event) => {
     const cal = calendars.find((c) => c.id === event.calendar_id)
     return cal?.color || '#10b981'
@@ -880,8 +1267,8 @@ function App() {
   const weatherDescription = (code) => {
     const map = {
       0: 'Klar',
-      1: 'Ueberwiegend klar',
-      2: 'Leicht bewoelkt',
+      1: 'Überwiegend klar',
+      2: 'Leicht bewölkt',
       3: 'Bedeckt',
       45: 'Nebel',
       48: 'Reifnebel',
@@ -1016,6 +1403,7 @@ function App() {
     const fallbackPharmacyId = pharmacies[0]?.id || ''
     setEditingStaff(member || { id: null })
     setStaffSaveMessage('')
+    setStaffInviteMessage('')
     setStaffForm({
       firstName: member?.first_name || '',
       lastName: member?.last_name || '',
@@ -1037,6 +1425,7 @@ function App() {
   const closeStaffModal = () => {
     setEditingStaff(null)
     setStaffSaveMessage('')
+    setStaffInviteMessage('')
     setStaffAvatarFile(null)
     setStaffAvatarPreview('')
   }
@@ -1130,18 +1519,18 @@ function App() {
 
   const deletePhoto = async (photoName, event) => {
     event.stopPropagation()
-    if (!confirm('Foto unwiderruflich loeschen?')) return
+    if (!confirm('Foto unwiderruflich löschen?')) return
     const { data, error } = await supabase
       .storage
       .from('documents')
       .remove([`photos/${photoName}`])
     console.log('Delete response:', { data, error, photoName })
     if (error) {
-      alert('Loeschen fehlgeschlagen: ' + error.message)
+      alert('Löschen fehlgeschlagen: ' + error.message)
       return
     }
     if (!data || data.length === 0) {
-      alert('Foto konnte nicht geloescht werden. Pruefe die Storage-Berechtigungen.')
+      alert('Foto konnte nicht gelöscht werden. Prüfe die Storage-Berechtigungen.')
       return
     }
     setAllPhotos((prev) => prev.filter((p) => p.name !== photoName))
@@ -1408,7 +1797,7 @@ function App() {
       return
     }
     if (!editForm.ownerRole) {
-      setEditMessage('Bitte Inhaber oder Filialleiter waehlen.')
+      setEditMessage('Bitte Inhaber oder Filialleiter wählen.')
       return
     }
 
@@ -1454,7 +1843,7 @@ function App() {
       return
     }
     if (!staffForm.role) {
-      setStaffSaveMessage('Bitte Beruf waehlen.')
+      setStaffSaveMessage('Bitte Beruf wählen.')
       return
     }
     if (!staffForm.pharmacyId) {
@@ -1543,13 +1932,96 @@ function App() {
     closeStaffModal()
   }
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-    })
+  const handleSendInvite = async () => {
+    if (!staffForm.email.trim()) {
+      setStaffInviteMessage('Bitte E-Mail-Adresse eingeben')
+      return
+    }
+    setStaffInviteLoading(true)
+    setStaffInviteMessage('')
+    try {
+      const response = await fetch(`${supabaseUrl}/functions/v1/invite-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
+          email: staffForm.email.trim(),
+          staffId: editingStaff?.id || null,
+        }),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error || 'Einladung fehlgeschlagen')
+      }
+      setStaffInviteMessage('Einladung wurde gesendet!')
+    } catch (error) {
+      setStaffInviteMessage(error.message)
+    }
+    setStaffInviteLoading(false)
+  }
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+  useEffect(() => {
+    // Check URL for invite or recovery tokens
+    const hashParams = new URLSearchParams(window.location.hash.substring(1))
+    const searchParams = new URLSearchParams(window.location.search)
+    const type = hashParams.get('type') || searchParams.get('type')
+    const accessToken = hashParams.get('access_token')
+    const refreshToken = hashParams.get('refresh_token')
+    const isAuthLink = type === 'invite' || type === 'recovery'
+    const hasAuthTokens = Boolean(accessToken && refreshToken)
+
+    const initAuth = async () => {
+      // If this is an invite or recovery link with tokens
+      if (isAuthLink && hasAuthTokens) {
+        const { data: { session: existingSession } } = await supabase.auth.getSession()
+        if (existingSession) {
+          setSession(existingSession)
+          setAuthView('resetPassword')
+          window.history.replaceState({}, document.title, window.location.pathname)
+          return
+        }
+
+        // Set the new session from the tokens in the URL
+        const { data, error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        })
+        if (!error && data.session) {
+          setSession(data.session)
+          setAuthView('resetPassword')
+          // Clean up the URL
+          window.history.replaceState({}, document.title, window.location.pathname)
+          return
+        }
+      }
+
+      // Normal session check (also covers auth links where the session is already set)
+      const { data: { session } } = await supabase.auth.getSession()
       setSession(session)
+      if (session && isAuthLink) {
+        setAuthView('resetPassword')
+        window.history.replaceState({}, document.title, window.location.pathname)
+      }
+    }
+
+    initAuth()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setSession(session)
+      if (event === 'PASSWORD_RECOVERY') {
+        setAuthView('resetPassword')
+      }
+      if (event === 'SIGNED_IN') {
+        const nextHashParams = new URLSearchParams(window.location.hash.substring(1))
+        const nextSearchParams = new URLSearchParams(window.location.search)
+        const nextType = nextHashParams.get('type') || nextSearchParams.get('type')
+        if (nextType === 'invite' || nextType === 'recovery') {
+          setAuthView('resetPassword')
+          window.history.replaceState({}, document.title, window.location.pathname)
+        }
+      }
     })
 
     return () => subscription.unsubscribe()
@@ -1559,6 +2031,7 @@ function App() {
     if (session) {
       fetchPharmacies()
       fetchStaff()
+      fetchContacts()
       fetchLatestPhoto()
       fetchAllPhotos()
       fetchPhotoOcrData()
@@ -1648,11 +2121,11 @@ function App() {
     }
   }, [selectedCalendarId, calendarViewDate, calendarViewMode])
 
-  // Realtime-Subscription fuer Kalender-Events
+  // Realtime-Subscription für Kalender-Events
   useEffect(() => {
     if (!session || activeView !== 'calendar' || !selectedCalendarId) return
 
-    // Bei "all" auf alle Events hoeren, sonst nur auf den ausgewaehlten Kalender
+    // Bei "all" auf alle Events hören, sonst nur auf den ausgewählten Kalender
     const subscriptionConfig = selectedCalendarId === 'all'
       ? { event: '*', schema: 'public', table: 'calendar_events' }
       : { event: '*', schema: 'public', table: 'calendar_events', filter: `calendar_id=eq.${selectedCalendarId}` }
@@ -1672,50 +2145,153 @@ function App() {
   const handleSignIn = async (e) => {
     e.preventDefault()
     setLoading(true)
+    setMessage('')
+    setSuccessMessage('')
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) setMessage(error.message)
-    else setMessage('')
+    setLoading(false)
+  }
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault()
+    if (!email.trim()) {
+      setMessage('Bitte E-Mail-Adresse eingeben')
+      return
+    }
+    setLoading(true)
+    setMessage('')
+    setSuccessMessage('')
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin,
+    })
+    if (error) {
+      setMessage(error.message)
+    } else {
+      setSuccessMessage('Falls ein Konto mit dieser E-Mail existiert, wurde ein Link zum Zurücksetzen gesendet.')
+    }
+    setLoading(false)
+  }
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault()
+    if (newPassword !== confirmPassword) {
+      setMessage('Passwörter stimmen nicht überein')
+      return
+    }
+    if (newPassword.length < 6) {
+      setMessage('Passwort muss mindestens 6 Zeichen lang sein')
+      return
+    }
+    setLoading(true)
+    setMessage('')
+    setSuccessMessage('')
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    if (error) {
+      setMessage(error.message)
+    } else {
+      setSuccessMessage('Passwort erfolgreich geändert!')
+      setNewPassword('')
+      setConfirmPassword('')
+      setAuthView('login')
+    }
     setLoading(false)
   }
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     setMessage('')
-    setMobileMenuOpen(false)
+    setSuccessMessage('')
+    setAuthView('login')
+    setSecondaryOpen(false)
+  }
+
+  // Password reset view (even if logged in via invite link)
+  if (authView === 'resetPassword') {
+    return (
+      <div className={`min-h-screen ${theme.bg} ${theme.text} flex items-center justify-center p-4 relative overflow-hidden`}>
+        <div className={`${theme.panel} p-6 sm:p-8 rounded-2xl border ${theme.border} ${theme.cardShadow} max-w-sm w-full`}>
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <img src="/logo.png" alt="Kaeee" className="h-10" />
+              <p className={`text-sm ${theme.textMuted}`}>Neues Passwort setzen</p>
+            </div>
+          </div>
+
+          <form onSubmit={handleResetPassword} className="space-y-5">
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${theme.textSecondary}`}>
+                Neues Passwort
+              </label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className={`w-full px-4 py-2.5 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text}`}
+                placeholder="••••••••"
+              />
+            </div>
+
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${theme.textSecondary}`}>
+                Passwort bestätigen
+              </label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className={`w-full px-4 py-2.5 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text}`}
+                placeholder="••••••••"
+              />
+            </div>
+
+            {message && (
+              <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3">
+                <p className="text-rose-400 text-sm">{message}</p>
+              </div>
+            )}
+
+            {successMessage && (
+              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3">
+                <p className="text-emerald-600 text-sm">{successMessage}</p>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              title="Passwort speichern"
+              className={`w-full ${theme.accent} text-white font-medium py-2.5 px-4 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              {loading ? 'Wird gespeichert...' : 'Passwort speichern'}
+            </button>
+          </form>
+        </div>
+      </div>
+    )
   }
 
   // Dashboard view
   if (session) {
     return (
-      <div className={`min-h-screen ${theme.bg} ${theme.bgPattern} ${theme.text} flex flex-col relative overflow-hidden`}>
+      <div className={`min-h-screen ${theme.bgApp} ${theme.textPrimary} flex flex-col relative overflow-hidden`}>
         {/* Header */}
-        <header className={`${theme.surface} border-b ${theme.border} px-4 lg:px-6 py-3 flex items-center justify-between sticky top-0 z-40`}>
+        <header className={`bg-white border-b ${theme.border} px-4 lg:px-6 py-3 flex items-center justify-between sticky top-0 z-40`}>
           <div className="flex items-center gap-3">
-            {/* Mobile menu button */}
             <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className={`lg:hidden p-2 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
-              title={mobileMenuOpen ? 'Menue schliessen' : 'Menue oeffnen'}
+              onClick={() => setMobileNavOpen(!mobileNavOpen)}
+              className={`lg:hidden p-2 rounded-[6px] ${theme.textSecondary} hover:bg-[#F5F7FA]`}
+              title={mobileNavOpen ? 'Menü schließen' : 'Menü öffnen'}
             >
-              {mobileMenuOpen ? <Icons.X /> : <Icons.Menu />}
+              {mobileNavOpen ? <Icons.X /> : <Icons.Menu />}
             </button>
-            <h1 className="text-xl font-semibold tracking-tight">Kaeee</h1>
+            <img src="/logo.png" alt="Kaeee" className="h-8" />
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4">
-            {/* Theme toggle */}
-            <button
-              onClick={() => setDarkMode(!darkMode)}
-              className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted} transition-colors`}
-              title={darkMode ? 'Hellmodus' : 'Dunkelmodus'}
-            >
-              {darkMode ? <Icons.Sun /> : <Icons.Moon />}
-            </button>
-
             {/* Camera button */}
             <button
               onClick={() => cameraInputRef.current?.click()}
-              className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted} transition-colors ${photoUploading ? 'opacity-50' : ''}`}
+              className={`p-2 rounded-[6px] hover:bg-[#F5F7FA] ${theme.textSecondary} transition-colors ${photoUploading ? 'opacity-50' : ''}`}
               title="Foto aufnehmen"
               disabled={photoUploading}
             >
@@ -1736,7 +2312,7 @@ function App() {
                 <img
                   src={currentStaff.avatar_url}
                   alt={session.user.email}
-                  className="h-9 w-9 rounded-full object-cover border border-zinc-700/60"
+                  className={`h-9 w-9 rounded-full object-cover border ${theme.border}`}
                 />
               ) : (
                 <div className={`h-9 w-9 rounded-full border ${theme.border} flex items-center justify-center text-xs ${theme.textMuted}`}>
@@ -1748,7 +2324,7 @@ function App() {
             {/* Sign out button */}
             <button
               onClick={handleSignOut}
-              className={`p-2 rounded-lg ${theme.danger} transition-colors`}
+              className={`p-2 rounded-[6px] ${theme.danger} transition-colors`}
               title="Ausloggen"
             >
               <Icons.Logout />
@@ -1757,55 +2333,144 @@ function App() {
         </header>
 
         <div className="flex flex-1 overflow-hidden relative">
-          {/* Mobile sidebar overlay */}
-          {mobileMenuOpen && (
+          {/* Mobile nav overlay */}
+          {mobileNavOpen && (
             <div
-              className={`fixed inset-0 ${theme.overlay} z-30 lg:hidden`}
-              onClick={() => setMobileMenuOpen(false)}
+              className={`fixed inset-0 ${theme.overlay} z-40 lg:hidden`}
+              onClick={() => setMobileNavOpen(false)}
             />
           )}
 
-          {/* Sidebar */}
+          {/* Mobile nav drawer */}
           <aside
             className={`
-              ${theme.surface} border-r ${theme.border}
-              flex-shrink-0 overflow-hidden z-40
-              fixed lg:relative inset-y-0 left-0 top-[57px] lg:top-0
-              transform ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0
-              transition-transform duration-200 ease-out
-              w-64 lg:w-auto
+              ${theme.sidebarBg} text-white fixed inset-y-0 left-0 z-50 w-[85%] max-w-[320px]
+              transform ${mobileNavOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-200 ease-out
+              lg:hidden
             `}
-            style={{ width: typeof window !== 'undefined' && window.innerWidth >= 1024 ? sidebarWidth : undefined }}
           >
-            <nav className="p-3 space-y-1">
-              {navItems.map((item, index) => (
-                <a
-                  key={index}
-                  href="#"
-                  className={`
-                    flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium border border-transparent
-                    transition-colors whitespace-nowrap overflow-hidden
-                    ${activeView === item.id ? theme.navActive : `${theme.textMuted} ${theme.navHover}`}
-                  `}
-                  title={item.label}
-                  onClick={(event) => {
-                    event.preventDefault()
-                    setActiveView(item.id)
-                    setMobileMenuOpen(false)
-                  }}
+            <div className="h-full flex flex-col">
+              <div className="px-4 pt-4 pb-3 border-b border-[#3c4255] flex items-center justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.08em] text-[#9CA3AF]">Navigation</p>
+                  <h2 className="text-sm font-semibold text-[#E5E7EB] mt-1">
+                    {navItems.find((item) => item.id === activeView)?.label || 'Menü'}
+                  </h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMobileNavOpen(false)}
+                  className="p-2 rounded-[6px] text-[#E5E7EB] hover:bg-[#4a5066]"
+                  title="Menü schließen"
                 >
-                  <item.icon />
-                  {(sidebarWidth > 100 || mobileMenuOpen) && <span>{item.label}</span>}
-                </a>
-              ))}
-            </nav>
+                  <Icons.X />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                <nav className="p-2 space-y-1 border-b border-[#3c4255]">
+                  {navItems.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-[6px] text-sm font-medium transition-colors ${
+                        activeView === item.id ? 'bg-[#4a5066] text-white' : 'text-[#E5E7EB] hover:bg-[#4a5066]'
+                      }`}
+                      onClick={() => setActiveView(item.id)}
+                    >
+                      <item.icon />
+                      <span>{item.label}</span>
+                    </button>
+                  ))}
+                </nav>
+
+                <nav className="p-2 space-y-1">
+                  {(secondaryNavMap[activeView] || []).map((item) => {
+                    const isActive = getActiveSecondaryId() === item.id
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        className={`w-full text-left px-3 py-2.5 rounded-[6px] text-sm font-medium border-l-4 transition-colors ${
+                          isActive
+                            ? theme.secondaryActive
+                            : 'border-transparent text-[#E5E7EB] hover:bg-[#4a5066] hover:text-white'
+                        }`}
+                        onClick={() => {
+                          handleSecondarySelect(item.id)
+                          setMobileNavOpen(false)
+                        }}
+                      >
+                        {item.label}
+                      </button>
+                    )
+                  })}
+                </nav>
+              </div>
+            </div>
           </aside>
 
-          {/* Resize Handle - hidden on mobile */}
-          <div
-            className={`hidden lg:block w-1 ${theme.resizeHandle} cursor-col-resize flex-shrink-0 transition-colors`}
-            onMouseDown={startResizing}
-          />
+          {/* Primary Sidebar */}
+          <aside className={`hidden lg:flex flex-shrink-0 ${theme.sidebarBg} w-16 min-w-[4rem] max-w-[4rem]`}>
+            <div className="h-full flex flex-col">
+              <nav className="py-3 space-y-1 flex flex-col items-center">
+                {navItems.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={`w-10 h-10 flex items-center justify-center mx-auto rounded-[6px] border-l-[3px] border-transparent box-border transition-colors ${theme.sidebarText} ${
+                      activeView === item.id ? theme.sidebarActive : theme.sidebarHover
+                    }`}
+                    title={item.label}
+                    onClick={() => {
+                      setActiveView(item.id)
+                    }}
+                  >
+                    <item.icon />
+                  </button>
+                ))}
+              </nav>
+            </div>
+          </aside>
+
+          {/* Secondary Sidebar */}
+          <aside
+            className={`
+              ${theme.secondarySidebarBg} border-r ${theme.border} flex-shrink-0 z-40
+              hidden lg:flex lg:relative inset-y-0 left-0 top-0
+              w-48
+            `}
+          >
+            <div className="h-full flex flex-col">
+              <div className="px-4 pt-4 pb-3 border-b border-[#3c4255]">
+                <p className="text-xs uppercase tracking-[0.08em] text-[#9CA3AF]">Navigation</p>
+                <h2 className="text-sm font-semibold text-[#E5E7EB] mt-1">
+                  {navItems.find((item) => item.id === activeView)?.label || 'Kontext'}
+                </h2>
+              </div>
+              <nav className="p-2 space-y-1 overflow-y-auto">
+                {(secondaryNavMap[activeView] || []).map((item) => {
+                  const isActive = getActiveSecondaryId() === item.id
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={`w-full text-left px-3 py-2.5 rounded-[6px] text-sm font-medium border-l-4 transition-colors ${
+                        isActive
+                          ? theme.secondaryActive
+                          : 'border-transparent text-[#E5E7EB] hover:bg-[#3c4255] hover:text-white'
+                      }`}
+                      title={item.label}
+                      onClick={() => {
+                        handleSecondarySelect(item.id)
+                      }}
+                    >
+                      {item.label}
+                    </button>
+                  )
+                })}
+              </nav>
+            </div>
+          </aside>
 
           {/* Main Content */}
           <main className="flex-1 p-4 lg:p-8 overflow-auto">
@@ -1817,13 +2482,13 @@ function App() {
                     <div className={`${theme.panel} rounded-2xl p-6 border ${theme.border} ${theme.cardShadow}`}>
                       <h3 className={`text-lg font-medium mb-2 ${theme.text}`}>Willkommen bei Kaeee</h3>
                       <p className={theme.textMuted}>
-                        Dein persoenliches Dashboard ist bereit.
+                        Dein persönliches Dashboard ist bereit.
                       </p>
                     </div>
                     <div className={`${theme.panel} rounded-2xl p-6 border ${theme.border} ${theme.cardShadow}`}>
-                      <h3 className={`text-lg font-medium mb-2 ${theme.text}`}>Naechste Schritte</h3>
+                      <h3 className={`text-lg font-medium mb-2 ${theme.text}`}>Nächste Schritte</h3>
                       <p className={theme.textMuted}>
-                        Verknuepfe Daten, um Live-Statistiken zu sehen.
+                        Verknüpfe Daten, um Live-Statistiken zu sehen.
                       </p>
                     </div>
                     <div className={`${theme.panel} rounded-2xl p-4 border ${theme.border} ${theme.cardShadow} flex flex-col gap-3`}>
@@ -1831,7 +2496,7 @@ function App() {
                         <div>
                           <h3 className={`text-lg font-medium ${theme.text}`}>Wetter</h3>
                           <p className={`text-xs ${theme.textMuted}`}>
-                            {weatherData?.name || weatherLocation || 'Ort waehlen'}
+                            {weatherData?.name || weatherLocation || 'Ort wählen'}
                           </p>
                         </div>
                         <button
@@ -1870,7 +2535,7 @@ function App() {
 
                           <div className="grid grid-cols-2 gap-2 text-xs">
                             <div className={`rounded-lg border ${theme.border} px-2.5 py-2`}>
-                              <p className={theme.textMuted}>Gefuehlt</p>
+                              <p className={theme.textMuted}>Gefühlt</p>
                               <p className={theme.text}>{Math.round(weatherData.feelsLike ?? weatherData.temperature)}°</p>
                             </div>
                             <div className={`rounded-lg border ${theme.border} px-2.5 py-2`}>
@@ -1906,7 +2571,7 @@ function App() {
                       )}
                       {!weatherLoading && !weatherError && !weatherData && (
                         <p className={theme.textMuted}>
-                          Kein Wetter verfuegbar.
+                          Kein Wetter verfügbar.
                         </p>
                       )}
                     </div>
@@ -1951,13 +2616,13 @@ function App() {
                       {allPhotos.map((photo) => (
                         <div
                           key={photo.name}
-                          className={`${theme.panel} rounded-xl border ${theme.border} ${theme.cardShadow} overflow-hidden hover:ring-2 hover:ring-emerald-400 transition-all relative group`}
+                          className={`${theme.panel} rounded-xl border ${theme.border} ${theme.cardShadow} overflow-hidden hover:ring-2 hover:ring-[#6AA9F0] transition-all relative group`}
                         >
                           <button
                             type="button"
                             onClick={(e) => deletePhoto(photo.name, e)}
                             className={`absolute top-2 right-2 p-1.5 rounded-lg ${theme.panel} border ${theme.border} opacity-0 group-hover:opacity-100 transition-opacity ${theme.danger} z-10`}
-                            title="Foto loeschen"
+                            title="Foto löschen"
                           >
                             <Icons.X />
                           </button>
@@ -2029,48 +2694,13 @@ function App() {
                         type="button"
                         onClick={() => changeApoMonth(1)}
                         className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
-                        title="Naechster Monat"
+                        title="Nächster Monat"
                       >
                         <Icons.ChevronRight />
                       </button>
                     </div>
                   </div>
 
-                  <div className="flex gap-2 mb-6">
-                    <button
-                      type="button"
-                      onClick={() => setApoTab('lav')}
-                      className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                        apoTab === 'lav'
-                          ? `${theme.accent} text-white`
-                          : `${theme.bgHover} ${theme.textSecondary} border ${theme.border}`
-                      }`}
-                    >
-                      LAK-Info
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setApoTab('amk')}
-                      className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                        apoTab === 'amk'
-                          ? `${theme.accent} text-white`
-                          : `${theme.bgHover} ${theme.textSecondary} border ${theme.border}`
-                      }`}
-                    >
-                      AMK-Meldungen
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setApoTab('recall')}
-                      className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                        apoTab === 'recall'
-                          ? `${theme.accent} text-white`
-                          : `${theme.bgHover} ${theme.textSecondary} border ${theme.border}`
-                      }`}
-                    >
-                      Rueckrufe
-                    </button>
-                  </div>
 
                   {apoTab === 'amk' && (
                     <div className="space-y-3">
@@ -2084,7 +2714,7 @@ function App() {
                             key={msg.id}
                             type="button"
                             onClick={() => setSelectedApoMessage({ ...msg, type: 'amk' })}
-                            className={`w-full text-left ${theme.panel} rounded-xl border ${theme.border} p-4 hover:ring-2 hover:ring-emerald-400 transition-all`}
+                            className={`w-full text-left ${theme.panel} rounded-xl border ${theme.border} p-4 hover:ring-2 hover:ring-[#6AA9F0] transition-all`}
                           >
                             <div className="flex items-start justify-between gap-3">
                               <h3 className={`font-medium ${theme.text} line-clamp-2`}>{msg.title}</h3>
@@ -2109,16 +2739,16 @@ function App() {
                   {apoTab === 'recall' && (
                     <div className="space-y-3">
                       {recallLoading ? (
-                        <p className={theme.textMuted}>Rueckrufe werden geladen...</p>
+                        <p className={theme.textMuted}>Rückrufe werden geladen...</p>
                       ) : recallMessages.length === 0 ? (
-                        <p className={theme.textMuted}>Keine Rueckrufe in diesem Monat.</p>
+                        <p className={theme.textMuted}>Keine Rückrufe in diesem Monat.</p>
                       ) : (
                         recallMessages.map((msg) => (
                           <button
                             key={msg.id}
                             type="button"
                             onClick={() => setSelectedApoMessage({ ...msg, type: 'recall' })}
-                            className={`w-full text-left ${theme.panel} rounded-xl border ${theme.border} p-4 hover:ring-2 hover:ring-emerald-400 transition-all`}
+                            className={`w-full text-left ${theme.panel} rounded-xl border ${theme.border} p-4 hover:ring-2 hover:ring-[#6AA9F0] transition-all`}
                           >
                             <div className="flex items-start justify-between gap-3">
                               <h3 className={`font-medium ${theme.text} line-clamp-2`}>{msg.title}</h3>
@@ -2152,7 +2782,7 @@ function App() {
                             key={ausgabe.id}
                             type="button"
                             onClick={() => setSelectedApoMessage({ ...ausgabe, type: 'lav' })}
-                            className={`w-full text-left ${theme.panel} rounded-xl border ${theme.border} p-4 hover:ring-2 hover:ring-emerald-400 transition-all`}
+                            className={`w-full text-left ${theme.panel} rounded-xl border ${theme.border} p-4 hover:ring-2 hover:ring-[#6AA9F0] transition-all`}
                           >
                             <div className="flex items-start justify-between gap-3">
                               <h3 className={`font-medium ${theme.text} line-clamp-2`}>{ausgabe.subject || `LAV-Info ${ausgabe.ausgabe}`}</h3>
@@ -2212,7 +2842,7 @@ function App() {
                               <img
                                 src={sender.avatar_url}
                                 alt={senderName}
-                                className="h-9 w-9 rounded-full object-cover border border-zinc-700/60"
+                                className={`h-9 w-9 rounded-full object-cover border ${theme.border}`}
                               />
                             ) : (
                               <div className={`h-9 w-9 rounded-full border ${theme.border} flex items-center justify-center text-xs ${theme.textMuted}`}>
@@ -2227,7 +2857,7 @@ function App() {
                               <div
                                 className={`inline-block mt-2 rounded-2xl px-4 py-2 border ${
                                   isOwn
-                                    ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-100'
+                                    ? 'bg-[#4A90E2]/15 border-[#4A90E2]/30 text-[#1F2937]'
                                     : `${theme.panel} ${theme.border}`
                                 }`}
                               >
@@ -2349,9 +2979,9 @@ function App() {
                                       className={`
                                         w-8 h-8 rounded-lg text-xs font-medium transition-colors
                                         ${day.isSelected
-                                          ? 'bg-emerald-500 text-white'
+                                          ? 'bg-[#4A90E2] text-white'
                                           : day.isTodayDate
-                                            ? `border-2 border-emerald-500/50 ${day.hasData ? theme.text : theme.textMuted}`
+                                            ? `border-2 border-[#4A90E2]/50 ${day.hasData ? theme.text : theme.textMuted}`
                                             : day.hasData
                                               ? `${theme.bgHover} ${day.isWeekend ? theme.textMuted : theme.text}`
                                               : `${theme.textMuted} opacity-40 cursor-not-allowed`
@@ -2425,17 +3055,17 @@ function App() {
                           if (!dayData) {
                             return (
                               <div className={`${theme.panel} rounded-2xl p-6 border ${theme.border} ${theme.cardShadow}`}>
-                                <p className={theme.textMuted}>Keine Daten fuer {selectedPlanDate} verfuegbar.</p>
+                                <p className={theme.textMuted}>Keine Daten für {selectedPlanDate} verfügbar.</p>
                               </div>
                             )
                           }
 
                           return (
-                            <div className={`${theme.panel} rounded-2xl p-5 border ${isToday ? 'border-emerald-500/40' : theme.border} ${theme.cardShadow}`}>
+                            <div className={`${theme.panel} rounded-2xl p-5 border ${isToday ? 'border-[#4A90E2]/40' : theme.border} ${theme.cardShadow}`}>
                               <div className="flex items-center gap-2 mb-4">
                                 <h3 className="text-lg font-semibold">{dayData.issueDate}</h3>
                                 {isToday && (
-                                  <span className="text-[10px] uppercase tracking-wide px-2 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+                                  <span className="text-[10px] uppercase tracking-wide px-2 py-1 rounded-full bg-[#4A90E2]/15 text-[#4A90E2] border border-[#4A90E2]/20">
                                     Heute
                                   </span>
                                 )}
@@ -2447,7 +3077,7 @@ function App() {
 
                                   {/* Zeitachse */}
                                   <div className="relative mb-2">
-                                    <div className="flex justify-between text-[10px] text-zinc-500">
+                                    <div className="flex justify-between text-[10px] text-[#9CA3AF]">
                                       {hours.map((h) => (
                                         <span key={h} className="w-0 text-center" style={{ marginLeft: h === START_HOUR ? 0 : undefined }}>
                                           {h}
@@ -2490,12 +3120,12 @@ function App() {
                                       return (
                                         <div
                                           key={`${emp.firstName}-${emp.lastName}-${idx}`}
-                                          className={`relative h-7 rounded ${darkMode ? 'bg-zinc-800/50' : 'bg-zinc-200/50'}`}
+                                          className="relative h-7 rounded bg-[#E5E7EB]/70"
                                         >
                                           {/* Hintergrund-Raster */}
                                           <div className="absolute inset-0 flex">
                                             {hours.slice(0, -1).map((h) => (
-                                              <div key={h} className={`flex-1 border-r ${darkMode ? 'border-zinc-700/30' : 'border-zinc-300/50'}`} />
+                                              <div key={h} className="flex-1 border-r border-[#E5E7EB]" />
                                             ))}
                                           </div>
 
@@ -2503,7 +3133,7 @@ function App() {
                                           {hasWork && !isAbsent && (
                                             <>
                                               <div
-                                                className="absolute top-0.5 bottom-0.5 bg-emerald-500 rounded"
+                                                className="absolute top-0.5 bottom-0.5 bg-[#4A90E2] rounded"
                                                 style={getBarStyle(startTime, endTime)}
                                               />
                                               {/* Pause */}
@@ -2518,7 +3148,7 @@ function App() {
                                                 className="absolute top-0.5 bottom-0.5 flex items-center justify-center overflow-hidden pointer-events-none"
                                                 style={getBarStyle(startTime, endTime)}
                                               >
-                                                <span className="text-[11px] font-semibold text-zinc-900 truncate px-2 drop-shadow-[0_0_2px_rgba(255,255,255,0.8)]">
+                                                <span className="text-[11px] font-semibold text-[#1F2937] truncate px-2 drop-shadow-[0_0_2px_rgba(255,255,255,0.8)]">
                                                   {emp.firstName} {emp.lastName}
                                                 </span>
                                               </div>
@@ -2531,7 +3161,7 @@ function App() {
                                               className="absolute top-0.5 bottom-0.5 rounded flex items-center justify-center overflow-hidden"
                                               style={{ left: '0%', width: '100%', backgroundColor: '#A481A2' }}
                                             >
-                                              <span className="text-[11px] font-semibold text-zinc-900 truncate px-2 drop-shadow-[0_0_2px_rgba(255,255,255,0.8)]">
+                                              <span className="text-[11px] font-semibold text-[#1F2937] truncate px-2 drop-shadow-[0_0_2px_rgba(255,255,255,0.8)]">
                                                 {emp.firstName} {emp.lastName} - Urlaub
                                               </span>
                                             </div>
@@ -2543,7 +3173,7 @@ function App() {
                                               className="absolute top-0.5 bottom-0.5 rounded flex items-center justify-center overflow-hidden"
                                               style={{ left: '0%', width: '100%', backgroundColor: '#FBBF24' }}
                                             >
-                                              <span className="text-[11px] font-semibold text-zinc-900 truncate px-2 drop-shadow-[0_0_2px_rgba(255,255,255,0.8)]">
+                                              <span className="text-[11px] font-semibold text-[#1F2937] truncate px-2 drop-shadow-[0_0_2px_rgba(255,255,255,0.8)]">
                                                 {emp.firstName} {emp.lastName} - Krank
                                               </span>
                                             </div>
@@ -2567,7 +3197,7 @@ function App() {
                               {/* Legende */}
                               <div className={`flex flex-wrap gap-4 mt-4 pt-4 border-t ${theme.border} text-[10px] ${theme.textMuted}`}>
                                 <div className="flex items-center gap-1.5">
-                                  <div className="w-3 h-3 rounded bg-emerald-500" />
+                                  <div className="w-3 h-3 rounded bg-[#4A90E2]" />
                                   <span>Arbeit</span>
                                 </div>
                                 <div className="flex items-center gap-1.5">
@@ -2592,7 +3222,7 @@ function App() {
 
                   {!planLoading && !planError && !planData && (
                     <div className={`${theme.panel} rounded-2xl p-6 border ${theme.border} ${theme.cardShadow}`}>
-                      <p className={theme.textMuted}>Keine Plandaten verfuegbar.</p>
+                      <p className={theme.textMuted}>Keine Plandaten verfügbar.</p>
                     </div>
                   )}
                 </>
@@ -2631,7 +3261,7 @@ function App() {
                             onClick={() => setCalendarViewMode(mode)}
                             className={`px-3 py-1.5 text-xs font-medium transition-colors ${
                               calendarViewMode === mode
-                                ? 'bg-emerald-500 text-white'
+                                ? 'bg-[#4A90E2] text-white'
                                 : `${theme.panel} ${theme.textMuted} ${theme.bgHover}`
                             }`}
                           >
@@ -2651,7 +3281,7 @@ function App() {
                           setCalendarViewDate(d)
                         }}
                         className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
-                        title="Zurueck"
+                        title="Zurück"
                       >
                         <Icons.ChevronLeft />
                       </button>
@@ -2729,7 +3359,7 @@ function App() {
                   ) : calendars.length === 0 ? (
                     <div className={`${theme.panel} rounded-2xl p-6 border ${theme.border} ${theme.cardShadow}`}>
                       <p className={theme.textMuted}>
-                        Keine Kalender verfuegbar.
+                        Keine Kalender verfügbar.
                         {currentStaff?.is_admin && ' Erstelle einen neuen Kalender.'}
                       </p>
                     </div>
@@ -2794,7 +3424,7 @@ function App() {
                                     className={`
                                       min-h-24 p-1 rounded-lg border transition-colors
                                       ${day.isCurrentMonth ? theme.panel : `${theme.panel} opacity-40`}
-                                      ${day.isToday ? 'border-emerald-500/50' : theme.border}
+                                      ${day.isToday ? 'border-[#4A90E2]/50' : theme.border}
                                       ${canWriteCurrentCalendar() ? 'cursor-pointer ' + theme.bgHover : ''}
                                     `}
                                   >
@@ -2867,7 +3497,7 @@ function App() {
                             {days.map((day, idx) => (
                               <div
                                 key={day.dateStr}
-                                className={`min-h-48 p-2 rounded-lg border ${day.isToday ? 'border-emerald-500/50' : theme.border} ${theme.panel}`}
+                                className={`min-h-48 p-2 rounded-lg border ${day.isToday ? 'border-[#4A90E2]/50' : theme.border} ${theme.panel}`}
                               >
                                 <div className={`text-xs font-medium mb-2 ${day.isToday ? theme.accentText : theme.textSecondary}`}>
                                   {weekDays[idx]} {day.date.getDate()}
@@ -2927,7 +3557,7 @@ function App() {
                                       <p className={`font-medium ${theme.text}`}>{event.title}</p>
                                       <p className={`text-xs ${theme.textMuted}`}>
                                         {event.all_day
-                                          ? 'Ganztaegig'
+                                          ? 'Ganztägig'
                                           : `${new Date(event.start_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} - ${new Date(event.end_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`}
                                       </p>
                                       {event.location && <p className={`text-xs ${theme.textMuted}`}>{event.location}</p>}
@@ -2982,95 +3612,69 @@ function App() {
                 <>
                   <h2 className="text-2xl lg:text-3xl font-semibold mb-6 tracking-tight">Einstellungen</h2>
 
-                  <div className="grid gap-4 lg:grid-cols-[200px_1fr]">
-                    <aside className={`${theme.panel} rounded-2xl p-3 border ${theme.border} ${theme.cardShadow} h-fit`}>
-                      <button
-                        onClick={() => setSettingsTab('pharmacies')}
-                        className={`w-full text-left px-3 py-2 rounded-xl text-xs font-medium border transition-colors ${
-                          settingsTab === 'pharmacies'
-                            ? `${theme.navActive}`
-                            : `${theme.textMuted} ${theme.bgHover} border-transparent`
-                        }`}
-                        title="Apothekendaten"
-                      >
-                        Apothekendaten
-                      </button>
-                      <button
-                        onClick={() => setSettingsTab('staff')}
-                        className={`w-full text-left mt-2 px-3 py-2 rounded-xl text-xs font-medium border transition-colors ${
-                          settingsTab === 'staff'
-                            ? `${theme.navActive}`
-                            : `${theme.textMuted} ${theme.bgHover} border-transparent`
-                        }`}
-                        title="Kollegium"
-                      >
-                        Kollegium
-                      </button>
-                    </aside>
-
-                    <div className="space-y-4">
-                      {settingsTab === 'pharmacies' && (
-                        <div className={`${theme.panel} rounded-2xl p-5 border ${theme.border} ${theme.cardShadow}`}>
-                          <div className="flex items-center justify-between mb-3">
-                            <div>
-                              <h3 className="text-base font-semibold">Apothekendaten</h3>
-                              <p className={`text-xs ${theme.textMuted}`}>Maximal 4 Eintraege.</p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <button
-                                type="button"
-                                onClick={fetchPharmacies}
-                                className={`text-xs font-medium ${theme.accentText} hover:opacity-80`}
-                                title="Liste aktualisieren"
-                              >
-                                Aktualisieren
-                              </button>
-                              <button
-                                type="button"
-                                onClick={openCreateModal}
-                                disabled={pharmacies.length >= 4}
-                                className={`h-8 w-8 rounded-full flex items-center justify-center border ${theme.border} ${theme.bgHover} ${theme.text} disabled:opacity-40 disabled:cursor-not-allowed`}
-                                title="Apotheke hinzufuegen"
-                              >
-                                +
-                              </button>
-                            </div>
+                  <div className="space-y-4">
+                    {settingsTab === 'pharmacies' && (
+                      <div className={`${theme.panel} rounded-2xl p-5 border ${theme.border} ${theme.cardShadow}`}>
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <h3 className="text-base font-semibold">Apothekendaten</h3>
+                            <p className={`text-xs ${theme.textMuted}`}>Maximal 4 Einträge.</p>
                           </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={fetchPharmacies}
+                              className={`text-xs font-medium ${theme.accentText} hover:opacity-80`}
+                              title="Liste aktualisieren"
+                            >
+                              Aktualisieren
+                            </button>
+                            <button
+                              type="button"
+                              onClick={openCreateModal}
+                              disabled={pharmacies.length >= 4}
+                              className={`h-8 w-8 rounded-full flex items-center justify-center border ${theme.border} ${theme.bgHover} ${theme.text} disabled:opacity-40 disabled:cursor-not-allowed`}
+                              title="Apotheke hinzufügen"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
 
-                          {pharmaciesMessage && (
-                            <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3 mb-3">
-                              <p className="text-rose-400 text-sm">{pharmaciesMessage}</p>
-                            </div>
-                          )}
+                        {pharmaciesMessage && (
+                          <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3 mb-3">
+                            <p className="text-rose-400 text-sm">{pharmaciesMessage}</p>
+                          </div>
+                        )}
 
-                          {pharmaciesLoading && (
-                            <p className={theme.textMuted}>Lade Daten...</p>
-                          )}
+                        {pharmaciesLoading && (
+                          <p className={theme.textMuted}>Lade Daten...</p>
+                        )}
 
-                          {!pharmaciesLoading && pharmacies.length === 0 && (
-                            <p className={theme.textMuted}>
-                              Noch keine Apotheke gespeichert. Nutze das + oben rechts.
-                            </p>
-                          )}
+                        {!pharmaciesLoading && pharmacies.length === 0 && (
+                          <p className={theme.textMuted}>
+                            Noch keine Apotheke gespeichert. Nutze das + oben rechts.
+                          </p>
+                        )}
 
-                          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                            {pharmacies.map((pharmacy) => (
-                              <button
-                                type="button"
-                                key={pharmacy.id}
-                                className={`rounded-xl border ${theme.border} p-4 ${theme.bgHover} text-left`}
-                                title="Apotheke bearbeiten"
-                                onClick={() => openEditModal(pharmacy)}
-                              >
-                                <div className="flex items-start justify-between gap-2">
-                                  <div>
-                                    <p className="font-medium text-sm">{pharmacy.name}</p>
-                                    <p className={`text-xs ${theme.textMuted}`}>
-                                      {[pharmacy.street, [pharmacy.postal_code, pharmacy.city].filter(Boolean).join(' ')].filter(Boolean).join(', ')}
-                                    </p>
-                                  </div>
+                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                          {pharmacies.map((pharmacy) => (
+                            <button
+                              type="button"
+                              key={pharmacy.id}
+                              className={`rounded-xl border ${theme.border} p-4 ${theme.bgHover} text-left`}
+                              title="Apotheke bearbeiten"
+                              onClick={() => openEditModal(pharmacy)}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div>
+                                  <p className="font-medium text-sm">{pharmacy.name}</p>
+                                  <p className={`text-xs ${theme.textMuted}`}>
+                                    {[pharmacy.street, [pharmacy.postal_code, pharmacy.city].filter(Boolean).join(' ')].filter(Boolean).join(', ')}
+                                  </p>
                                 </div>
-                                <div className="mt-3 grid gap-1.5 text-xs">
+                              </div>
+                              <div className="mt-3 grid gap-1.5 text-xs">
                                   <p className={theme.textMuted}>
                                     Telefon: <span className={theme.text}>{pharmacy.phone || '-'}</span>
                                   </p>
@@ -3094,12 +3698,12 @@ function App() {
                         </div>
                       )}
 
-                      {settingsTab === 'staff' && (
-                        <div className={`${theme.panel} rounded-2xl p-5 border ${theme.border} ${theme.cardShadow}`}>
+                    {settingsTab === 'staff' && (
+                      <div className={`${theme.panel} rounded-2xl p-5 border ${theme.border} ${theme.cardShadow}`}>
                           <div className="flex items-center justify-between mb-3">
                             <div>
                               <h3 className="text-base font-semibold">Kollegium</h3>
-                              <p className={`text-xs ${theme.textMuted}`}>Global ueber alle Apotheken.</p>
+                              <p className={`text-xs ${theme.textMuted}`}>Global über alle Apotheken.</p>
                             </div>
                             <div className="flex items-center gap-2">
                               <button
@@ -3115,7 +3719,7 @@ function App() {
                                 onClick={() => openStaffModal()}
                                 disabled={pharmacies.length === 0}
                                 className={`h-8 w-8 rounded-full flex items-center justify-center border ${theme.border} ${theme.bgHover} ${theme.text} disabled:opacity-40 disabled:cursor-not-allowed`}
-                                title="Person hinzufuegen"
+                                title="Person hinzufügen"
                               >
                                 +
                               </button>
@@ -3160,7 +3764,7 @@ function App() {
                                         <img
                                           src={member.avatar_url}
                                           alt={`${member.first_name} ${member.last_name}`}
-                                          className="h-8 w-8 rounded-full object-cover border border-zinc-700/60"
+                                          className={`h-8 w-8 rounded-full object-cover border ${theme.border}`}
                                         />
                                       ) : (
                                         <div className={`h-8 w-8 rounded-full border ${theme.border} flex items-center justify-center text-[10px] ${theme.textMuted}`}>
@@ -3200,7 +3804,7 @@ function App() {
                                   </p>
                                   {member.auth_user_id && (
                                     <p className={theme.textMuted}>
-                                      Login verknuepft
+                                      Login verknüpft
                                     </p>
                                   )}
                                 </div>
@@ -3208,8 +3812,253 @@ function App() {
                             ))}
                           </div>
                         </div>
-                      )}
-                    </div>
+                    )}
+
+                    {settingsTab === 'contacts' && (
+                      <div className={`${theme.panel} rounded-2xl p-5 border ${theme.border} ${theme.cardShadow}`}>
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <h3 className="text-base font-semibold">Kontakte</h3>
+                            <p className={`text-xs ${theme.textMuted}`}>Business-Kontakte und Visitenkarten.</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={fetchContacts}
+                              className={`text-xs font-medium ${theme.accentText} hover:opacity-80`}
+                              title="Liste aktualisieren"
+                            >
+                              Aktualisieren
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => openContactModal()}
+                              disabled={!currentStaff}
+                              className={`h-8 w-8 rounded-full flex items-center justify-center border ${theme.border} ${theme.bgHover} ${theme.text} disabled:opacity-40 disabled:cursor-not-allowed`}
+                              title="Kontakt hinzufügen"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Suchfeld und Ansicht-Umschalter */}
+                        <div className="mb-4 flex flex-col sm:flex-row gap-3">
+                          <div className="relative flex-1">
+                            <svg className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${theme.textMuted}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            <input
+                              type="text"
+                              value={contactSearch}
+                              onChange={(e) => setContactSearch(e.target.value)}
+                              placeholder="Suchen nach Name, Firma, Adresse, E-Mail..."
+                              className={`w-full pl-10 pr-10 py-2.5 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
+                            />
+                            {contactSearch && (
+                              <button
+                                type="button"
+                                onClick={() => setContactSearch('')}
+                                className={`absolute right-3 top-1/2 -translate-y-1/2 ${theme.textMuted} hover:${theme.text}`}
+                                title="Suche löschen"
+                              >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            )}
+                          </div>
+                          {/* Ansicht-Umschalter */}
+                          <div className={`flex rounded-xl border ${theme.border} overflow-hidden`}>
+                            <button
+                              type="button"
+                              onClick={() => setContactViewMode('cards')}
+                              className={`px-3 py-2 ${contactViewMode === 'cards' ? theme.accent + ' text-white' : theme.bgHover + ' ' + theme.textMuted}`}
+                              title="Kartenansicht"
+                            >
+                              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                              </svg>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setContactViewMode('list')}
+                              className={`px-3 py-2 ${contactViewMode === 'list' ? theme.accent + ' text-white' : theme.bgHover + ' ' + theme.textMuted}`}
+                              title="Listenansicht"
+                            >
+                              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                        {contactSearch && (
+                          <p className={`text-xs ${theme.textMuted} mb-3`}>
+                            {filteredContacts.length} von {contacts.length} Kontakten
+                          </p>
+                        )}
+
+                        {contactsMessage && (
+                          <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3 mb-3">
+                            <p className="text-rose-400 text-sm">{contactsMessage}</p>
+                          </div>
+                        )}
+
+                        {contactsLoading && (
+                          <p className={theme.textMuted}>Lade Daten...</p>
+                        )}
+
+                        {!contactsLoading && !currentStaff && (
+                          <p className={theme.textMuted}>
+                            Bitte zuerst ein Mitarbeiter-Profil anlegen.
+                          </p>
+                        )}
+
+                        {!contactsLoading && currentStaff && contacts.length === 0 && (
+                          <p className={theme.textMuted}>
+                            Noch keine Kontakte erfasst. Nutze das + oben rechts.
+                          </p>
+                        )}
+
+                        {!contactsLoading && currentStaff && contacts.length > 0 && filteredContacts.length === 0 && (
+                          <p className={theme.textMuted}>
+                            Keine Kontakte gefunden für "{contactSearch}".
+                          </p>
+                        )}
+
+                        {/* Kartenansicht */}
+                        {contactViewMode === 'cards' && (
+                          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                            {filteredContacts.map((contact) => (
+                              <button
+                                type="button"
+                                key={contact.id}
+                                className={`rounded-xl border ${theme.border} p-4 ${theme.bgHover} text-left ${contact.staff_id ? 'border-l-4 border-l-[#4A90E2]' : ''}`}
+                                title={contact.staff_id ? 'Mitarbeiter - wird über Kollegium gepflegt' : 'Kontakt anzeigen'}
+                                onClick={() => setSelectedContact(contact)}
+                              >
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex items-center gap-2">
+                                    {contact.business_card_url ? (
+                                      <img
+                                        src={contact.business_card_url}
+                                        alt="Visitenkarte"
+                                        className={`h-10 w-14 rounded object-cover border ${theme.border}`}
+                                      />
+                                    ) : (
+                                      <div className={`h-10 w-14 rounded border ${theme.border} flex items-center justify-center text-[10px] ${theme.textMuted}`}>
+                                        {(contact.first_name?.[0] || '') + (contact.last_name?.[0] || contact.company?.[0] || '')}
+                                      </div>
+                                    )}
+                                    <div>
+                                      <p className="font-medium text-sm">
+                                        {[contact.first_name, contact.last_name].filter(Boolean).join(' ') || contact.company || '-'}
+                                      </p>
+                                      {contact.company && (contact.first_name || contact.last_name) && (
+                                        <p className={`text-xs ${theme.textMuted}`}>{contact.company}</p>
+                                      )}
+                                      {contact.position && (
+                                        <p className={`text-xs ${theme.textMuted}`}>{contact.position}</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <span className={`text-[10px] uppercase tracking-wide px-2 py-1 rounded-full border ${theme.border} ${theme.textMuted}`}>
+                                    {contactTypeLabels[contact.contact_type] || contact.contact_type}
+                                  </span>
+                                </div>
+                                <div className="mt-3 grid gap-1.5 text-xs">
+                                  <p className={theme.textMuted}>
+                                    Adresse: <span className={theme.text}>
+                                      {[contact.street, [contact.postal_code, contact.city].filter(Boolean).join(' ')].filter(Boolean).join(', ') || '-'}
+                                    </span>
+                                  </p>
+                                  {contact.phone && (
+                                    <p className={theme.textMuted}>
+                                      Tel: <span className={theme.text}>{contact.phone}</span>
+                                    </p>
+                                  )}
+                                  {contact.mobile && (
+                                    <p className={theme.textMuted}>
+                                      Mobil: <span className={theme.text}>{contact.mobile}</span>
+                                    </p>
+                                  )}
+                                  {contact.email && (
+                                    <p className={theme.textMuted}>
+                                      E-Mail: <span className={theme.text}>{contact.email}</span>
+                                    </p>
+                                  )}
+                                  {!contact.shared && (
+                                    <p className={`${theme.textMuted} italic`}>Privat</p>
+                                  )}
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Listenansicht */}
+                        {contactViewMode === 'list' && (
+                          <div className={`rounded-xl border ${theme.border} overflow-hidden`}>
+                            <table className="w-full text-sm">
+                              <thead className={`${theme.bg} border-b ${theme.border}`}>
+                                <tr>
+                                  <th className={`text-left px-4 py-3 font-medium ${theme.textSecondary}`}>Name</th>
+                                  <th className={`text-left px-4 py-3 font-medium ${theme.textSecondary} hidden sm:table-cell`}>Firma</th>
+                                  <th className={`text-left px-4 py-3 font-medium ${theme.textSecondary} hidden md:table-cell`}>Adresse</th>
+                                  <th className={`text-left px-4 py-3 font-medium ${theme.textSecondary} hidden lg:table-cell`}>Kontakt</th>
+                                  <th className={`text-left px-4 py-3 font-medium ${theme.textSecondary} w-24`}>Typ</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {filteredContacts.map((contact) => (
+                                  <tr
+                                    key={contact.id}
+                                    className={`border-b ${theme.border} ${theme.bgHover} cursor-pointer ${contact.staff_id ? 'border-l-4 border-l-[#4A90E2]' : ''}`}
+                                    title={contact.staff_id ? 'Mitarbeiter - wird über Kollegium gepflegt' : 'Kontakt anzeigen'}
+                                    onClick={() => setSelectedContact(contact)}
+                                  >
+                                    <td className={`px-4 py-3 ${theme.text}`}>
+                                      <div className="flex items-center gap-2">
+                                        <div className={`h-8 w-8 rounded-full border ${theme.border} flex items-center justify-center text-[10px] ${theme.textMuted} flex-shrink-0`}>
+                                          {(contact.first_name?.[0] || '') + (contact.last_name?.[0] || contact.company?.[0] || '')}
+                                        </div>
+                                        <div>
+                                          <p className="font-medium">
+                                            {[contact.first_name, contact.last_name].filter(Boolean).join(' ') || '-'}
+                                          </p>
+                                          {contact.position && (
+                                            <p className={`text-xs ${theme.textMuted}`}>{contact.position}</p>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </td>
+                                    <td className={`px-4 py-3 ${theme.textMuted} hidden sm:table-cell`}>
+                                      {contact.company || '-'}
+                                    </td>
+                                    <td className={`px-4 py-3 ${theme.textMuted} hidden md:table-cell`}>
+                                      {[contact.street, [contact.postal_code, contact.city].filter(Boolean).join(' ')].filter(Boolean).join(', ') || '-'}
+                                    </td>
+                                    <td className={`px-4 py-3 hidden lg:table-cell`}>
+                                      <div className={`text-xs ${theme.textMuted}`}>
+                                        {contact.email && <p>{contact.email}</p>}
+                                        {contact.phone && <p>{contact.phone}</p>}
+                                        {contact.mobile && <p>{contact.mobile}</p>}
+                                        {!contact.email && !contact.phone && !contact.mobile && '-'}
+                                      </div>
+                                    </td>
+                                    <td className="px-4 py-3">
+                                      <span className={`text-[10px] uppercase tracking-wide px-2 py-1 rounded-full border ${theme.border} ${theme.textMuted}`}>
+                                        {contactTypeLabels[contact.contact_type] || contact.contact_type}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </>
               )}
@@ -3229,7 +4078,7 @@ function App() {
               <div className={`flex items-center justify-between px-5 py-4 border-b ${theme.border}`}>
                 <div>
                   <h3 className="text-base font-semibold">
-                    {editingPharmacy.id ? 'Apotheke bearbeiten' : 'Apotheke hinzufuegen'}
+                    {editingPharmacy.id ? 'Apotheke bearbeiten' : 'Apotheke hinzufügen'}
                   </h3>
                   <p className={`text-xs ${theme.textMuted}`}>
                     {editingPharmacy.id ? 'Aenderungen werden sofort gespeichert.' : 'Neue Apotheke anlegen.'}
@@ -3239,7 +4088,7 @@ function App() {
                   type="button"
                   onClick={closeEditModal}
                   className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
-                  title="Popup schliessen"
+                  title="Popup schließen"
                 >
                   <Icons.X />
                 </button>
@@ -3314,7 +4163,7 @@ function App() {
                         className={`w-full px-3 py-2 ${theme.input} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
                         required
                       >
-                        <option value="">Bitte waehlen</option>
+                        <option value="">Bitte wählen</option>
                         <option value="owner">Inhaber</option>
                         <option value="manager">Filialleiter</option>
                       </select>
@@ -3400,7 +4249,7 @@ function App() {
               <div className={`flex items-center justify-between px-5 py-4 border-b ${theme.border}`}>
                 <div>
                   <h3 className="text-base font-semibold">
-                    {editingStaff.id ? 'Kollegium bearbeiten' : 'Kollegium hinzufuegen'}
+                    {editingStaff.id ? 'Kollegium bearbeiten' : 'Kollegium hinzufügen'}
                   </h3>
                   <p className={`text-xs ${theme.textMuted}`}>
                     {editingStaff.id ? 'Aenderungen werden sofort gespeichert.' : 'Neue Person anlegen.'}
@@ -3410,7 +4259,7 @@ function App() {
                   type="button"
                   onClick={closeStaffModal}
                   className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
-                  title="Popup schliessen"
+                  title="Popup schließen"
                 >
                   <Icons.X />
                 </button>
@@ -3482,16 +4331,34 @@ function App() {
                       className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
                     />
                   </div>
-                  <div>
+                  <div className="sm:col-span-2">
                     <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
                       E-Mail
                     </label>
-                    <input
-                      value={staffForm.email}
-                      onChange={(e) => handleStaffInput('email', e.target.value)}
-                      className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
-                      type="email"
-                    />
+                    <div className="flex gap-2">
+                      <input
+                        value={staffForm.email}
+                        onChange={(e) => handleStaffInput('email', e.target.value)}
+                        className={`flex-1 px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
+                        type="email"
+                      />
+                      {currentStaff?.is_admin && !staffForm.authUserId && (
+                        <button
+                          type="button"
+                          onClick={handleSendInvite}
+                          disabled={staffInviteLoading || !staffForm.email.trim()}
+                          className={`px-3 py-2 rounded-xl text-xs font-medium ${theme.accent} text-white disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap`}
+                          title="Einladung senden"
+                        >
+                          {staffInviteLoading ? 'Sende...' : 'Einladen'}
+                        </button>
+                      )}
+                    </div>
+                    {staffInviteMessage && (
+                      <p className={`text-xs mt-1 ${staffInviteMessage.includes('gesendet') ? 'text-emerald-600' : 'text-rose-400'}`}>
+                        {staffInviteMessage}
+                      </p>
+                    )}
                   </div>
 
                   <div>
@@ -3504,7 +4371,7 @@ function App() {
                       className={`w-full px-3 py-2 ${theme.input} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
                       required
                     >
-                      <option value="">Bitte waehlen</option>
+                      <option value="">Bitte wählen</option>
                       <option value="ApothekerIn">ApothekerIn</option>
                       <option value="PTA">PTA</option>
                       <option value="PKA">PKA</option>
@@ -3521,7 +4388,7 @@ function App() {
                       className={`w-full px-3 py-2 ${theme.input} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
                       required
                     >
-                      <option value="">Bitte waehlen</option>
+                      <option value="">Bitte wählen</option>
                       {pharmacies.map((pharmacy) => (
                         <option key={pharmacy.id} value={pharmacy.id}>
                           {pharmacy.name}
@@ -3548,7 +4415,7 @@ function App() {
                       <img
                         src={staffAvatarPreview}
                         alt="Avatar Vorschau"
-                        className="h-12 w-12 rounded-full object-cover border border-zinc-700/60"
+                        className={`h-12 w-12 rounded-full object-cover border ${theme.border}`}
                       />
                     ) : (
                       <div className={`h-12 w-12 rounded-full border ${theme.border} flex items-center justify-center text-xs ${theme.textMuted}`}>
@@ -3566,17 +4433,17 @@ function App() {
                     type="button"
                     onClick={linkCurrentUser}
                     className={`text-xs font-medium ${theme.accentText} hover:opacity-80`}
-                    title="Mit aktuellem Login verknuepfen"
+                    title="Mit aktuellem Login verknüpfen"
                     disabled={!session?.user?.id}
                   >
-                    {staffForm.authUserId ? 'Login verknuepft' : 'Mit aktuellem Login verknuepfen'}
+                    {staffForm.authUserId ? 'Login verknüpft' : 'Mit aktuellem Login verknüpfen'}
                   </button>
                   <label className={`flex items-center gap-2 text-xs ${theme.textMuted}`}>
                     <input
                       type="checkbox"
                       checked={staffForm.isAdmin}
                       onChange={(e) => handleStaffInput('isAdmin', e.target.checked)}
-                      className="accent-emerald-500"
+                      className="accent-[#4A90E2]"
                     />
                     Admin
                   </label>
@@ -3609,6 +4476,484 @@ function App() {
           </div>
         )}
 
+        {/* Kontakt Detail-Ansicht */}
+        {selectedContact && (
+          <div
+            className={`fixed inset-0 z-50 ${theme.overlay} flex items-center justify-center p-4`}
+            onClick={() => setSelectedContact(null)}
+          >
+            <div
+              className={`${theme.panel} rounded-2xl border ${theme.border} ${theme.cardShadow} w-full max-w-4xl max-h-[90vh] overflow-y-auto`}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className={`flex items-center justify-between px-5 py-4 border-b ${theme.border}`}>
+                <div>
+                  <h3 className="text-base font-semibold">
+                    {[selectedContact.first_name, selectedContact.last_name].filter(Boolean).join(' ') || selectedContact.company || 'Kontakt'}
+                  </h3>
+                  <p className={`text-xs ${theme.textMuted}`}>
+                    {selectedContact.company && (selectedContact.first_name || selectedContact.last_name) ? selectedContact.company : ''}
+                    {selectedContact.position ? (selectedContact.company ? ' · ' : '') + selectedContact.position : ''}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {!selectedContact.staff_id && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        openContactModal(selectedContact)
+                        setSelectedContact(null)
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${theme.border} ${theme.bgHover}`}
+                      title="Kontakt bearbeiten"
+                    >
+                      Bearbeiten
+                    </button>
+                  )}
+                  {selectedContact.staff_id && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSettingsTab('staff')
+                        setSelectedContact(null)
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${theme.border} ${theme.bgHover}`}
+                      title="Im Kollegium bearbeiten"
+                    >
+                      Im Kollegium bearbeiten
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedContact(null)}
+                    className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
+                    title="Schließen"
+                  >
+                    <Icons.X />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-5">
+                <div className="grid gap-6 lg:grid-cols-2">
+                  {/* Visitenkarte / Bild */}
+                  <div>
+                    <h4 className={`text-xs font-medium mb-2 ${theme.textSecondary}`}>Visitenkarte</h4>
+                    {selectedContact.business_card_url ? (
+                      <a
+                        href={selectedContact.business_card_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block"
+                      >
+                        {selectedContact.business_card_url.toLowerCase().endsWith('.pdf') ? (
+                          <div className={`rounded-xl border ${theme.border} overflow-hidden`}>
+                            <iframe
+                              src={selectedContact.business_card_url}
+                              className="w-full h-80"
+                              title="Visitenkarte PDF"
+                            />
+                            <p className={`text-xs ${theme.textMuted} text-center py-2 border-t ${theme.border}`}>
+                              Klicken zum Öffnen in neuem Tab
+                            </p>
+                          </div>
+                        ) : (
+                          <img
+                            src={selectedContact.business_card_url}
+                            alt="Visitenkarte"
+                            className={`w-full rounded-xl border ${theme.border} object-contain max-h-80`}
+                          />
+                        )}
+                      </a>
+                    ) : (
+                      <div className={`h-40 rounded-xl border-2 border-dashed ${theme.border} flex items-center justify-center ${theme.textMuted}`}>
+                        Keine Visitenkarte hinterlegt
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Kontaktdaten */}
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className={`text-xs font-medium mb-2 ${theme.textSecondary}`}>Kontaktdaten</h4>
+                      <div className={`rounded-xl border ${theme.border} divide-y ${theme.border}`}>
+                        {selectedContact.email && (
+                          <a href={`mailto:${selectedContact.email}`} className={`flex items-center gap-3 px-4 py-3 ${theme.bgHover}`}>
+                            <svg className={`w-4 h-4 ${theme.textMuted}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                            <span className={`text-sm ${theme.text}`}>{selectedContact.email}</span>
+                          </a>
+                        )}
+                        {selectedContact.phone && (
+                          <a href={`tel:${selectedContact.phone}`} className={`flex items-center gap-3 px-4 py-3 ${theme.bgHover}`}>
+                            <svg className={`w-4 h-4 ${theme.textMuted}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                            </svg>
+                            <span className={`text-sm ${theme.text}`}>{selectedContact.phone}</span>
+                          </a>
+                        )}
+                        {selectedContact.mobile && (
+                          <a href={`tel:${selectedContact.mobile}`} className={`flex items-center gap-3 px-4 py-3 ${theme.bgHover}`}>
+                            <svg className={`w-4 h-4 ${theme.textMuted}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                            </svg>
+                            <span className={`text-sm ${theme.text}`}>{selectedContact.mobile}</span>
+                          </a>
+                        )}
+                        {selectedContact.website && (
+                          <a href={selectedContact.website.startsWith('http') ? selectedContact.website : `https://${selectedContact.website}`} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-3 px-4 py-3 ${theme.bgHover}`}>
+                            <svg className={`w-4 h-4 ${theme.textMuted}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                            </svg>
+                            <span className={`text-sm ${theme.text}`}>{selectedContact.website}</span>
+                          </a>
+                        )}
+                        {!selectedContact.email && !selectedContact.phone && !selectedContact.mobile && !selectedContact.website && (
+                          <p className={`px-4 py-3 text-sm ${theme.textMuted}`}>Keine Kontaktdaten</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className={`text-xs font-medium mb-2 ${theme.textSecondary}`}>Adresse</h4>
+                      <div className={`rounded-xl border ${theme.border} px-4 py-3`}>
+                        {selectedContact.street || selectedContact.postal_code || selectedContact.city ? (
+                          <div className={`text-sm ${theme.text}`}>
+                            {selectedContact.street && <p>{selectedContact.street}</p>}
+                            {(selectedContact.postal_code || selectedContact.city) && (
+                              <p>{[selectedContact.postal_code, selectedContact.city].filter(Boolean).join(' ')}</p>
+                            )}
+                            {selectedContact.country && selectedContact.country !== 'DE' && (
+                              <p>{selectedContact.country}</p>
+                            )}
+                          </div>
+                        ) : (
+                          <p className={`text-sm ${theme.textMuted}`}>Keine Adresse</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {selectedContact.notes && (
+                      <div>
+                        <h4 className={`text-xs font-medium mb-2 ${theme.textSecondary}`}>Notizen</h4>
+                        <div className={`rounded-xl border ${theme.border} px-4 py-3`}>
+                          <p className={`text-sm ${theme.text} whitespace-pre-wrap`}>{selectedContact.notes}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] uppercase tracking-wide px-2 py-1 rounded-full border ${theme.border} ${theme.textMuted}`}>
+                        {contactTypeLabels[selectedContact.contact_type] || selectedContact.contact_type}
+                      </span>
+                      {!selectedContact.shared && (
+                        <span className={`text-[10px] uppercase tracking-wide px-2 py-1 rounded-full border ${theme.border} ${theme.textMuted}`}>
+                          Privat
+                        </span>
+                      )}
+                      {selectedContact.staff_id && (
+                        <span className={`text-[10px] uppercase tracking-wide px-2 py-1 rounded-full bg-[#4A90E2]/10 text-[#4A90E2] border border-[#4A90E2]/20`}>
+                          Mitarbeiter
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {editingContact && (
+          <div
+            className={`fixed inset-0 z-50 ${theme.overlay} flex items-center justify-center p-4`}
+            onClick={closeContactModal}
+          >
+            <div
+              className={`${theme.panel} rounded-2xl border ${theme.border} ${theme.cardShadow} w-full max-w-2xl max-h-[90vh] overflow-y-auto`}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className={`flex items-center justify-between px-5 py-4 border-b ${theme.border}`}>
+                <div>
+                  <h3 className="text-base font-semibold">
+                    {editingContact.id ? 'Kontakt bearbeiten' : 'Kontakt hinzufügen'}
+                  </h3>
+                  <p className={`text-xs ${theme.textMuted}`}>
+                    {editingContact.id ? 'Änderungen werden sofort gespeichert.' : 'Neuen Kontakt anlegen.'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {editingContact.id && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        deleteContact(editingContact.id)
+                        closeContactModal()
+                      }}
+                      className={`p-2 rounded-lg ${theme.danger}`}
+                      title="Kontakt löschen"
+                    >
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={closeContactModal}
+                    className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
+                    title="Popup schließen"
+                  >
+                    <Icons.X />
+                  </button>
+                </div>
+              </div>
+
+              <form onSubmit={handleContactSubmit} className="p-5 space-y-4">
+                {/* Visitenkarte Upload */}
+                <div>
+                  <label className={`block text-xs font-medium mb-2 ${theme.textSecondary}`}>
+                    Visitenkarte
+                  </label>
+                  <div className="flex items-center gap-4">
+                    {contactCardPreview ? (
+                      <img
+                        src={contactCardPreview}
+                        alt="Visitenkarte Vorschau"
+                        className={`h-20 w-32 rounded-lg object-cover border ${theme.border}`}
+                      />
+                    ) : (
+                      <div className={`h-20 w-32 rounded-lg border-2 border-dashed ${theme.border} flex items-center justify-center ${theme.textMuted}`}>
+                        <Icons.Photo />
+                      </div>
+                    )}
+                    <div className="flex flex-col gap-2">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        ref={contactCardInputRef}
+                        onChange={handleContactCardChange}
+                        className="hidden"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => contactCardInputRef.current?.click()}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${theme.border} ${theme.bgHover}`}
+                      >
+                        {contactCardPreview ? 'Ändern' : 'Hochladen'}
+                      </button>
+                      {contactCardPreview && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setContactCardFile(null)
+                            setContactCardPreview('')
+                            handleContactInput('businessCardUrl', '')
+                          }}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium ${theme.danger}`}
+                        >
+                          Entfernen
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
+                      Vorname
+                    </label>
+                    <input
+                      value={contactForm.firstName}
+                      onChange={(e) => handleContactInput('firstName', e.target.value)}
+                      className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
+                    />
+                  </div>
+                  <div>
+                    <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
+                      Nachname
+                    </label>
+                    <input
+                      value={contactForm.lastName}
+                      onChange={(e) => handleContactInput('lastName', e.target.value)}
+                      className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
+                      Firma
+                    </label>
+                    <input
+                      value={contactForm.company}
+                      onChange={(e) => handleContactInput('company', e.target.value)}
+                      className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
+                    />
+                  </div>
+                  <div>
+                    <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
+                      Position
+                    </label>
+                    <input
+                      value={contactForm.position}
+                      onChange={(e) => handleContactInput('position', e.target.value)}
+                      className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
+                      E-Mail
+                    </label>
+                    <input
+                      type="email"
+                      value={contactForm.email}
+                      onChange={(e) => handleContactInput('email', e.target.value)}
+                      className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
+                    />
+                  </div>
+                  <div>
+                    <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
+                      Webseite
+                    </label>
+                    <input
+                      value={contactForm.website}
+                      onChange={(e) => handleContactInput('website', e.target.value)}
+                      className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
+                      Telefon
+                    </label>
+                    <input
+                      value={contactForm.phone}
+                      onChange={(e) => handleContactInput('phone', e.target.value)}
+                      className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
+                    />
+                  </div>
+                  <div>
+                    <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
+                      Mobil
+                    </label>
+                    <input
+                      value={contactForm.mobile}
+                      onChange={(e) => handleContactInput('mobile', e.target.value)}
+                      className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
+                      Straße
+                    </label>
+                    <input
+                      value={contactForm.street}
+                      onChange={(e) => handleContactInput('street', e.target.value)}
+                      className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
+                      PLZ
+                    </label>
+                    <input
+                      value={contactForm.postalCode}
+                      onChange={(e) => handleContactInput('postalCode', e.target.value)}
+                      className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
+                    />
+                  </div>
+                  <div>
+                    <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
+                      Ort
+                    </label>
+                    <input
+                      value={contactForm.city}
+                      onChange={(e) => handleContactInput('city', e.target.value)}
+                      className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
+                      Land
+                    </label>
+                    <input
+                      value={contactForm.country}
+                      onChange={(e) => handleContactInput('country', e.target.value)}
+                      className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
+                    />
+                  </div>
+                  <div>
+                    <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
+                      Kategorie
+                    </label>
+                    <select
+                      value={contactForm.contactType}
+                      onChange={(e) => handleContactInput('contactType', e.target.value)}
+                      className={`w-full px-3 py-2 ${theme.input} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
+                    >
+                      <option value="business">Geschäftlich</option>
+                      <option value="supplier">Lieferant</option>
+                      <option value="customer">Kunde</option>
+                      <option value="other">Sonstige</option>
+                    </select>
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
+                      Notizen
+                    </label>
+                    <textarea
+                      value={contactForm.notes}
+                      onChange={(e) => handleContactInput('notes', e.target.value)}
+                      rows={3}
+                      className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm resize-none`}
+                    />
+                  </div>
+                </div>
+
+                <label className={`flex items-center gap-2 text-xs ${theme.textMuted}`}>
+                  <input
+                    type="checkbox"
+                    checked={contactForm.shared}
+                    onChange={(e) => handleContactInput('shared', e.target.checked)}
+                    className="accent-[#4A90E2]"
+                  />
+                  Für alle Mitarbeiter sichtbar
+                </label>
+
+                {contactSaveMessage && (
+                  <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3">
+                    <p className="text-rose-400 text-sm">{contactSaveMessage}</p>
+                  </div>
+                )}
+
+                <div className="flex flex-wrap gap-2 justify-end">
+                  <button
+                    type="button"
+                    onClick={closeContactModal}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium border ${theme.border} ${theme.bgHover}`}
+                  >
+                    Abbrechen
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={contactSaveLoading}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium ${theme.accent} text-white disabled:opacity-50 disabled:cursor-not-allowed`}
+                  >
+                    {contactSaveLoading ? 'Speichert...' : 'Speichern'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
         {weatherModalOpen && (
           <div
             className={`fixed inset-0 z-50 ${theme.overlay} flex items-center justify-center p-4`}
@@ -3627,7 +4972,7 @@ function App() {
                   type="button"
                   onClick={closeWeatherModal}
                   className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
-                  title="Popup schliessen"
+                  title="Popup schließen"
                 >
                   <Icons.X />
                 </button>
@@ -3710,7 +5055,7 @@ function App() {
                       max="150"
                       value={brightness}
                       onChange={(e) => setBrightness(Number(e.target.value))}
-                      className="w-full accent-emerald-500"
+                      className="w-full accent-[#4A90E2]"
                     />
                   </div>
                   <div>
@@ -3723,7 +5068,7 @@ function App() {
                       max="150"
                       value={contrast}
                       onChange={(e) => setContrast(Number(e.target.value))}
-                      className="w-full accent-emerald-500"
+                      className="w-full accent-[#4A90E2]"
                     />
                   </div>
 
@@ -3743,7 +5088,7 @@ function App() {
                       )}
                     </div>
                     {ocrProcessing[selectedPhoto.name] && (
-                      <p className={`text-sm ${theme.accentText}`}>OCR wird ausgefuehrt...</p>
+                      <p className={`text-sm ${theme.accentText}`}>OCR wird ausgeführt...</p>
                     )}
                     {photoOcrData[selectedPhoto.name]?.status === 'completed' && (
                       <div className={`${theme.input} border rounded-lg p-3 max-h-40 overflow-auto`}>
@@ -3756,7 +5101,7 @@ function App() {
                       <p className="text-sm text-rose-400">OCR fehlgeschlagen</p>
                     )}
                     {!photoOcrData[selectedPhoto.name] && !ocrProcessing[selectedPhoto.name] && (
-                      <p className={`text-sm ${theme.textMuted}`}>Noch kein OCR durchgefuehrt</p>
+                      <p className={`text-sm ${theme.textMuted}`}>Noch kein OCR durchgeführt</p>
                     )}
                   </div>
                 </div>
@@ -3817,13 +5162,25 @@ function App() {
                     )}
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setSelectedApoMessage(null)}
-                  className={`${theme.textMuted} ${theme.bgHover} p-2 rounded-lg flex-shrink-0`}
-                >
-                  <Icons.X />
-                </button>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {selectedApoMessage.type === 'amk' && (
+                    <button
+                      type="button"
+                      onClick={() => downloadAmkPdf(selectedApoMessage)}
+                      className={`${theme.accentText} ${theme.bgHover} p-2 rounded-lg`}
+                      title="Als PDF herunterladen"
+                    >
+                      <Icons.Download />
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedApoMessage(null)}
+                    className={`${theme.textMuted} ${theme.bgHover} p-2 rounded-lg`}
+                  >
+                    <Icons.X />
+                  </button>
+                </div>
               </div>
 
               <div className="flex-1 overflow-auto p-4">
@@ -3839,7 +5196,7 @@ function App() {
                 )}
                 {selectedApoMessage.type === 'recall' && selectedApoMessage.recall_number && (
                   <p className={`text-sm ${theme.textSecondary} mb-3`}>
-                    <strong>Rueckrufnummer:</strong> {selectedApoMessage.recall_number}
+                    <strong>Rückrufnummer:</strong> {selectedApoMessage.recall_number}
                   </p>
                 )}
 
@@ -3847,7 +5204,9 @@ function App() {
                 {selectedApoMessage.type === 'recall' && selectedApoMessage.ai_zusammenfassung && (
                   <div className={`mb-4 p-3 rounded-lg ${theme.surface} border ${theme.border}`}>
                     <p className={`text-sm font-medium ${theme.accentText} mb-1`}>KI-Zusammenfassung:</p>
-                    <p className={`text-sm ${theme.text}`}>{selectedApoMessage.ai_zusammenfassung}</p>
+                    <div className={`text-sm ${theme.text} markdown-content`}>
+                      <ReactMarkdown>{selectedApoMessage.ai_zusammenfassung}</ReactMarkdown>
+                    </div>
                     {selectedApoMessage.ai_analysiert_am && (
                       <p className={`text-xs ${theme.textMuted} mt-2`}>
                         Analysiert am: {new Date(selectedApoMessage.ai_analysiert_am).toLocaleString('de-DE')}
@@ -3884,13 +5243,13 @@ function App() {
                     </div>
                   </div>
                 )}
-                {selectedApoMessage.type === 'recall' && selectedApoMessage.ai_packungsgroessen && selectedApoMessage.ai_packungsgroessen.length > 0 && (
+                {selectedApoMessage.type === 'recall' && selectedApoMessage.ai_packungsgrößen && selectedApoMessage.ai_packungsgrößen.length > 0 && (
                   <div className="mb-4">
-                    <p className={`text-sm font-medium ${theme.textSecondary} mb-1`}>Packungsgroessen:</p>
+                    <p className={`text-sm font-medium ${theme.textSecondary} mb-1`}>Packungsgrößen:</p>
                     <div className="flex flex-wrap gap-1">
-                      {selectedApoMessage.ai_packungsgroessen.map((groesse, i) => (
+                      {selectedApoMessage.ai_packungsgrößen.map((größe, i) => (
                         <span key={i} className={`text-xs px-2 py-1 rounded ${theme.surface} ${theme.text} border ${theme.border}`}>
-                          {groesse}
+                          {größe}
                         </span>
                       ))}
                     </div>
@@ -3924,7 +5283,9 @@ function App() {
                             </summary>
                             {thema.volltext && (
                               <div className={`px-3 py-2 border-t ${theme.border}`}>
-                                <p className={`text-sm ${theme.text} whitespace-pre-wrap`}>{thema.volltext}</p>
+                                <div className={`text-sm ${theme.text} markdown-content`}>
+                                  <ReactMarkdown>{thema.volltext}</ReactMarkdown>
+                                </div>
                               </div>
                             )}
                           </details>
@@ -3952,7 +5313,7 @@ function App() {
 
                 {selectedApoMessage.type === 'lav' && selectedApoMessage.attachment_urls && selectedApoMessage.attachment_urls.length > 0 && (
                   <div className="mb-4">
-                    <p className={`text-sm font-medium ${theme.textSecondary} mb-1`}>Anhaenge:</p>
+                    <p className={`text-sm font-medium ${theme.textSecondary} mb-1`}>Anhänge:</p>
                     <div className="flex flex-wrap gap-2">
                       {selectedApoMessage.attachment_urls.map((url, i) => (
                         <a
@@ -3969,37 +5330,46 @@ function App() {
                   </div>
                 )}
 
-                {selectedApoMessage.description && (
+                {/* Beschreibung, Produkte, wichtige Infos nur für Nicht-AMK (bei AMK ist alles im full_text) */}
+                {selectedApoMessage.type !== 'amk' && selectedApoMessage.description && (
                   <div className="mb-4">
                     <p className={`text-sm font-medium ${theme.textSecondary} mb-1`}>Beschreibung:</p>
-                    <p className={`text-sm ${theme.text}`}>{selectedApoMessage.description}</p>
+                    <div className={`text-sm ${theme.text} markdown-content`}>
+                      <ReactMarkdown>{selectedApoMessage.description}</ReactMarkdown>
+                    </div>
                   </div>
                 )}
-                {selectedApoMessage.affected_products && selectedApoMessage.affected_products.length > 0 && (
+                {selectedApoMessage.type !== 'amk' && selectedApoMessage.affected_products && selectedApoMessage.affected_products.length > 0 && (
                   <div className="mb-4">
                     <p className={`text-sm font-medium ${theme.textSecondary} mb-1`}>Betroffene Produkte:</p>
-                    <ul className={`text-sm ${theme.text} list-disc list-inside`}>
+                    <ul className={`text-sm ${theme.text} list-disc list-inside space-y-1`}>
                       {selectedApoMessage.affected_products.map((p, i) => (
-                        <li key={i}>{p}</li>
+                        <li key={i} className="markdown-content"><ReactMarkdown>{p}</ReactMarkdown></li>
                       ))}
                     </ul>
                   </div>
                 )}
-                {selectedApoMessage.important_info && selectedApoMessage.important_info.length > 0 && (
+                {selectedApoMessage.type !== 'amk' && selectedApoMessage.important_info && selectedApoMessage.important_info.length > 0 && (
                   <div className="mb-4">
                     <p className={`text-sm font-medium ${theme.textSecondary} mb-1`}>Wichtige Informationen:</p>
-                    <ul className={`text-sm ${theme.text} list-disc list-inside`}>
+                    <ul className={`text-sm ${theme.text} list-disc list-inside space-y-1`}>
                       {selectedApoMessage.important_info.map((info, i) => (
-                        <li key={i}>{info}</li>
+                        <li key={i} className="markdown-content"><ReactMarkdown>{info}</ReactMarkdown></li>
                       ))}
                     </ul>
                   </div>
                 )}
                 {selectedApoMessage.full_text && (
                   <div>
-                    <p className={`text-sm font-medium ${theme.textSecondary} mb-1`}>Vollstaendiger Text:</p>
-                    <div className={`text-sm ${theme.text} whitespace-pre-wrap ${theme.input} border rounded-lg p-3`}>
-                      {selectedApoMessage.full_text}
+                    {selectedApoMessage.type !== 'amk' && (
+                      <p className={`text-sm font-medium ${theme.textSecondary} mb-1`}>Vollständiger Text:</p>
+                    )}
+                    <div className={`text-sm ${theme.text} markdown-content`}>
+                      <ReactMarkdown>
+                        {selectedApoMessage.type === 'amk'
+                          ? selectedApoMessage.full_text.replace(/^#[^\n]*\n+/, '')
+                          : selectedApoMessage.full_text}
+                      </ReactMarkdown>
                     </div>
                   </div>
                 )}
@@ -4031,7 +5401,7 @@ function App() {
                   onClick={() => setSelectedApoMessage(null)}
                   className={`px-4 py-2.5 rounded-lg ${theme.accent} text-white font-medium`}
                 >
-                  Schliessen
+                  Schließen
                 </button>
               </div>
             </div>
@@ -4072,9 +5442,9 @@ function App() {
                     type="checkbox"
                     checked={eventForm.allDay}
                     onChange={(e) => setEventForm((prev) => ({ ...prev, allDay: e.target.checked }))}
-                    className="rounded border-zinc-600"
+                    className={`rounded ${theme.border}`}
                   />
-                  <span className={`text-sm ${theme.textSecondary}`}>Ganztaegig</span>
+                  <span className={`text-sm ${theme.textSecondary}`}>Ganztägig</span>
                 </label>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -4155,7 +5525,7 @@ function App() {
                       onClick={() => deleteEvent(editingEvent.id)}
                       className={`px-4 py-2.5 rounded-xl text-sm font-medium ${theme.danger} border ${theme.border}`}
                     >
-                      Loeschen
+                      Löschen
                     </button>
                   )}
                   <div className="flex-1" />
@@ -4284,10 +5654,10 @@ function App() {
               </div>
 
               <div className={`p-4 rounded-xl border ${theme.border} mb-6`}>
-                <h4 className={`text-sm font-medium mb-3 ${theme.textSecondary}`}>Berechtigung hinzufuegen</h4>
+                <h4 className={`text-sm font-medium mb-3 ${theme.textSecondary}`}>Berechtigung hinzufügen</h4>
                 <div className="flex gap-2">
                   <select id="newPermUser" className={`flex-1 px-3 py-2 rounded-lg border ${theme.input} text-sm ${theme.text}`}>
-                    <option value="">Mitarbeiter waehlen...</option>
+                    <option value="">Mitarbeiter wählen...</option>
                     {staff
                       .filter((s) => s.auth_user_id && !calendarPermissions.some((p) => p.user_id === s.auth_user_id))
                       .map((s) => (
@@ -4358,66 +5728,173 @@ function App() {
     )
   }
 
-  // Login view
+  // Login / Forgot Password / Reset Password views
   return (
-    <div className={`min-h-screen ${theme.bg} ${theme.bgPattern} ${theme.text} flex items-center justify-center p-4 relative overflow-hidden`}>
+    <div className={`min-h-screen ${theme.bg} ${theme.text} flex items-center justify-center p-4 relative overflow-hidden`}>
       <div className={`${theme.panel} p-6 sm:p-8 rounded-2xl border ${theme.border} ${theme.cardShadow} max-w-sm w-full`}>
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">Kaeee</h1>
-            <p className={`text-sm ${theme.textMuted}`}>Willkommen zurueck</p>
+            <img src="/logo.png" alt="Kaeee" className="h-10" />
+            <p className={`text-sm ${theme.textMuted}`}>
+              {authView === 'login' && 'Willkommen zurück'}
+              {authView === 'forgot' && 'Passwort zurücksetzen'}
+              {authView === 'resetPassword' && 'Neues Passwort setzen'}
+            </p>
           </div>
-          <button
-            onClick={() => setDarkMode(!darkMode)}
-            className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted} transition-colors`}
-            title={darkMode ? 'Hellmodus' : 'Dunkelmodus'}
-          >
-            {darkMode ? <Icons.Sun /> : <Icons.Moon />}
-          </button>
         </div>
 
-        <form onSubmit={handleSignIn} className="space-y-5">
-          <div>
-            <label className={`block text-sm font-medium mb-2 ${theme.textSecondary}`}>
-              Email
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className={`w-full px-4 py-2.5 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text}`}
-              placeholder="email@example.com"
-            />
-          </div>
-
-          <div>
-            <label className={`block text-sm font-medium mb-2 ${theme.textSecondary}`}>
-              Passwort
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className={`w-full px-4 py-2.5 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text}`}
-              placeholder="••••••••"
-            />
-          </div>
-
-          {message && (
-            <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3">
-              <p className="text-rose-400 text-sm">{message}</p>
+        {/* Login Form */}
+        {authView === 'login' && (
+          <form onSubmit={handleSignIn} className="space-y-5">
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${theme.textSecondary}`}>
+                Email
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={`w-full px-4 py-2.5 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text}`}
+                placeholder="email@example.com"
+              />
             </div>
-          )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            title="Einloggen"
-            className={`w-full ${theme.accent} text-white font-medium py-2.5 px-4 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
-          >
-            {loading ? 'Wird geladen...' : 'Einloggen'}
-          </button>
-        </form>
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${theme.textSecondary}`}>
+                Passwort
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className={`w-full px-4 py-2.5 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text}`}
+                placeholder="••••••••"
+              />
+            </div>
+
+            {message && (
+              <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3">
+                <p className="text-rose-400 text-sm">{message}</p>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              title="Einloggen"
+              className={`w-full ${theme.accent} text-white font-medium py-2.5 px-4 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              {loading ? 'Wird geladen...' : 'Einloggen'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { setAuthView('forgot'); setMessage(''); setSuccessMessage(''); }}
+              className={`w-full text-sm ${theme.accentText} hover:opacity-80`}
+            >
+              Passwort vergessen?
+            </button>
+          </form>
+        )}
+
+        {/* Forgot Password Form */}
+        {authView === 'forgot' && (
+          <form onSubmit={handleForgotPassword} className="space-y-5">
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${theme.textSecondary}`}>
+                Email
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={`w-full px-4 py-2.5 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text}`}
+                placeholder="email@example.com"
+              />
+            </div>
+
+            {message && (
+              <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3">
+                <p className="text-rose-400 text-sm">{message}</p>
+              </div>
+            )}
+
+            {successMessage && (
+              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3">
+                <p className="text-emerald-600 text-sm">{successMessage}</p>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              title="Link senden"
+              className={`w-full ${theme.accent} text-white font-medium py-2.5 px-4 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              {loading ? 'Wird gesendet...' : 'Link senden'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { setAuthView('login'); setMessage(''); setSuccessMessage(''); }}
+              className={`w-full text-sm ${theme.accentText} hover:opacity-80`}
+            >
+              Zurück zum Login
+            </button>
+          </form>
+        )}
+
+        {/* Reset Password Form */}
+        {authView === 'resetPassword' && (
+          <form onSubmit={handleResetPassword} className="space-y-5">
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${theme.textSecondary}`}>
+                Neues Passwort
+              </label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className={`w-full px-4 py-2.5 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text}`}
+                placeholder="••••••••"
+              />
+            </div>
+
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${theme.textSecondary}`}>
+                Passwort bestätigen
+              </label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className={`w-full px-4 py-2.5 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text}`}
+                placeholder="••••••••"
+              />
+            </div>
+
+            {message && (
+              <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3">
+                <p className="text-rose-400 text-sm">{message}</p>
+              </div>
+            )}
+
+            {successMessage && (
+              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3">
+                <p className="text-emerald-600 text-sm">{successMessage}</p>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              title="Passwort speichern"
+              className={`w-full ${theme.accent} text-white font-medium py-2.5 px-4 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              {loading ? 'Wird gespeichert...' : 'Passwort speichern'}
+            </button>
+          </form>
+        )}
       </div>
     </div>
   )

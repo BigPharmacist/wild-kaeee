@@ -1,14 +1,14 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: 'Sora', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
 }
 
 html {
   font-family: var(--font-sans);
 }
 
-/* Smooth transitions for theme switching */
+/* Smooth transitions */
 * {
   transition-property: background-color, border-color, color, box-shadow;
   transition-duration: 150ms;
@@ -26,10 +26,109 @@ html {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #52525b;
+  background: #cbd5e1;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #71717a;
+  background: #94a3b8;
+}
+
+/* Markdown Content Styling */
+.markdown-content h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  line-height: 1.3;
+}
+
+.markdown-content h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.3;
+}
+
+.markdown-content h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.markdown-content p {
+  margin-bottom: 0.75rem;
+  line-height: 1.6;
+}
+
+.markdown-content strong {
+  font-weight: 600;
+}
+
+.markdown-content em {
+  font-style: italic;
+}
+
+.markdown-content ul, .markdown-content ol {
+  margin-bottom: 0.75rem;
+  padding-left: 1.5rem;
+}
+
+.markdown-content ul {
+  list-style-type: disc;
+}
+
+.markdown-content ol {
+  list-style-type: decimal;
+}
+
+.markdown-content li {
+  margin-bottom: 0.25rem;
+  line-height: 1.5;
+}
+
+.markdown-content a {
+  color: #4A90E2;
+  text-decoration: underline;
+}
+
+.markdown-content a:hover {
+  color: #6AA9F0;
+}
+
+.markdown-content blockquote {
+  border-left: 3px solid #E5E7EB;
+  padding-left: 1rem;
+  margin: 0.75rem 0;
+  color: #6B7280;
+  font-style: italic;
+}
+
+.markdown-content code {
+  background: #F3F4F6;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-size: 0.875em;
+  font-family: monospace;
+}
+
+.markdown-content pre {
+  background: #F3F4F6;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin-bottom: 0.75rem;
+}
+
+.markdown-content pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.markdown-content hr {
+  border: none;
+  border-top: 1px solid #E5E7EB;
+  margin: 1rem 0;
 }
