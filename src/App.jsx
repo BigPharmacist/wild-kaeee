@@ -145,6 +145,11 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
     </svg>
   ),
+  FileText: ({ className = "w-5 h-5" }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+    </svg>
+  ),
 }
 
 function App() {
@@ -330,6 +335,12 @@ function App() {
   const [permissionsLoading, setPermissionsLoading] = useState(false)
   const [dashboardEvents, setDashboardEvents] = useState([])
   const [dashboardEventsLoading, setDashboardEventsLoading] = useState(false)
+
+  // GH-Rechnungen State
+  const [rechnungen, setRechnungen] = useState([])
+  const [rechnungenLoading, setRechnungenLoading] = useState(false)
+  const [pdfModalOpen, setPdfModalOpen] = useState(false)
+  const [selectedPdf, setSelectedPdf] = useState(null)
 
   const theme = {
     bgApp: 'bg-[#F5F7FA]',
@@ -849,6 +860,48 @@ function App() {
       setContacts(data || [])
     }
     setContactsLoading(false)
+  }
+
+  // GH-Rechnungen laden
+  const fetchRechnungen = async () => {
+    setRechnungenLoading(true)
+    const { data, error } = await supabase
+      .from('rechnungen')
+      .select('*')
+      .order('datum', { ascending: false })
+      .limit(100)
+
+    if (error) {
+      console.error('Fehler beim Laden der Rechnungen:', error.message)
+      setRechnungen([])
+    } else {
+      setRechnungen(data || [])
+    }
+    setRechnungenLoading(false)
+  }
+
+  // PDF im Modal öffnen
+  const openPdfModal = async (rechnung) => {
+    // Signierte URL für das PDF holen
+    const { data, error } = await supabase.storage
+      .from('rechnungen')
+      .createSignedUrl(rechnung.storage_path, 3600) // 1 Stunde gültig
+
+    if (error) {
+      console.error('Fehler beim Erstellen der PDF-URL:', error.message)
+      return
+    }
+
+    setSelectedPdf({
+      ...rechnung,
+      url: data.signedUrl
+    })
+    setPdfModalOpen(true)
+  }
+
+  const closePdfModal = () => {
+    setPdfModalOpen(false)
+    setSelectedPdf(null)
   }
 
   const openContactModal = (contact = null) => {
@@ -2865,6 +2918,13 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
     }
   }, [activeView, session])
 
+  // GH-Rechnungen laden bei View-Wechsel
+  useEffect(() => {
+    if (session && activeView === 'rechnungen' && rechnungen.length === 0 && !rechnungenLoading) {
+      fetchRechnungen()
+    }
+  }, [activeView, session])
+
   // Kalender laden bei View-Wechsel
   useEffect(() => {
     if (session && activeView === 'calendar') {
@@ -3085,6 +3145,15 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
               onChange={handleBusinessCardScan}
               className="hidden"
             />
+
+            {/* GH-Rechnungen Button */}
+            <button
+              onClick={() => setActiveView('rechnungen')}
+              className={`p-2 rounded-[6px] hover:bg-[#F5F7FA] ${activeView === 'rechnungen' ? theme.accentText : theme.textSecondary} transition-colors`}
+              title="GH-Rechnungen"
+            >
+              <Icons.FileText />
+            </button>
 
             {/* User email - hidden on mobile */}
             <div className="hidden sm:flex items-center gap-2">
@@ -4654,6 +4723,122 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
                 </>
               )}
 
+              {activeView === 'rechnungen' && (
+                <>
+                  <h2 className="text-2xl lg:text-3xl font-semibold mb-6 tracking-tight">Großhandelsrechnungen</h2>
+
+                  {rechnungenLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <svg className="w-8 h-8 animate-spin text-[#4A90E2]" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                    </div>
+                  ) : rechnungen.length === 0 ? (
+                    <div className={`${theme.panel} rounded-2xl p-8 border ${theme.border} ${theme.cardShadow} text-center`}>
+                      <Icons.FileText className="w-12 h-12 mx-auto mb-4 text-[#9CA3AF]" />
+                      <p className={theme.textMuted}>Keine Rechnungen vorhanden.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {(() => {
+                        // Nach Datum gruppieren
+                        const byDate = rechnungen.reduce((acc, r) => {
+                          const dateKey = r.datum
+                          if (!acc[dateKey]) acc[dateKey] = []
+                          acc[dateKey].push(r)
+                          return acc
+                        }, {})
+
+                        // Sortierte Datumsschlüssel (neueste zuerst)
+                        const sortedDates = Object.keys(byDate).sort((a, b) => new Date(b) - new Date(a))
+
+                        return sortedDates.map(dateKey => {
+                          const dayRechnungen = byDate[dateKey]
+                          const phoenix = dayRechnungen.filter(r => r.grosshaendler?.toLowerCase() === 'phoenix')
+                          const ahd = dayRechnungen.filter(r => r.grosshaendler?.toLowerCase() === 'ahd')
+                          const sanacorp = dayRechnungen.filter(r => r.grosshaendler?.toLowerCase() === 'sanacorp')
+
+                          const dateLabel = new Date(dateKey).toLocaleDateString('de-DE', {
+                            weekday: 'long',
+                            day: '2-digit',
+                            month: 'long',
+                            year: 'numeric'
+                          })
+
+                          return (
+                            <div key={dateKey}>
+                              {/* Tagesüberschrift */}
+                              <div className={`flex items-center gap-3 mb-3`}>
+                                <h3 className="text-base font-semibold">{dateLabel}</h3>
+                                <div className={`flex-1 h-px ${theme.border} border-t`} />
+                              </div>
+
+                              {/* Drei Spalten für den Tag */}
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                {/* Phoenix - grün */}
+                                <div className="space-y-1">
+                                  {phoenix.length > 0 ? phoenix.map(r => (
+                                    <button
+                                      key={r.id}
+                                      onClick={() => openPdfModal(r)}
+                                      className="w-full text-left px-3 py-2 rounded-lg bg-[#E8F5E9] hover:bg-[#C8E6C9] transition-colors border-l-4 border-[#2E7D32]"
+                                    >
+                                      <p className="text-sm font-medium text-[#1B5E20]">{r.rechnungsnummer}</p>
+                                      <p className={`text-xs ${theme.textMuted}`}>{r.dateiname}</p>
+                                    </button>
+                                  )) : (
+                                    <div className="px-3 py-2 rounded-lg bg-gray-50 text-center">
+                                      <p className={`text-xs ${theme.textMuted}`}>–</p>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* AHD - gelb */}
+                                <div className="space-y-1">
+                                  {ahd.length > 0 ? ahd.map(r => (
+                                    <button
+                                      key={r.id}
+                                      onClick={() => openPdfModal(r)}
+                                      className="w-full text-left px-3 py-2 rounded-lg bg-[#FFF8E1] hover:bg-[#FFECB3] transition-colors border-l-4 border-[#F9A825]"
+                                    >
+                                      <p className="text-sm font-medium text-[#F57F17]">{r.rechnungsnummer}</p>
+                                      <p className={`text-xs ${theme.textMuted}`}>{r.dateiname}</p>
+                                    </button>
+                                  )) : (
+                                    <div className="px-3 py-2 rounded-lg bg-gray-50 text-center">
+                                      <p className={`text-xs ${theme.textMuted}`}>–</p>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Sanacorp - blau */}
+                                <div className="space-y-1">
+                                  {sanacorp.length > 0 ? sanacorp.map(r => (
+                                    <button
+                                      key={r.id}
+                                      onClick={() => openPdfModal(r)}
+                                      className="w-full text-left px-3 py-2 rounded-lg bg-[#E3F2FD] hover:bg-[#BBDEFB] transition-colors border-l-4 border-[#1565C0]"
+                                    >
+                                      <p className="text-sm font-medium text-[#0D47A1]">{r.rechnungsnummer}</p>
+                                      <p className={`text-xs ${theme.textMuted}`}>{r.dateiname}</p>
+                                    </button>
+                                  )) : (
+                                    <div className="px-3 py-2 rounded-lg bg-gray-50 text-center">
+                                      <p className={`text-xs ${theme.textMuted}`}>–</p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })
+                      })()}
+                    </div>
+                  )}
+                </>
+              )}
+
               {activeView === 'settings' && (
                 <>
                   <h2 className="text-2xl lg:text-3xl font-semibold mb-6 tracking-tight">Einstellungen</h2>
@@ -6120,6 +6305,64 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* PDF-Modal für GH-Rechnungen */}
+        {pdfModalOpen && selectedPdf && (
+          <div
+            className={`fixed inset-0 z-50 ${theme.overlay} flex items-center justify-center p-4`}
+            onClick={closePdfModal}
+          >
+            <div
+              className={`${theme.panel} rounded-2xl border ${theme.border} ${theme.cardShadow} w-full max-w-5xl h-[90vh] flex flex-col`}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className={`flex items-center justify-between px-5 py-4 border-b ${theme.border} flex-shrink-0`}>
+                <div>
+                  <h3 className="text-base font-semibold">{selectedPdf.grosshaendler} - {selectedPdf.rechnungsnummer}</h3>
+                  <p className={`text-xs ${theme.textMuted}`}>
+                    {new Date(selectedPdf.datum).toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <a
+                    href={selectedPdf.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`p-2 rounded-lg ${theme.bgHover} ${theme.textSecondary}`}
+                    title="In neuem Tab öffnen"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
+                  <a
+                    href={selectedPdf.url}
+                    download={selectedPdf.dateiname}
+                    className={`p-2 rounded-lg ${theme.bgHover} ${theme.textSecondary}`}
+                    title="Herunterladen"
+                  >
+                    <Icons.Download />
+                  </a>
+                  <button
+                    type="button"
+                    onClick={closePdfModal}
+                    className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
+                    title="Schließen"
+                  >
+                    <Icons.X />
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <iframe
+                  src={selectedPdf.url}
+                  className="w-full h-full border-0"
+                  title={`PDF ${selectedPdf.rechnungsnummer}`}
+                />
+              </div>
             </div>
           </div>
         )}
