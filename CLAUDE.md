@@ -121,7 +121,7 @@ id (uuid), name, street, postal_code, city, phone, owner, owner_role, website, e
 
 Lokale Supabase Tabelle `staff` für Kollegium:
 ```text
-id (uuid), pharmacy_id (uuid), first_name, last_name, street, postal_code, city, mobile, email, role, auth_user_id (uuid), is_admin (bool), avatar_url (text)
+id (uuid), pharmacy_id (uuid), first_name, last_name, street, postal_code, city, mobile, email, role, auth_user_id (uuid), is_admin (bool), avatar_url (text), employed_since (date)
 ```
 
 ---
