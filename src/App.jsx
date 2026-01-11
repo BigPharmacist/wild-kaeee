@@ -266,6 +266,8 @@ function App() {
   const [permissionsModalOpen, setPermissionsModalOpen] = useState(false)
   const [calendarPermissions, setCalendarPermissions] = useState([])
   const [permissionsLoading, setPermissionsLoading] = useState(false)
+  const [dashboardEvents, setDashboardEvents] = useState([])
+  const [dashboardEventsLoading, setDashboardEventsLoading] = useState(false)
 
   const theme = {
     bgApp: 'bg-[#F5F7FA]',
@@ -331,8 +333,6 @@ function App() {
     ],
     plan: [
       { id: 'timeline', label: 'Zeitplan' },
-      { id: 'team', label: 'Team' },
-      { id: 'shift', label: 'Schichten' },
     ],
     calendar: [
       { id: 'calendars', label: 'Kalender' },
@@ -1012,6 +1012,47 @@ function App() {
       setCalendarPermissions(permissionsWithStaff)
     }
     setPermissionsLoading(false)
+  }
+
+  // Dashboard: Alle Termine laden (für Widget)
+  const fetchDashboardEvents = async () => {
+    setDashboardEventsLoading(true)
+
+    // Erst Kalender laden um Notdienst zu identifizieren
+    const { data: calsData } = await supabase
+      .from('calendars')
+      .select('id, name, color')
+      .eq('is_active', true)
+
+    const calendarsList = calsData || []
+
+    // Termine der nächsten 30 Tage laden
+    const today = new Date()
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+    const futureDate = new Date(today)
+    futureDate.setDate(futureDate.getDate() + 30)
+    const futureStr = `${futureDate.getFullYear()}-${String(futureDate.getMonth() + 1).padStart(2, '0')}-${String(futureDate.getDate()).padStart(2, '0')}`
+
+    const { data: eventsData, error } = await supabase
+      .from('calendar_events')
+      .select('id, title, start_time, end_time, all_day, calendar_id, location')
+      .gte('start_time', todayStr)
+      .lte('start_time', futureStr + 'T23:59:59')
+      .order('start_time', { ascending: true })
+
+    if (!error && eventsData) {
+      // Events mit Kalenderinfo anreichern
+      const enrichedEvents = eventsData.map((event) => {
+        const cal = calendarsList.find((c) => c.id === event.calendar_id)
+        return {
+          ...event,
+          calendarName: cal?.name || '',
+          calendarColor: cal?.color || '#6B7280',
+        }
+      })
+      setDashboardEvents(enrichedEvents)
+    }
+    setDashboardEventsLoading(false)
   }
 
   const createCalendar = async () => {
@@ -2111,6 +2152,13 @@ function App() {
     }
   }, [activeView, session, planData, planLoading, planError])
 
+  // Dashboard Events laden
+  useEffect(() => {
+    if (session && activeView === 'dashboard' && dashboardEvents.length === 0 && !dashboardEventsLoading) {
+      fetchDashboardEvents()
+    }
+  }, [activeView, session])
+
   // Kalender laden bei View-Wechsel
   useEffect(() => {
     if (session && activeView === 'calendar') {
@@ -2579,6 +2627,111 @@ function App() {
                         </p>
                       )}
                     </div>
+                    {/* Kalender Widget */}
+                    <div className={`${theme.panel} rounded-2xl p-4 border ${theme.border} ${theme.cardShadow} flex flex-col gap-3 sm:col-span-2`}>
+                      <div className="flex items-center justify-between">
+                        <h3 className={`text-lg font-medium ${theme.text}`}>Termine</h3>
+                        <button
+                          type="button"
+                          onClick={() => setActiveView('calendar')}
+                          className={`text-xs ${theme.accentText} hover:underline`}
+                        >
+                          Kalender öffnen
+                        </button>
+                      </div>
+                      {dashboardEventsLoading && (
+                        <p className={`text-xs ${theme.textMuted}`}>Termine werden geladen...</p>
+                      )}
+                      {!dashboardEventsLoading && dashboardEvents.length === 0 && (
+                        <p className={theme.textMuted}>Keine kommenden Termine.</p>
+                      )}
+                      {!dashboardEventsLoading && dashboardEvents.length > 0 && (() => {
+                        const today = new Date()
+                        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+
+                        // Wochenende berechnen (Sonntag dieser Woche)
+                        const endOfWeek = new Date(today)
+                        const daysUntilSunday = 7 - today.getDay()
+                        endOfWeek.setDate(today.getDate() + (today.getDay() === 0 ? 0 : daysUntilSunday))
+                        const endOfWeekStr = `${endOfWeek.getFullYear()}-${String(endOfWeek.getMonth() + 1).padStart(2, '0')}-${String(endOfWeek.getDate()).padStart(2, '0')}`
+
+                        // Termine filtern
+                        const todayEvents = dashboardEvents.filter((e) => e.start_time.substring(0, 10) === todayStr)
+                        const weekEvents = dashboardEvents.filter((e) => {
+                          const eventDate = e.start_time.substring(0, 10)
+                          return eventDate > todayStr && eventDate <= endOfWeekStr && !e.calendarName.toLowerCase().includes('notdienst')
+                        })
+                        const futureEvents = dashboardEvents.filter((e) => {
+                          const eventDate = e.start_time.substring(0, 10)
+                          return eventDate > endOfWeekStr && !e.calendarName.toLowerCase().includes('notdienst')
+                        }).slice(0, 5)
+
+                        const formatTime = (dateStr) => {
+                          return new Date(dateStr).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+                        }
+
+                        const formatDate = (dateStr) => {
+                          return new Date(dateStr).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' })
+                        }
+
+                        return (
+                          <div className="space-y-4 text-sm">
+                            {/* Heute */}
+                            <div>
+                              <p className={`text-xs font-medium mb-2 ${theme.textSecondary}`}>Heute</p>
+                              {todayEvents.length === 0 ? (
+                                <p className={`text-xs ${theme.textMuted}`}>Keine Termine</p>
+                              ) : (
+                                <div className="space-y-1.5">
+                                  {todayEvents.map((event) => (
+                                    <div key={event.id} className="flex items-center gap-2">
+                                      <div className="w-1 h-4 rounded" style={{ backgroundColor: event.calendarColor }} />
+                                      <span className={`text-xs ${theme.textMuted} w-10`}>
+                                        {event.all_day ? 'Ganz.' : formatTime(event.start_time)}
+                                      </span>
+                                      <span className={`text-xs ${theme.text} truncate`}>{event.title}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Diese Woche */}
+                            {weekEvents.length > 0 && (
+                              <div>
+                                <p className={`text-xs font-medium mb-2 ${theme.textSecondary}`}>Diese Woche</p>
+                                <div className="space-y-1.5">
+                                  {weekEvents.map((event) => (
+                                    <div key={event.id} className="flex items-center gap-2">
+                                      <div className="w-1 h-4 rounded" style={{ backgroundColor: event.calendarColor }} />
+                                      <span className={`text-xs ${theme.textMuted} w-16`}>{formatDate(event.start_time)}</span>
+                                      <span className={`text-xs ${theme.text} truncate`}>{event.title}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Weitere Termine */}
+                            {futureEvents.length > 0 && (
+                              <div>
+                                <p className={`text-xs font-medium mb-2 ${theme.textSecondary}`}>Demnächst</p>
+                                <div className="space-y-1.5">
+                                  {futureEvents.map((event) => (
+                                    <div key={event.id} className="flex items-center gap-2">
+                                      <div className="w-1 h-4 rounded" style={{ backgroundColor: event.calendarColor }} />
+                                      <span className={`text-xs ${theme.textMuted} w-16`}>{formatDate(event.start_time)}</span>
+                                      <span className={`text-xs ${theme.text} truncate`}>{event.title}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })()}
+                    </div>
+
                     <div className={`${theme.panel} rounded-2xl p-4 border ${theme.border} ${theme.cardShadow} flex flex-col gap-3`}>
                       <h3 className={`text-lg font-medium ${theme.text}`}>Letztes Foto</h3>
                       {photoUploading && (
