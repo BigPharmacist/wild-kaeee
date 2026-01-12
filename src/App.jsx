@@ -339,6 +339,7 @@ function App() {
   // GH-Rechnungen State
   const [rechnungen, setRechnungen] = useState([])
   const [rechnungenLoading, setRechnungenLoading] = useState(false)
+  const [collapsedDays, setCollapsedDays] = useState({})
   const [pdfModalOpen, setPdfModalOpen] = useState(false)
   const [selectedPdf, setSelectedPdf] = useState(null)
 
@@ -4753,7 +4754,7 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
                         // Sortierte Datumsschlüssel (neueste zuerst)
                         const sortedDates = Object.keys(byDate).sort((a, b) => new Date(b) - new Date(a))
 
-                        return sortedDates.map(dateKey => {
+                        return sortedDates.map((dateKey, index) => {
                           const dayRechnungen = byDate[dateKey]
                           const phoenix = dayRechnungen.filter(r => r.grosshaendler?.toLowerCase() === 'phoenix')
                           const ahd = dayRechnungen.filter(r => r.grosshaendler?.toLowerCase() === 'ahd')
@@ -4766,16 +4767,40 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
                             year: 'numeric'
                           })
 
+                          // Erster Tag (neueste) ist ausgeklappt, alle anderen eingeklappt
+                          const isCollapsed = index === 0
+                            ? collapsedDays[dateKey] === true
+                            : collapsedDays[dateKey] !== false
+
+                          const toggleDay = () => {
+                            setCollapsedDays(prev => ({
+                              ...prev,
+                              [dateKey]: !isCollapsed
+                            }))
+                          }
+
                           return (
                             <div key={dateKey}>
-                              {/* Tagesüberschrift */}
-                              <div className={`flex items-center gap-3 mb-3`}>
+                              {/* Tagesüberschrift - klickbar */}
+                              <button
+                                onClick={toggleDay}
+                                className={`w-full flex items-center gap-3 mb-3 group cursor-pointer`}
+                              >
+                                <svg
+                                  className={`w-4 h-4 ${theme.textMuted} transition-transform ${isCollapsed ? '' : 'rotate-90'}`}
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
                                 <h3 className="text-base font-semibold">{dateLabel}</h3>
+                                <span className={`text-xs ${theme.textMuted}`}>({dayRechnungen.length})</span>
                                 <div className={`flex-1 h-px ${theme.border} border-t`} />
-                              </div>
+                              </button>
 
-                              {/* Drei Spalten für den Tag */}
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                              {/* Drei Spalten für den Tag - nur wenn ausgeklappt */}
+                              {!isCollapsed && <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                 {/* Phoenix - grün */}
                                 <div className="space-y-1">
                                   {phoenix.length > 0 ? phoenix.map(r => (
@@ -4784,7 +4809,10 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
                                       onClick={() => openPdfModal(r)}
                                       className="w-full text-left px-3 py-2 rounded-lg bg-[#E8F5E9] hover:bg-[#C8E6C9] transition-colors border-l-4 border-[#2E7D32]"
                                     >
-                                      <p className="text-sm font-medium text-[#1B5E20]">{r.rechnungsnummer}</p>
+                                      <div className="flex justify-between items-start">
+                                        <p className="text-sm font-medium text-[#1B5E20]">{r.rechnungsnummer}</p>
+                                        <span className="text-xs text-[#2E7D32]">{new Date(r.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr</span>
+                                      </div>
                                       <p className={`text-xs ${theme.textMuted}`}>{r.dateiname}</p>
                                     </button>
                                   )) : (
@@ -4802,7 +4830,10 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
                                       onClick={() => openPdfModal(r)}
                                       className="w-full text-left px-3 py-2 rounded-lg bg-[#FFF8E1] hover:bg-[#FFECB3] transition-colors border-l-4 border-[#F9A825]"
                                     >
-                                      <p className="text-sm font-medium text-[#F57F17]">{r.rechnungsnummer}</p>
+                                      <div className="flex justify-between items-start">
+                                        <p className="text-sm font-medium text-[#F57F17]">{r.rechnungsnummer}</p>
+                                        <span className="text-xs text-[#F9A825]">{new Date(r.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr</span>
+                                      </div>
                                       <p className={`text-xs ${theme.textMuted}`}>{r.dateiname}</p>
                                     </button>
                                   )) : (
@@ -4820,7 +4851,10 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
                                       onClick={() => openPdfModal(r)}
                                       className="w-full text-left px-3 py-2 rounded-lg bg-[#E3F2FD] hover:bg-[#BBDEFB] transition-colors border-l-4 border-[#1565C0]"
                                     >
-                                      <p className="text-sm font-medium text-[#0D47A1]">{r.rechnungsnummer}</p>
+                                      <div className="flex justify-between items-start">
+                                        <p className="text-sm font-medium text-[#0D47A1]">{r.rechnungsnummer}</p>
+                                        <span className="text-xs text-[#1565C0]">{new Date(r.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr</span>
+                                      </div>
                                       <p className={`text-xs ${theme.textMuted}`}>{r.dateiname}</p>
                                     </button>
                                   )) : (
@@ -4829,7 +4863,7 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
                                     </div>
                                   )}
                                 </div>
-                              </div>
+                              </div>}
                             </div>
                           )
                         })
