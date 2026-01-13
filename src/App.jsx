@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase, supabaseUrl } from './lib/supabase'
+import { House, Camera, Pill, CalendarDots, CalendarBlank, ChatCircle, GearSix } from '@phosphor-icons/react'
 import ReactCrop from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 import { jsPDF } from 'jspdf'
@@ -152,6 +153,16 @@ const Icons = {
   ),
 }
 
+// Unread Badge Komponente für Apo-Tabs
+const UnreadBadge = ({ count }) => {
+  if (!count || count === 0) return null
+  return (
+    <span className="ml-auto flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-red-500 rounded-full">
+      {count > 99 ? '99+' : count}
+    </span>
+  )
+}
+
 function App() {
   const [session, setSession] = useState(null)
   const [email, setEmail] = useState('')
@@ -163,9 +174,9 @@ function App() {
   const [authView, setAuthView] = useState('login') // 'login' | 'forgot' | 'resetPassword'
   const [successMessage, setSuccessMessage] = useState('')
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
-  const [secondaryTab, setSecondaryTab] = useState('overview')
-  const [activeView, setActiveView] = useState('dashboard')
-  const [settingsTab, setSettingsTab] = useState('pharmacies')
+  const [secondaryTab, setSecondaryTab] = useState(() => localStorage.getItem('nav_secondaryTab') || 'overview')
+  const [activeView, setActiveView] = useState(() => localStorage.getItem('nav_activeView') || 'dashboard')
+  const [settingsTab, setSettingsTab] = useState(() => localStorage.getItem('nav_settingsTab') || 'pharmacies')
   const [pharmacies, setPharmacies] = useState([])
   const [pharmaciesLoading, setPharmaciesLoading] = useState(false)
   const [pharmaciesMessage, setPharmaciesMessage] = useState('')
@@ -221,6 +232,7 @@ function App() {
     email: '',
     phone: '',
     mobile: '',
+    fax: '',
     website: '',
     street: '',
     postalCode: '',
@@ -231,6 +243,7 @@ function App() {
     notes: '',
     shared: true,
     businessCardUrl: '',
+    businessCardUrlEnhanced: '',
     status: 'aktiv',
     predecessorId: null,
     transitionDate: null,
@@ -239,10 +252,14 @@ function App() {
   const [contactSaveMessage, setContactSaveMessage] = useState('')
   const [contactCardFile, setContactCardFile] = useState(null)
   const [contactCardPreview, setContactCardPreview] = useState('')
+  const [contactCardEnhancedFile, setContactCardEnhancedFile] = useState(null)
+  const [contactCardEnhancedPreview, setContactCardEnhancedPreview] = useState('')
   const [contactCardRotation, setContactCardRotation] = useState(0)
+  const [contactCardEnhancing, setContactCardEnhancing] = useState(false)
   const contactCardInputRef = useRef(null)
   const businessCardScanRef = useRef(null)
   const mobileNavTimerRef = useRef(null)
+  const isInitialMount = useRef(true)
   const [businessCardScanning, setBusinessCardScanning] = useState(false)
   const [businessCardOcrResult, setBusinessCardOcrResult] = useState(null)
   const [duplicateCheckResult, setDuplicateCheckResult] = useState(null) // { type: 'email'|'phone'|'company', matches: [], ocrData: {} }
@@ -250,6 +267,7 @@ function App() {
   const [contactSearch, setContactSearch] = useState('')
   const [contactViewMode, setContactViewMode] = useState('cards') // 'cards' | 'list'
   const [selectedContact, setSelectedContact] = useState(null) // Für Detail-Ansicht
+  const [selectedContactCardView, setSelectedContactCardView] = useState('enhanced') // 'enhanced' | 'original'
   const [staffAvatarPreview, setStaffAvatarPreview] = useState('')
   const [weatherLocation, setWeatherLocation] = useState('')
   const [weatherInput, setWeatherInput] = useState('')
@@ -279,10 +297,20 @@ function App() {
   const [contrast, setContrast] = useState(100)
   const [photoSaving, setPhotoSaving] = useState(false)
   const photoImgRef = useRef(null)
+  const signatureCanvasRef = useRef(null)
+  const signatureCtxRef = useRef(null)
+  const pznCameraInputRef = useRef(null)
+  const [isDrawing, setIsDrawing] = useState(false)
   const [photoOcrData, setPhotoOcrData] = useState({})
   const [mistralApiKey, setMistralApiKey] = useState(null)
+  const [googleApiKey, setGoogleApiKey] = useState(null)
+  const [enhanceFile, setEnhanceFile] = useState(null)
+  const [enhancePreview, setEnhancePreview] = useState('')
+  const [enhanceResultPreview, setEnhanceResultPreview] = useState('')
+  const [enhanceLoading, setEnhanceLoading] = useState(false)
+  const [enhanceMessage, setEnhanceMessage] = useState('')
   const [ocrProcessing, setOcrProcessing] = useState({})
-  const [apoTab, setApoTab] = useState('amk')
+  const [apoTab, setApoTab] = useState(() => localStorage.getItem('nav_apoTab') || 'amk')
   const [apoYear, setApoYear] = useState(() => new Date().getFullYear())
   const [apoSearch, setApoSearch] = useState('')
   const [amkMessages, setAmkMessages] = useState([])
@@ -292,6 +320,17 @@ function App() {
   const [lavAusgaben, setLavAusgaben] = useState([])
   const [lavLoading, setLavLoading] = useState(false)
   const [selectedApoMessage, setSelectedApoMessage] = useState(null)
+  const [showDokumentationModal, setShowDokumentationModal] = useState(false)
+  const [dokumentationBemerkung, setDokumentationBemerkung] = useState('')
+  const [dokumentationSignature, setDokumentationSignature] = useState(null)
+  const [showSignatureCanvas, setShowSignatureCanvas] = useState(false)
+  const [dokumentationLoading, setDokumentationLoading] = useState(false)
+  const [existingDokumentationen, setExistingDokumentationen] = useState([])
+  const [savedPznFotos, setSavedPznFotos] = useState({})  // { pzn: foto_path } - aus DB geladen
+  const [pznFotoUploading, setPznFotoUploading] = useState(false)
+  const [activePzn, setActivePzn] = useState(null)
+  const [unreadCounts, setUnreadCounts] = useState({ amk: 0, recall: 0, lav: 0 })
+  const [readMessageIds, setReadMessageIds] = useState({ amk: new Set(), recall: new Set(), lav: new Set() })
   const [planData, setPlanData] = useState(null)
   const [planLoading, setPlanLoading] = useState(false)
   const [planError, setPlanError] = useState('')
@@ -379,13 +418,13 @@ function App() {
   }
 
   const navItems = [
-    { id: 'dashboard', icon: Icons.Home, label: 'Dashboard' },
-    { id: 'photos', icon: Icons.Photo, label: 'Fotos' },
-    { id: 'apo', icon: Icons.Pill, label: 'Apo' },
-    { id: 'plan', icon: Icons.Calendar, label: 'Plan' },
-    { id: 'calendar', icon: Icons.Calendar, label: 'Kalender' },
-    { id: 'chat', icon: Icons.Chat, label: 'Chat' },
-    { id: 'settings', icon: Icons.Settings, label: 'Einstellungen' },
+    { id: 'dashboard', icon: () => <House size={20} weight="regular" />, label: 'Dashboard' },
+    { id: 'photos', icon: () => <Camera size={20} weight="regular" />, label: 'Fotos' },
+    { id: 'apo', icon: () => <Pill size={20} weight="regular" />, label: 'Apo' },
+    { id: 'plan', icon: () => <CalendarDots size={20} weight="regular" />, label: 'Plan' },
+    { id: 'calendar', icon: () => <CalendarBlank size={20} weight="regular" />, label: 'Kalender' },
+    { id: 'chat', icon: () => <ChatCircle size={20} weight="regular" />, label: 'Chat' },
+    { id: 'settings', icon: () => <GearSix size={20} weight="regular" />, label: 'Einstellungen' },
   ]
 
   const secondaryNavMap = {
@@ -420,16 +459,39 @@ function App() {
       { id: 'pharmacies', label: 'Apotheken' },
       { id: 'staff', label: 'Kollegium' },
       { id: 'contacts', label: 'Kontakte' },
+      { id: 'card-enhance', label: 'Karten-Test' },
     ],
   }
 
   useEffect(() => {
+    // Beim ersten Mount den gespeicherten Wert behalten
+    if (isInitialMount.current) {
+      isInitialMount.current = false
+      return
+    }
     if (activeView === 'settings' || activeView === 'apo') return
     const nextItems = secondaryNavMap[activeView] || []
     if (nextItems.length) {
       setSecondaryTab(nextItems[0].id)
     }
   }, [activeView])
+
+  // Navigation in localStorage speichern
+  useEffect(() => {
+    localStorage.setItem('nav_activeView', activeView)
+  }, [activeView])
+
+  useEffect(() => {
+    localStorage.setItem('nav_secondaryTab', secondaryTab)
+  }, [secondaryTab])
+
+  useEffect(() => {
+    localStorage.setItem('nav_settingsTab', settingsTab)
+  }, [settingsTab])
+
+  useEffect(() => {
+    localStorage.setItem('nav_apoTab', apoTab)
+  }, [apoTab])
 
   // Mobile Nav: Nach 3 Sekunden automatisch schließen wenn primärer Punkt gewählt
   useEffect(() => {
@@ -576,7 +638,14 @@ function App() {
       y += 10
     }
 
-    // Fußzeile mit Unterschriftsfeldern
+    // Dokumentationen aus Datenbank laden
+    const { data: dokumentationen } = await supabase
+      .from('amk_dokumentationen')
+      .select('*')
+      .eq('amk_message_id', msg.id)
+      .order('erstellt_am', { ascending: true })
+
+    // Fußzeile mit Dokumentation
     if (y > pageHeight - 80) {
       doc.addPage()
       y = 20
@@ -586,23 +655,99 @@ function App() {
     doc.line(margin, y, pageWidth - margin, y)
     y += 10
 
-    doc.setFontSize(9)
-    doc.setFont('helvetica', 'normal')
-    doc.text('Bearbeitet durch:', margin, y)
-    doc.line(margin + 35, y, margin + 100, y)
-    y += 8
-    doc.text('Bearbeitet am:', margin, y)
-    doc.line(margin + 35, y, margin + 100, y)
-    y += 12
+    // Gespeicherte Dokumentationen anzeigen
+    if (dokumentationen && dokumentationen.length > 0) {
+      doc.setFontSize(15)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Dokumentation:', margin, y)
+      y += 12
 
-    doc.setFont('helvetica', 'bold')
-    doc.text('Zur Kenntnis genommen:', margin, y)
-    y += 8
-    doc.setFont('helvetica', 'normal')
-    for (let i = 0; i < 5; i++) {
-      doc.text('Name / Datum:', margin, y)
-      doc.line(margin + 30, y, margin + 100, y)
+      for (const dok of dokumentationen) {
+        // Berechne Box-Höhe
+        let boxHeight = 16 // Padding oben/unten
+        const boxPadding = 8
+        const innerWidth = maxWidth - boxPadding * 2
+
+        let bemerkungLines = []
+        if (dok.bemerkung) {
+          doc.setFontSize(14)
+          bemerkungLines = doc.splitTextToSize(dok.bemerkung, innerWidth)
+          boxHeight += bemerkungLines.length * 7
+        }
+        if (dok.unterschrift_data) {
+          boxHeight += 38 // Größere Unterschrift (75x30) + Abstand
+        }
+        boxHeight += 14 // Name/Datum
+
+        // Seitenumbruch prüfen
+        if (y + boxHeight > pageHeight - 20) {
+          doc.addPage()
+          y = 20
+        }
+
+        // Box mit runden Ecken zeichnen
+        doc.setFillColor(245, 247, 250)
+        doc.setDrawColor(200)
+        doc.roundedRect(margin, y, maxWidth, boxHeight, 4, 4, 'FD')
+
+        let boxY = y + boxPadding
+
+        // Bemerkung
+        if (dok.bemerkung && bemerkungLines.length > 0) {
+          doc.setFont('helvetica', 'normal')
+          doc.setFontSize(14)
+          doc.setTextColor(0)
+          for (const line of bemerkungLines) {
+            doc.text(line, margin + boxPadding, boxY + 4)
+            boxY += 7
+          }
+          boxY += 4
+        }
+
+        // Unterschrift als Bild (50% größer: 75x30)
+        if (dok.unterschrift_data) {
+          try {
+            doc.addImage(dok.unterschrift_data, 'PNG', margin + boxPadding, boxY, 75, 30)
+            boxY += 34
+          } catch (e) {
+            // Fehler beim Laden der Unterschrift ignorieren
+          }
+        }
+
+        // Name und Datum
+        doc.setFontSize(12)
+        doc.setTextColor(100)
+        const nameAndDate = [
+          dok.erstellt_von_name || '',
+          dok.erstellt_am ? new Date(dok.erstellt_am).toLocaleString('de-DE') : ''
+        ].filter(Boolean).join(' · ')
+        if (nameAndDate) {
+          doc.text(nameAndDate, margin + boxPadding, boxY + 4)
+        }
+        doc.setTextColor(0)
+
+        y += boxHeight + 8
+      }
+    } else {
+      // Leere Unterschriftsfelder nur wenn keine Dokumentation vorhanden
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'normal')
+      doc.text('Bearbeitet durch:', margin, y)
+      doc.line(margin + 35, y, margin + 100, y)
       y += 8
+      doc.text('Bearbeitet am:', margin, y)
+      doc.line(margin + 35, y, margin + 100, y)
+      y += 12
+
+      doc.setFont('helvetica', 'bold')
+      doc.text('Zur Kenntnis genommen:', margin, y)
+      y += 8
+      doc.setFont('helvetica', 'normal')
+      for (let i = 0; i < 5; i++) {
+        doc.text('Name / Datum:', margin, y)
+        doc.line(margin + 30, y, margin + 100, y)
+        y += 8
+      }
     }
 
     // Download
@@ -772,7 +917,14 @@ function App() {
       y += 10
     }
 
-    // Fußzeile mit Unterschriftsfeldern
+    // Dokumentationen aus Datenbank laden
+    const { data: dokumentationen } = await supabase
+      .from('recall_dokumentationen')
+      .select('*')
+      .eq('recall_message_id', msg.id)
+      .order('erstellt_am', { ascending: true })
+
+    // Fußzeile mit Dokumentation
     if (y > pageHeight - 80) {
       doc.addPage()
       y = 20
@@ -782,23 +934,139 @@ function App() {
     doc.line(margin, y, pageWidth - margin, y)
     y += 10
 
-    doc.setFontSize(9)
-    doc.setFont('helvetica', 'normal')
-    doc.text('Bearbeitet durch:', margin, y)
-    doc.line(margin + 35, y, margin + 100, y)
-    y += 8
-    doc.text('Bearbeitet am:', margin, y)
-    doc.line(margin + 35, y, margin + 100, y)
-    y += 12
+    // Gespeicherte Dokumentationen anzeigen
+    if (dokumentationen && dokumentationen.length > 0) {
+      doc.setFontSize(15)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Dokumentation:', margin, y)
+      y += 12
 
-    doc.setFont('helvetica', 'bold')
-    doc.text('Zur Kenntnis genommen:', margin, y)
-    y += 8
-    doc.setFont('helvetica', 'normal')
-    for (let i = 0; i < 5; i++) {
-      doc.text('Name / Datum:', margin, y)
-      doc.line(margin + 30, y, margin + 100, y)
+      for (const dok of dokumentationen) {
+        // Berechne Box-Höhe
+        let boxHeight = 16 // Padding oben/unten
+        const boxPadding = 8
+        const innerWidth = maxWidth - boxPadding * 2
+
+        let bemerkungLines = []
+        if (dok.bemerkung) {
+          doc.setFontSize(14)
+          bemerkungLines = doc.splitTextToSize(dok.bemerkung, innerWidth)
+          boxHeight += bemerkungLines.length * 7
+        }
+        if (dok.unterschrift_data) {
+          boxHeight += 38 // Größere Unterschrift (75x30) + Abstand
+        }
+        // Platz für PZN-Fotos
+        if (dok.pzn_fotos && Object.keys(dok.pzn_fotos).length > 0) {
+          boxHeight += 65 // Foto (60x45) + Label + Abstand
+        }
+        boxHeight += 14 // Name/Datum
+
+        // Seitenumbruch prüfen
+        if (y + boxHeight > pageHeight - 20) {
+          doc.addPage()
+          y = 20
+        }
+
+        // Box mit runden Ecken zeichnen
+        doc.setFillColor(245, 247, 250)
+        doc.setDrawColor(200)
+        doc.roundedRect(margin, y, maxWidth, boxHeight, 4, 4, 'FD')
+
+        let boxY = y + boxPadding
+
+        // Bemerkung
+        if (dok.bemerkung && bemerkungLines.length > 0) {
+          doc.setFont('helvetica', 'normal')
+          doc.setFontSize(14)
+          doc.setTextColor(0)
+          for (const line of bemerkungLines) {
+            doc.text(line, margin + boxPadding, boxY + 4)
+            boxY += 7
+          }
+          boxY += 4
+        }
+
+        // Unterschrift als Bild (50% größer: 75x30)
+        if (dok.unterschrift_data) {
+          try {
+            doc.addImage(dok.unterschrift_data, 'PNG', margin + boxPadding, boxY, 75, 30)
+            boxY += 34
+          } catch (e) {
+            // Fehler beim Laden der Unterschrift ignorieren
+          }
+        }
+
+        // PZN-Fotos anzeigen
+        if (dok.pzn_fotos && Object.keys(dok.pzn_fotos).length > 0) {
+          doc.setFontSize(9)
+          doc.setFont('helvetica', 'bold')
+          doc.setTextColor(0)
+          doc.text('PZN-Fotos:', margin + boxPadding, boxY + 4)
+          boxY += 8
+
+          let photoX = margin + boxPadding
+          for (const [pzn, path] of Object.entries(dok.pzn_fotos)) {
+            try {
+              const photoUrl = `${supabaseUrl}/storage/v1/object/public/recall-fotos/${path}`
+              const photoResponse = await fetch(photoUrl)
+              const photoBlob = await photoResponse.blob()
+              const photoBase64 = await new Promise((resolve) => {
+                const reader = new FileReader()
+                reader.onloadend = () => resolve(reader.result)
+                reader.readAsDataURL(photoBlob)
+              })
+
+              // Foto einfügen (60x45 - 50% größer)
+              doc.addImage(photoBase64, 'JPEG', photoX, boxY, 60, 45)
+
+              // PZN-Label unter dem Foto
+              doc.setFontSize(8)
+              doc.setFont('helvetica', 'normal')
+              doc.text(pzn, photoX + 30, boxY + 50, { align: 'center' })
+
+              photoX += 65
+            } catch (e) {
+              // Fehler beim Laden des Fotos ignorieren
+            }
+          }
+          boxY += 55
+        }
+
+        // Name und Datum
+        doc.setFontSize(12)
+        doc.setTextColor(100)
+        const nameAndDate = [
+          dok.erstellt_von_name || '',
+          dok.erstellt_am ? new Date(dok.erstellt_am).toLocaleString('de-DE') : ''
+        ].filter(Boolean).join(' · ')
+        if (nameAndDate) {
+          doc.text(nameAndDate, margin + boxPadding, boxY + 4)
+        }
+        doc.setTextColor(0)
+
+        y += boxHeight + 8
+      }
+    } else {
+      // Leere Unterschriftsfelder nur wenn keine Dokumentation vorhanden
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'normal')
+      doc.text('Bearbeitet durch:', margin, y)
+      doc.line(margin + 35, y, margin + 100, y)
       y += 8
+      doc.text('Bearbeitet am:', margin, y)
+      doc.line(margin + 35, y, margin + 100, y)
+      y += 12
+
+      doc.setFont('helvetica', 'bold')
+      doc.text('Zur Kenntnis genommen:', margin, y)
+      y += 8
+      doc.setFont('helvetica', 'normal')
+      for (let i = 0; i < 5; i++) {
+        doc.text('Name / Datum:', margin, y)
+        doc.line(margin + 30, y, margin + 100, y)
+        y += 8
+      }
     }
 
     // Download
@@ -827,7 +1095,7 @@ function App() {
     setStaffLoading(true)
     const { data, error } = await supabase
       .from('staff')
-      .select('id, first_name, last_name, street, postal_code, city, mobile, email, role, pharmacy_id, auth_user_id, is_admin, avatar_url')
+      .select('id, first_name, last_name, street, postal_code, city, mobile, email, role, pharmacy_id, auth_user_id, is_admin, avatar_url, created_at')
       .order('last_name', { ascending: true })
 
     if (error) {
@@ -916,6 +1184,7 @@ function App() {
       email: contact?.email || '',
       phone: contact?.phone || '',
       mobile: contact?.mobile || '',
+      fax: contact?.fax || '',
       website: contact?.website || '',
       street: contact?.street || '',
       postalCode: contact?.postal_code || '',
@@ -926,9 +1195,13 @@ function App() {
       notes: contact?.notes || '',
       shared: contact?.shared ?? true,
       businessCardUrl: contact?.business_card_url || '',
+      businessCardUrlEnhanced: contact?.business_card_url_enhanced || '',
     })
     setContactCardFile(null)
-    setContactCardPreview(contact?.business_card_url || '')
+    setContactCardEnhancedFile(null)
+    setContactCardEnhancedPreview(contact?.business_card_url_enhanced || '')
+    setContactCardPreview(contact?.business_card_url_enhanced || contact?.business_card_url || '')
+    setContactCardEnhancing(false)
     setContactCardRotation(0)
   }
 
@@ -937,11 +1210,174 @@ function App() {
     setContactSaveMessage('')
     setContactCardFile(null)
     setContactCardPreview('')
+    setContactCardEnhancedFile(null)
+    setContactCardEnhancedPreview('')
+    setContactCardEnhancing(false)
     setContactCardRotation(0)
   }
 
   const handleContactInput = (field, value) => {
     setContactForm((prev) => ({ ...prev, [field]: value }))
+  }
+
+  // EXIF-Orientation aus JPEG auslesen (1-8)
+  const getExifOrientation = (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const view = new DataView(e.target.result)
+        if (view.getUint16(0, false) !== 0xFFD8) {
+          resolve(1) // Kein JPEG
+          return
+        }
+        let offset = 2
+        while (offset < view.byteLength) {
+          const marker = view.getUint16(offset, false)
+          offset += 2
+          if (marker === 0xFFE1) { // APP1 (EXIF)
+            if (view.getUint32(offset + 2, false) !== 0x45786966) { // "Exif"
+              resolve(1)
+              return
+            }
+            const little = view.getUint16(offset + 8, false) === 0x4949
+            const tags = view.getUint16(offset + 16, little)
+            for (let i = 0; i < tags; i++) {
+              const tagOffset = offset + 18 + i * 12
+              if (view.getUint16(tagOffset, little) === 0x0112) { // Orientation tag
+                resolve(view.getUint16(tagOffset + 8, little))
+                return
+              }
+            }
+            resolve(1)
+            return
+          } else if ((marker & 0xFF00) !== 0xFF00) {
+            break
+          } else {
+            offset += view.getUint16(offset, false)
+          }
+        }
+        resolve(1)
+      }
+      reader.readAsArrayBuffer(file.slice(0, 65536))
+    })
+  }
+
+  // Bild automatisch drehen basierend auf EXIF-Orientation
+  const autoRotateImage = async (file) => {
+    const orientation = await getExifOrientation(file)
+    if (orientation === 1) return file // Keine Drehung nötig
+
+    return new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const img = new Image()
+        img.onload = () => {
+          const canvas = document.createElement('canvas')
+          const ctx = canvas.getContext('2d')
+
+          // Canvas-Größe basierend auf Orientation
+          if (orientation >= 5 && orientation <= 8) {
+            canvas.width = img.height
+            canvas.height = img.width
+          } else {
+            canvas.width = img.width
+            canvas.height = img.height
+          }
+
+          // Transformation basierend auf Orientation
+          switch (orientation) {
+            case 2: ctx.transform(-1, 0, 0, 1, canvas.width, 0); break // Horizontal flip
+            case 3: ctx.transform(-1, 0, 0, -1, canvas.width, canvas.height); break // 180°
+            case 4: ctx.transform(1, 0, 0, -1, 0, canvas.height); break // Vertical flip
+            case 5: ctx.transform(0, 1, 1, 0, 0, 0); break // 90° CW + flip
+            case 6: ctx.transform(0, 1, -1, 0, canvas.width, 0); break // 90° CW
+            case 7: ctx.transform(0, -1, -1, 0, canvas.width, canvas.height); break // 90° CCW + flip
+            case 8: ctx.transform(0, -1, 1, 0, 0, canvas.height); break // 90° CCW
+            default: break
+          }
+
+          ctx.drawImage(img, 0, 0)
+          canvas.toBlob((blob) => {
+            resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }))
+          }, 'image/jpeg', 0.95)
+        }
+        img.src = e.target.result
+      }
+      reader.readAsDataURL(file)
+    })
+  }
+
+  // KI-basierte Rotationserkennung für Visitenkarten
+  const detectRotationWithAI = async (file, apiKey) => {
+    const base64 = await new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result.split(',')[1])
+      reader.readAsDataURL(file)
+    })
+
+    const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'pixtral-12b-2409',
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: 'Analysiere dieses Bild einer Visitenkarte. Um wie viel Grad im Uhrzeigersinn muss es gedreht werden, damit der Text richtig lesbar ist (horizontal, von links nach rechts)? Antworte NUR mit einer Zahl: 0, 90, 180 oder 270'
+            },
+            {
+              type: 'image_url',
+              image_url: { url: `data:image/jpeg;base64,${base64}` }
+            }
+          ]
+        }],
+        max_tokens: 10,
+      }),
+    })
+
+    const result = await response.json()
+    const content = result.choices?.[0]?.message?.content || '0'
+    const match = content.match(/\b(0|90|180|270)\b/)
+    return match ? parseInt(match[1], 10) : 0
+  }
+
+  // Bild um bestimmten Winkel drehen
+  const rotateImageByDegrees = (file, degrees) => {
+    if (degrees === 0) return Promise.resolve(file)
+
+    return new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const img = new Image()
+        img.onload = () => {
+          const canvas = document.createElement('canvas')
+          const ctx = canvas.getContext('2d')
+
+          if (degrees === 90 || degrees === 270) {
+            canvas.width = img.height
+            canvas.height = img.width
+          } else {
+            canvas.width = img.width
+            canvas.height = img.height
+          }
+
+          ctx.translate(canvas.width / 2, canvas.height / 2)
+          ctx.rotate((degrees * Math.PI) / 180)
+          ctx.drawImage(img, -img.width / 2, -img.height / 2)
+
+          canvas.toBlob((blob) => {
+            resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }))
+          }, 'image/jpeg', 0.95)
+        }
+        img.src = e.target.result
+      }
+      reader.readAsDataURL(file)
+    })
   }
 
   // Bild komprimieren (max 800px Breite, 70% Qualität)
@@ -1008,7 +1444,123 @@ function App() {
     if (!file) return
     setContactCardFile(file)
     setContactCardPreview(URL.createObjectURL(file))
+    setContactCardEnhancedFile(null)
+    setContactCardEnhancedPreview('')
+    setContactCardEnhancing(false)
     setContactCardRotation(0)
+  }
+
+  const handleEnhanceFileChange = (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    setEnhanceFile(file)
+    setEnhancePreview(URL.createObjectURL(file))
+    setEnhanceResultPreview('')
+    setEnhanceMessage('')
+  }
+
+  const getEnhancedImage = async (file, apiKey) => {
+    // Bild als Base64 konvertieren
+    const base64 = await new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result.split(',')[1])
+      reader.readAsDataURL(file)
+    })
+
+    // Google Nano Banana Pro API aufrufen
+    const response = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey,
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              {
+                inline_data: {
+                  mime_type: file.type || 'image/jpeg',
+                  data: base64
+                }
+              },
+              {
+                text: `Enhance this business card photo:
+1. Crop tightly to the card edges
+2. Correct perspective distortion (make edges straight and rectangular)
+3. Improve sharpness and readability
+4. Keep all text, logos, and colors exactly as they are
+5. Output as a clean, professional-looking scan`
+              }
+            ]
+          }],
+          generationConfig: {
+            responseModalities: ['TEXT', 'IMAGE'],
+          }
+        })
+      }
+    )
+
+    const result = await response.json()
+    console.log('Nano Banana Pro Response:', response.status, result)
+
+    if (!response.ok) {
+      throw new Error(result?.error?.message || 'Google Nano Banana Pro Anfrage fehlgeschlagen.')
+    }
+
+    // Bild aus Response extrahieren
+    const parts = result?.candidates?.[0]?.content?.parts || []
+    console.log('Nano Banana Pro Parts:', parts.map(p => ({ hasImage: !!p.inlineData, hasText: !!p.text })))
+    const imagePart = parts.find(p => p.inlineData?.data)
+
+    if (!imagePart) {
+      throw new Error('Kein Bild von Nano Banana Pro erhalten. Parts: ' + JSON.stringify(parts.map(p => Object.keys(p))))
+    }
+
+    // Base64 zu Blob konvertieren
+    const byteString = atob(imagePart.inlineData.data)
+    const byteArray = new Uint8Array(byteString.length)
+    for (let i = 0; i < byteString.length; i += 1) {
+      byteArray[i] = byteString.charCodeAt(i)
+    }
+    const mimeType = imagePart.inlineData.mimeType || 'image/png'
+    const blob = new Blob([byteArray], { type: mimeType })
+
+    const previewUrl = URL.createObjectURL(blob)
+    const enhancedFile = new File([blob], 'business-card-enhanced.png', {
+      type: mimeType,
+    })
+    return { previewUrl, enhancedFile }
+  }
+
+  const runBusinessCardEnhance = async () => {
+    if (!enhanceFile) {
+      setEnhanceMessage('Bitte zuerst ein Foto auswählen.')
+      return
+    }
+
+    let apiKey = googleApiKey
+    if (!apiKey) {
+      apiKey = await fetchGoogleApiKey()
+    }
+    if (!apiKey) {
+      setEnhanceMessage('Google API Key nicht gefunden (erwartet: name = "Google Nano Banana").')
+      return
+    }
+
+    setEnhanceLoading(true)
+    setEnhanceMessage('')
+    setEnhanceResultPreview('')
+
+    try {
+      const { previewUrl } = await getEnhancedImage(enhanceFile, apiKey)
+      setEnhanceResultPreview(previewUrl)
+    } catch (error) {
+      setEnhanceMessage(error.message || 'Verbesserung fehlgeschlagen.')
+    } finally {
+      setEnhanceLoading(false)
+    }
   }
 
   // Duplikat-Prüfung für Kontakte
@@ -1070,15 +1622,10 @@ function App() {
     setBusinessCardScanning(true)
     setBusinessCardOcrResult(null)
     setDuplicateCheckResult(null)
+    setContactSaveMessage('')
 
     try {
-      // Bild komprimieren
-      const compressedFile = await compressImage(file, 1200, 0.8)
-      setContactCardFile(compressedFile)
-      setContactCardPreview(URL.createObjectURL(compressedFile))
-      setContactCardRotation(0)
-
-      // API Key holen
+      // API Keys holen
       let apiKey = mistralApiKey
       if (!apiKey) {
         apiKey = await fetchMistralApiKey()
@@ -1087,28 +1634,88 @@ function App() {
         throw new Error('Mistral API Key nicht gefunden')
       }
 
-      // Bild als Base64 für OCR
+      // 1. KI-basierte Rotationserkennung (ohne EXIF)
+      const aiRotation = await detectRotationWithAI(file, apiKey)
+      const rotatedFile = await rotateImageByDegrees(file, aiRotation)
+
+      // 2. Google Nano Banana Pro Enhancement parallel starten mit unkomprimiertem Bild
+      let googleKey = googleApiKey
+      if (!googleKey) {
+        googleKey = await fetchGoogleApiKey()
+      }
+      if (!googleKey) {
+        console.warn('Google Nano Banana API Key nicht gefunden - KI-Verbesserung übersprungen')
+      }
+      if (googleKey) {
+        setContactCardEnhancing(true)
+        getEnhancedImage(rotatedFile, googleKey)
+          .then(({ previewUrl, enhancedFile }) => {
+            setContactCardEnhancedFile(enhancedFile)
+            setContactCardEnhancedPreview(previewUrl)
+            setContactCardPreview(previewUrl)
+          })
+          .catch((error) => {
+            console.warn('Nano Banana Pro Enhance fehlgeschlagen:', error)
+          })
+          .finally(() => {
+            setContactCardEnhancing(false)
+          })
+      }
+
+      // 3. Komprimieren für Speicherung und Preview
+      const compressedFile = await compressImage(rotatedFile, 1200, 0.8)
+      setContactCardFile(compressedFile)
+      // NICHT setContactCardEnhancedFile(null) - das würde das KI-Ergebnis überschreiben!
+      setContactCardPreview(URL.createObjectURL(compressedFile))
+      setContactCardRotation(0)
+
+      // 4. Bild als Base64 für OCR (rotiertes Bild)
       const base64 = await new Promise((resolve) => {
         const reader = new FileReader()
         reader.onload = () => resolve(reader.result.split(',')[1])
-        reader.readAsDataURL(compressedFile)
+        reader.readAsDataURL(rotatedFile)
       })
 
-      // OCR durchführen
-      const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
+      // 5. OCR mit mistral-ocr-latest über /v1/ocr Endpunkt
+      const ocrResponse = await fetch('https://api.mistral.ai/v1/ocr', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: 'pixtral-12b-2409',
+          model: 'mistral-ocr-latest',
+          document: {
+            type: 'image_url',
+            image_url: `data:image/jpeg;base64,${base64}`
+          }
+        }),
+      })
+
+      const ocrResult = await ocrResponse.json()
+      const ocrText = ocrResult.pages?.[0]?.markdown || ''
+
+      if (!ocrText) {
+        throw new Error('OCR hat keinen Text erkannt')
+      }
+
+      // 6. OCR-Text mit Pixtral in strukturiertes JSON umwandeln
+      const structureResponse = await fetch('https://api.mistral.ai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'mistral-small-latest',
           messages: [{
             role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: `Analysiere diese Visitenkarte und extrahiere die Daten als JSON. Antworte NUR mit dem JSON-Objekt, ohne Erklärung:
+            content: `Extrahiere aus diesem Visitenkarten-Text die Kontaktdaten als JSON. Antworte NUR mit dem JSON-Objekt, ohne Erklärung:
+
+Text von der Visitenkarte:
+${ocrText}
+
+Erwartetes Format:
 {
   "firstName": "",
   "lastName": "",
@@ -1117,25 +1724,20 @@ function App() {
   "email": "",
   "phone": "",
   "mobile": "",
+  "fax": "",
   "website": "",
   "street": "",
   "postalCode": "",
   "city": ""
 }
-Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder leer.`
-              },
-              {
-                type: 'image_url',
-                image_url: { url: `data:image/jpeg;base64,${base64}` }
-              }
-            ]
+Fülle nur Felder aus, die im Text eindeutig erkennbar sind. Lasse unbekannte Felder leer.`
           }],
           max_tokens: 500,
         }),
       })
 
-      const result = await response.json()
-      const content = result.choices?.[0]?.message?.content || ''
+      const structureResult = await structureResponse.json()
+      const content = structureResult.choices?.[0]?.message?.content || ''
 
       // JSON extrahieren
       const jsonMatch = content.match(/\{[\s\S]*\}/)
@@ -1154,6 +1756,8 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
           // Kein Duplikat - direkt Formular öffnen
           openContactFormWithOcrData(parsed)
         }
+      } else {
+        throw new Error('Konnte keine strukturierten Daten aus OCR-Text extrahieren')
       }
     } catch (err) {
       console.error('Visitenkarten-Scan fehlgeschlagen:', err)
@@ -1177,6 +1781,7 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
       email: ocrData.email || '',
       phone: ocrData.phone || '',
       mobile: ocrData.mobile || '',
+      fax: ocrData.fax || '',
       website: ocrData.website || '',
       street: ocrData.street || '',
       postalCode: ocrData.postalCode || '',
@@ -1187,6 +1792,7 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
       notes: '',
       shared: true,
       businessCardUrl: '',
+      businessCardUrlEnhanced: '',
       status: 'aktiv',
       predecessorId: predecessorId,
       transitionDate: transitionDate,
@@ -1209,6 +1815,7 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
       email: ocrData.email || existingContact.email || '',
       phone: ocrData.phone || existingContact.phone || '',
       mobile: ocrData.mobile || existingContact.mobile || '',
+      fax: ocrData.fax || existingContact.fax || '',
       website: ocrData.website || existingContact.website || '',
       street: ocrData.street || existingContact.street || '',
       postalCode: ocrData.postalCode || existingContact.postal_code || '',
@@ -1219,6 +1826,7 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
       notes: existingContact.notes || '',
       shared: existingContact.shared ?? true,
       businessCardUrl: '', // Leer lassen - neues Foto wird beim Speichern hochgeladen
+      businessCardUrlEnhanced: '', // Leer lassen - neues KI-Bild wird beim Speichern hochgeladen
       status: existingContact.status || 'aktiv',
       predecessorId: existingContact.predecessor_id || null,
       transitionDate: existingContact.transition_date || null,
@@ -1265,6 +1873,11 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
       return
     }
 
+    if (contactCardEnhancing) {
+      setContactSaveMessage('KI-Verbesserung läuft noch, bitte kurz warten.')
+      return
+    }
+
     setContactSaveLoading(true)
     const payload = {
       owner_id: editingContact.owner_id || currentStaff.id,
@@ -1275,6 +1888,7 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
       email: contactForm.email.trim(),
       phone: contactForm.phone.trim(),
       mobile: contactForm.mobile.trim(),
+      fax: contactForm.fax.trim(),
       website: contactForm.website.trim(),
       street: contactForm.street.trim(),
       postal_code: contactForm.postalCode.trim(),
@@ -1285,22 +1899,23 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
       notes: contactForm.notes.trim(),
       shared: contactForm.shared,
       business_card_url: contactForm.businessCardUrl || null,
+      business_card_url_enhanced: contactForm.businessCardUrlEnhanced || null,
       status: contactForm.status || 'aktiv',
       predecessor_id: contactForm.predecessorId || null,
       transition_date: contactForm.transitionDate || null,
     }
 
-    const uploadBusinessCard = async (contactId) => {
-      if (!contactCardFile) return null
+    const uploadBusinessCard = async (contactId, file, suffix, contentType = 'image/jpeg') => {
+      if (!file) return null
       // Bild drehen falls nötig
-      const fileToUpload = contactCardRotation !== 0
-        ? await rotateImage(contactCardFile, contactCardRotation)
-        : contactCardFile
-      const filePath = `${contactId}/${Date.now()}.jpg`
+      const fileToUpload = suffix === 'original' && contactCardRotation !== 0
+        ? await rotateImage(file, contactCardRotation)
+        : file
+      const filePath = `${contactId}/${Date.now()}-${suffix}.${contentType === 'image/png' ? 'png' : 'jpg'}`
       const { error: uploadError } = await supabase
         .storage
         .from('business-cards')
-        .upload(filePath, fileToUpload, { upsert: true })
+        .upload(filePath, fileToUpload, { upsert: true, contentType })
 
       if (uploadError) {
         throw new Error(uploadError.message)
@@ -1339,13 +1954,18 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
 
     if (contactCardFile && savedId) {
       try {
-        const cardUrl = await uploadBusinessCard(savedId)
-        if (cardUrl) {
-          await supabase
-            .from('contacts')
-            .update({ business_card_url: cardUrl })
-            .eq('id', savedId)
+        const originalUrl = await uploadBusinessCard(savedId, contactCardFile, 'original', 'image/jpeg')
+        const enhancedUrl = contactCardEnhancedFile
+          ? await uploadBusinessCard(savedId, contactCardEnhancedFile, 'enhanced', contactCardEnhancedFile.type || 'image/png')
+          : null
+        const updatePayload = {
+          business_card_url: originalUrl || contactForm.businessCardUrl || null,
+          business_card_url_enhanced: enhancedUrl || contactForm.businessCardUrlEnhanced || null,
         }
+        await supabase
+          .from('contacts')
+          .update(updatePayload)
+          .eq('id', savedId)
       } catch (error) {
         setContactSaveMessage(error.message || 'Visitenkarte konnte nicht gespeichert werden.')
         setContactSaveLoading(false)
@@ -1360,13 +1980,30 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
 
   const deleteContact = async (contactId) => {
     if (!window.confirm('Kontakt wirklich löschen?')) return
-    const { error } = await supabase
+    const { data: deletedContact, error } = await supabase
       .from('contacts')
       .delete()
       .eq('id', contactId)
+      .select('business_card_url, business_card_url_enhanced')
+      .single()
     if (error) {
       setContactsMessage(error.message)
+      return
     } else {
+      const urlsToDelete = [
+        deletedContact?.business_card_url,
+        deletedContact?.business_card_url_enhanced,
+      ].filter(Boolean)
+      const paths = urlsToDelete
+        .map((url) => url.match(/business-cards\/(.+)$/))
+        .filter(Boolean)
+        .map((match) => match[1])
+      if (paths.length > 0) {
+        const { error: storageError } = await supabase.storage.from('business-cards').remove(paths)
+        if (storageError) {
+          setContactsMessage(`Kontakt gelöscht, aber Dateien konnten nicht entfernt werden: ${storageError.message}`)
+        }
+      }
       await fetchContacts()
     }
   }
@@ -1397,6 +2034,25 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
       (contact.notes || '').toLowerCase().includes(search)
     )
   })
+
+  const openContactDetail = (contact) => {
+    setSelectedContact(contact)
+    setSelectedContactCardView(contact.business_card_url_enhanced ? 'enhanced' : 'original')
+  }
+
+  const getContactCardUrl = (contact, view = 'enhanced') => {
+    if (!contact) return ''
+    if (view === 'enhanced' && contact.business_card_url_enhanced) {
+      return contact.business_card_url_enhanced
+    }
+    return contact.business_card_url || contact.business_card_url_enhanced || ''
+  }
+
+  const selectedCardUrl = selectedContact
+    ? getContactCardUrl(selectedContact, selectedContactCardView)
+    : ''
+  const selectedCardHasEnhanced = !!selectedContact?.business_card_url_enhanced
+  const selectedCardHasOriginal = !!selectedContact?.business_card_url
 
   const fetchChatMessages = async () => {
     setChatLoading(true)
@@ -1431,6 +2087,241 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
       setChatInput('')
     }
     setChatSending(false)
+  }
+
+  // Dokumentationen laden (AMK oder Recall)
+  const loadDokumentationen = async (messageId, messageType = 'amk') => {
+    setDokumentationLoading(true)
+    const tableName = messageType === 'recall' ? 'recall_dokumentationen' : 'amk_dokumentationen'
+    const idColumn = messageType === 'recall' ? 'recall_message_id' : 'amk_message_id'
+
+    const { data, error } = await supabase
+      .from(tableName)
+      .select('*')
+      .eq(idColumn, messageId)
+      .order('erstellt_am', { ascending: false })
+
+    if (!error && data) {
+      setExistingDokumentationen(data)
+    } else {
+      setExistingDokumentationen([])
+    }
+    setDokumentationLoading(false)
+  }
+
+  // Signature Canvas initialisieren
+  const initSignatureCanvas = () => {
+    const canvas = signatureCanvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    ctx.strokeStyle = '#1F2937'
+    ctx.lineWidth = 2
+    ctx.lineCap = 'round'
+    ctx.lineJoin = 'round'
+    signatureCtxRef.current = ctx
+    // Canvas leeren
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+  }
+
+  const startDrawing = (e) => {
+    const canvas = signatureCanvasRef.current
+    const ctx = signatureCtxRef.current
+    if (!canvas || !ctx) return
+
+    const rect = canvas.getBoundingClientRect()
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+
+    let x, y
+    if (e.touches) {
+      x = (e.touches[0].clientX - rect.left) * scaleX
+      y = (e.touches[0].clientY - rect.top) * scaleY
+    } else {
+      x = (e.clientX - rect.left) * scaleX
+      y = (e.clientY - rect.top) * scaleY
+    }
+
+    ctx.beginPath()
+    ctx.moveTo(x, y)
+    setIsDrawing(true)
+  }
+
+  const draw = (e) => {
+    if (!isDrawing) return
+    const canvas = signatureCanvasRef.current
+    const ctx = signatureCtxRef.current
+    if (!canvas || !ctx) return
+
+    const rect = canvas.getBoundingClientRect()
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+
+    let x, y
+    if (e.touches) {
+      e.preventDefault()
+      x = (e.touches[0].clientX - rect.left) * scaleX
+      y = (e.touches[0].clientY - rect.top) * scaleY
+    } else {
+      x = (e.clientX - rect.left) * scaleX
+      y = (e.clientY - rect.top) * scaleY
+    }
+
+    ctx.lineTo(x, y)
+    ctx.stroke()
+  }
+
+  const stopDrawing = () => {
+    if (isDrawing) {
+      signatureCtxRef.current?.closePath()
+      setIsDrawing(false)
+      // Signatur als Base64 speichern
+      const canvas = signatureCanvasRef.current
+      if (canvas) {
+        setDokumentationSignature(canvas.toDataURL('image/png'))
+      }
+    }
+  }
+
+  const clearSignature = () => {
+    const canvas = signatureCanvasRef.current
+    const ctx = signatureCtxRef.current
+    if (canvas && ctx) {
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      setDokumentationSignature(null)
+    }
+  }
+
+  // Dokumentation speichern (AMK oder Recall)
+  const saveDokumentation = async () => {
+    const hasSavedPznFotos = Object.keys(savedPznFotos).length > 0
+    if (!selectedApoMessage?.id || (!dokumentationBemerkung.trim() && !dokumentationSignature && !hasSavedPznFotos)) return
+
+    const messageType = selectedApoMessage.type
+    const tableName = messageType === 'recall' ? 'recall_dokumentationen' : 'amk_dokumentationen'
+    const idColumn = messageType === 'recall' ? 'recall_message_id' : 'amk_message_id'
+
+    // Name des eingeloggten Nutzers ermitteln
+    const currentStaffMember = staffByAuthId[session?.user?.id]
+    const userName = currentStaffMember
+      ? `${currentStaffMember.first_name || ''} ${currentStaffMember.last_name || ''}`.trim()
+      : session?.user?.email || 'Unbekannt'
+
+    setDokumentationLoading(true)
+
+    // PZN-Fotos aus der recall_pzn_fotos Tabelle in die Dokumentation kopieren
+    const pznFotoPaths = messageType === 'recall' && hasSavedPznFotos ? savedPznFotos : null
+
+    const { error } = await supabase
+      .from(tableName)
+      .insert({
+        [idColumn]: selectedApoMessage.id,
+        bemerkung: dokumentationBemerkung.trim() || null,
+        unterschrift_data: dokumentationSignature || null,
+        erstellt_von: session?.user?.id || null,
+        erstellt_von_name: userName,
+        pharmacy_id: pharmacies[0]?.id || null,
+        ...(pznFotoPaths ? { pzn_fotos: pznFotoPaths } : {})
+      })
+
+    if (!error) {
+      // Dokumentationen neu laden (für Button-Status)
+      await loadDokumentationen(selectedApoMessage.id, messageType)
+      // Liste aktualisieren (für Karten-Status)
+      if (messageType === 'recall') {
+        fetchRecallMessages(apoYear)
+      } else {
+        fetchAmkMessages(apoYear)
+      }
+      // Modal schließen nach erfolgreichem Speichern
+      setShowDokumentationModal(false)
+      setShowSignatureCanvas(false)
+      setDokumentationBemerkung('')
+      setDokumentationSignature(null)
+    }
+    setDokumentationLoading(false)
+  }
+
+  // PZN-Fotos aus Datenbank laden
+  const loadSavedPznFotos = async (recallMessageId) => {
+    const { data, error } = await supabase
+      .from('recall_pzn_fotos')
+      .select('pzn, foto_path')
+      .eq('recall_message_id', recallMessageId)
+
+    if (!error && data) {
+      const fotosMap = {}
+      data.forEach(item => {
+        fotosMap[item.pzn] = item.foto_path
+      })
+      setSavedPznFotos(fotosMap)
+    } else {
+      setSavedPznFotos({})
+    }
+  }
+
+  // PZN-Foto Handler
+  const handlePznClick = (pzn) => {
+    if (pznFotoUploading) return
+    setActivePzn(pzn)
+    pznCameraInputRef.current?.click()
+  }
+
+  const handlePznCameraCapture = async (event) => {
+    const file = event.target.files?.[0]
+    if (!file || !activePzn || !selectedApoMessage?.id) return
+
+    setPznFotoUploading(true)
+
+    try {
+      // Bestehende compressImage Funktion nutzen (max 800px, 0.7 quality)
+      const compressed = await compressImage(file, 800, 0.7)
+
+      // Foto sofort nach Storage hochladen
+      const fileName = `${Date.now()}-${activePzn}.jpg`
+      const { error: uploadError } = await supabase.storage
+        .from('recall-fotos')
+        .upload(fileName, compressed)
+
+      if (uploadError) {
+        console.error('Foto-Upload fehlgeschlagen:', uploadError.message)
+        return
+      }
+
+      // Name des eingeloggten Nutzers ermitteln
+      const currentStaffMember = staffByAuthId[session?.user?.id]
+      const userName = currentStaffMember
+        ? `${currentStaffMember.first_name || ''} ${currentStaffMember.last_name || ''}`.trim()
+        : session?.user?.email || 'Unbekannt'
+
+      // In Datenbank speichern (upsert - ersetzt bestehendes Foto für diese PZN)
+      const { error: dbError } = await supabase
+        .from('recall_pzn_fotos')
+        .upsert({
+          recall_message_id: selectedApoMessage.id,
+          pzn: activePzn,
+          foto_path: fileName,
+          erstellt_von: session?.user?.id || null,
+          erstellt_von_name: userName
+        }, {
+          onConflict: 'recall_message_id,pzn'
+        })
+
+      if (!dbError) {
+        // State aktualisieren
+        setSavedPznFotos(prev => ({
+          ...prev,
+          [activePzn]: fileName
+        }))
+      }
+    } catch (e) {
+      console.error('Fehler beim Speichern des PZN-Fotos:', e)
+    } finally {
+      setPznFotoUploading(false)
+      setActivePzn(null)
+      event.target.value = ''  // Reset für erneute Auswahl
+    }
   }
 
   const fetchPlanData = async () => {
@@ -2250,9 +3141,8 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
       // Hole alle Kontakte mit Visitenkarten-URL
       const { data: contactsWithCards, error } = await supabase
         .from('contacts')
-        .select('id, first_name, last_name, company, business_card_url, created_at')
-        .not('business_card_url', 'is', null)
-        .neq('business_card_url', '')
+        .select('id, first_name, last_name, company, business_card_url, business_card_url_enhanced, created_at')
+        .or('business_card_url.not.is.null,business_card_url_enhanced.not.is.null')
         .order('created_at', { ascending: false })
 
       if (error || !contactsWithCards) {
@@ -2262,18 +3152,22 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
         return
       }
 
-      const cards = contactsWithCards.map((contact) => {
-        const url = contact.business_card_url
-        const ext = url.split('.').pop()?.toUpperCase() || 'JPG'
-        return {
-          id: contact.id,
-          contactName: [contact.first_name, contact.last_name].filter(Boolean).join(' ') || 'Unbekannt',
-          company: contact.company || '',
-          url: url,
-          createdAt: contact.created_at,
-          format: ext,
-        }
-      })
+      const cards = contactsWithCards
+        .filter((contact) => contact.business_card_url_enhanced || contact.business_card_url)
+        .map((contact) => {
+          const url = contact.business_card_url_enhanced || contact.business_card_url
+          const ext = url.split('.').pop()?.toUpperCase() || 'JPG'
+          return {
+            id: contact.id,
+            contactName: [contact.first_name, contact.last_name].filter(Boolean).join(' ') || 'Unbekannt',
+            company: contact.company || '',
+            url: url,
+            originalUrl: contact.business_card_url || '',
+            enhancedUrl: contact.business_card_url_enhanced || '',
+            createdAt: contact.created_at,
+            format: ext,
+          }
+        })
       setBusinessCards(cards)
     } catch (err) {
       console.error('Fehler beim Laden der Visitenkarten:', err)
@@ -2289,7 +3183,7 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
     // Lösche die URL aus dem Kontakt
     const { error } = await supabase
       .from('contacts')
-      .update({ business_card_url: null })
+      .update({ business_card_url: null, business_card_url_enhanced: null })
       .eq('id', card.id)
 
     if (error) {
@@ -2298,11 +3192,13 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
     }
 
     // Optional: Versuche auch die Datei aus dem Storage zu löschen (falls im eigenen Bucket)
-    if (card.url.includes('/business-cards/')) {
-      const pathMatch = card.url.match(/business-cards\/(.+)$/)
-      if (pathMatch) {
-        await supabase.storage.from('business-cards').remove([pathMatch[1]])
-      }
+    const urlsToDelete = [card.originalUrl, card.enhancedUrl, card.url].filter(Boolean)
+    const paths = urlsToDelete
+      .map((url) => url.match(/business-cards\/(.+)$/))
+      .filter(Boolean)
+      .map((match) => match[1])
+    if (paths.length > 0) {
+      await supabase.storage.from('business-cards').remove(paths)
     }
 
     setBusinessCards((prev) => prev.filter((c) => c.id !== card.id))
@@ -2318,6 +3214,35 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
       setMistralApiKey(data.key)
       return data.key
     }
+    return null
+  }
+
+  const fetchGoogleApiKey = async () => {
+    console.log('fetchGoogleApiKey: Suche nach Google Nano Banana Key...')
+    const { data, error } = await supabase
+      .from('api_keys')
+      .select('key')
+      .eq('name', 'Google Nano Banana')
+      .single()
+    console.log('fetchGoogleApiKey Result:', { found: !!data, error: error?.message })
+    if (!error && data) {
+      setGoogleApiKey(data.key)
+      return data.key
+    }
+
+    // Fallback: Suche nach ähnlichen Namen
+    const { data: fallbackData, error: fallbackError } = await supabase
+      .from('api_keys')
+      .select('key')
+      .ilike('name', '%google%nano%banana%')
+      .limit(1)
+      .single()
+    console.log('fetchGoogleApiKey Fallback:', { found: !!fallbackData, error: fallbackError?.message })
+    if (!fallbackError && fallbackData) {
+      setGoogleApiKey(fallbackData.key)
+      return fallbackData.key
+    }
+
     return null
   }
 
@@ -2434,7 +3359,31 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
       .lte('date', endDate)
       .order('date', { ascending: false })
     if (!error && data) {
-      setAmkMessages(data)
+      // Dokumentationen für alle AMK-Meldungen laden
+      const amkIds = data.map(m => m.id)
+      const { data: allDoks } = await supabase
+        .from('amk_dokumentationen')
+        .select('*')
+        .in('amk_message_id', amkIds)
+        .order('erstellt_am', { ascending: false })
+
+      // Dokumentationen den Meldungen zuordnen
+      const doksById = {}
+      if (allDoks) {
+        for (const dok of allDoks) {
+          if (!doksById[dok.amk_message_id]) {
+            doksById[dok.amk_message_id] = []
+          }
+          doksById[dok.amk_message_id].push(dok)
+        }
+      }
+
+      // Meldungen mit Dokumentationen anreichern
+      const enrichedData = data.map(msg => ({
+        ...msg,
+        dokumentationen: doksById[msg.id] || []
+      }))
+      setAmkMessages(enrichedData)
     } else {
       setAmkMessages([])
     }
@@ -2452,7 +3401,31 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
       .lte('date', endDate)
       .order('date', { ascending: false })
     if (!error && data) {
-      setRecallMessages(data)
+      // Dokumentationen für alle Rückrufe laden
+      const recallIds = data.map(m => m.id)
+      const { data: allDoks } = await supabase
+        .from('recall_dokumentationen')
+        .select('*')
+        .in('recall_message_id', recallIds)
+        .order('erstellt_am', { ascending: false })
+
+      // Dokumentationen den Rückrufen zuordnen
+      const doksById = {}
+      if (allDoks) {
+        for (const dok of allDoks) {
+          if (!doksById[dok.recall_message_id]) {
+            doksById[dok.recall_message_id] = []
+          }
+          doksById[dok.recall_message_id].push(dok)
+        }
+      }
+
+      // Rückrufe mit Dokumentationen anreichern
+      const enrichedData = data.map(msg => ({
+        ...msg,
+        dokumentationen: doksById[msg.id] || []
+      }))
+      setRecallMessages(enrichedData)
     } else {
       setRecallMessages([])
     }
@@ -2478,6 +3451,71 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
       setLavAusgaben([])
     }
     setLavLoading(false)
+  }
+
+  // Ungelesene Meldungen zählen
+  const fetchUnreadCounts = async (year) => {
+    if (!session?.user?.id) return
+    const { data, error } = await supabase.rpc('get_unread_counts', {
+      p_user_id: session.user.id,
+      p_year: year,
+    })
+    if (!error && data) {
+      const counts = { amk: 0, recall: 0, lav: 0 }
+      data.forEach((row) => {
+        counts[row.message_type] = Number(row.unread_count)
+      })
+      setUnreadCounts(counts)
+    }
+  }
+
+  // IDs der gelesenen Meldungen laden (für Karten-Hervorhebung)
+  const fetchReadMessageIds = async () => {
+    if (!session?.user?.id) return
+    const { data, error } = await supabase
+      .from('message_read_status')
+      .select('message_type, message_id')
+      .eq('user_id', session.user.id)
+    if (!error && data) {
+      const ids = { amk: new Set(), recall: new Set(), lav: new Set() }
+      data.forEach((row) => {
+        ids[row.message_type].add(row.message_id)
+      })
+      setReadMessageIds(ids)
+    }
+  }
+
+  // Meldung als gelesen markieren
+  const markAsRead = async (messageType, messageId) => {
+    if (!session?.user?.id) return
+    const idStr = String(messageId)
+    // Prüfen ob bereits gelesen
+    if (readMessageIds[messageType].has(idStr)) return
+    const { error } = await supabase.from('message_read_status').insert({
+      user_id: session.user.id,
+      message_type: messageType,
+      message_id: idStr,
+    })
+    if (error) {
+      // Duplikat-Fehler ignorieren (bereits gelesen)
+      if (error.code !== '23505') {
+        console.error('markAsRead error:', error)
+      }
+      return
+    }
+    if (!error) {
+      // Lokalen State aktualisieren
+      setUnreadCounts((prev) => ({
+        ...prev,
+        [messageType]: Math.max(0, prev[messageType] - 1),
+      }))
+      setReadMessageIds((prev) => {
+        const newIds = { ...prev }
+        newIds[messageType] = new Set(prev[messageType])
+        newIds[messageType].add(idStr)
+        return newIds
+      })
+    }
   }
 
   const changeApoYear = (delta) => {
@@ -2835,6 +3873,7 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
       fetchAllPhotos()
       fetchPhotoOcrData()
       fetchMistralApiKey()
+      fetchGoogleApiKey()
     }
   }, [session])
 
@@ -2855,6 +3894,23 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
       }
     }
   }, [session, activeView, apoTab, apoYear])
+
+  // Unread-Counts und Read-IDs laden
+  useEffect(() => {
+    if (session?.user?.id) {
+      fetchUnreadCounts(apoYear)
+      fetchReadMessageIds()
+    }
+  }, [session?.user?.id, apoYear])
+
+  // PZN-Fotos laden bei Message-Wechsel (nur für Rückrufe)
+  useEffect(() => {
+    if (selectedApoMessage?.id && selectedApoMessage?.type === 'recall') {
+      loadSavedPznFotos(selectedApoMessage.id)
+    } else {
+      setSavedPznFotos({})
+    }
+  }, [selectedApoMessage?.id, selectedApoMessage?.type])
 
   useEffect(() => {
     if (session?.user?.id) {
@@ -3146,6 +4202,15 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
               onChange={handleBusinessCardScan}
               className="hidden"
             />
+            {/* Input für PZN-Fotos (Rückrufe) */}
+            <input
+              ref={pznCameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handlePznCameraCapture}
+              className="hidden"
+            />
 
             {/* GH-Rechnungen Button */}
             <button
@@ -3219,29 +4284,41 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
               </div>
               <div className="flex-1 overflow-y-auto">
                 <nav className="p-2 space-y-1 border-b border-[#3c4255]">
-                  {navItems.map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-[6px] text-sm font-medium transition-colors ${
-                        activeView === item.id ? 'bg-[#4a5066] text-white' : 'text-[#E5E7EB] hover:bg-[#4a5066]'
-                      }`}
-                      onClick={() => setActiveView(item.id)}
-                    >
-                      <item.icon />
-                      <span>{item.label}</span>
-                    </button>
-                  ))}
+                  {navItems.map((item) => {
+                    const totalApoUnread = item.id === 'apo' ? unreadCounts.amk + unreadCounts.recall + unreadCounts.lav : 0
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-[6px] text-sm font-medium transition-colors ${
+                          activeView === item.id ? 'bg-[#4a5066] text-white' : 'text-[#E5E7EB] hover:bg-[#4a5066]'
+                        }`}
+                        onClick={() => setActiveView(item.id)}
+                      >
+                        <div className="relative">
+                          <item.icon />
+                          {totalApoUnread > 0 && (
+                            <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+                          )}
+                        </div>
+                        <span className="flex-1">{item.label}</span>
+                        {totalApoUnread > 0 && (
+                          <span className="text-xs text-red-400">({totalApoUnread})</span>
+                        )}
+                      </button>
+                    )
+                  })}
                 </nav>
 
                 <nav className="p-2 space-y-1">
                   {(secondaryNavMap[activeView] || []).map((item) => {
                     const isActive = getActiveSecondaryId() === item.id
+                    const badgeCount = activeView === 'apo' ? unreadCounts[item.id] || 0 : 0
                     return (
                       <button
                         key={item.id}
                         type="button"
-                        className={`w-full text-left px-3 py-2.5 rounded-[6px] text-sm font-medium border-l-4 transition-colors ${
+                        className={`w-full flex items-center text-left px-3 py-2.5 rounded-[6px] text-sm font-medium border-l-4 transition-colors ${
                           isActive
                             ? theme.secondaryActive
                             : 'border-transparent text-[#E5E7EB] hover:bg-[#4a5066] hover:text-white'
@@ -3251,7 +4328,8 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
                           setMobileNavOpen(false)
                         }}
                       >
-                        {item.label}
+                        <span>{item.label}</span>
+                        <UnreadBadge count={badgeCount} />
                       </button>
                     )
                   })}
@@ -3261,24 +4339,33 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
           </aside>
 
           {/* Primary Sidebar */}
-          <aside className={`hidden lg:flex flex-shrink-0 ${theme.sidebarBg} w-16 min-w-[4rem] max-w-[4rem]`}>
+          <aside className={`hidden lg:flex flex-shrink-0 ${theme.sidebarBg} w-16 min-w-[4rem] max-w-[4rem] overflow-visible`}>
             <div className="h-full flex flex-col">
               <nav className="py-3 space-y-1 flex flex-col items-center">
-                {navItems.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className={`w-10 h-10 flex items-center justify-center mx-auto rounded-[6px] border-l-[3px] border-transparent box-border transition-colors ${theme.sidebarText} ${
-                      activeView === item.id ? theme.sidebarActive : theme.sidebarHover
-                    }`}
-                    title={item.label}
-                    onClick={() => {
-                      setActiveView(item.id)
-                    }}
-                  >
-                    <item.icon />
-                  </button>
-                ))}
+                {navItems.map((item) => {
+                  const totalApoUnread = item.id === 'apo' ? unreadCounts.amk + unreadCounts.recall + unreadCounts.lav : 0
+                  return (
+                    <div key={item.id} className="relative group">
+                      <button
+                        type="button"
+                        className={`w-10 h-10 flex items-center justify-center mx-auto rounded-[6px] border-l-[3px] border-transparent box-border transition-colors ${theme.sidebarText} ${
+                          activeView === item.id ? theme.sidebarActive : theme.sidebarHover
+                        }`}
+                        onClick={() => {
+                          setActiveView(item.id)
+                        }}
+                      >
+                        <item.icon />
+                        {totalApoUnread > 0 && (
+                          <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#3c4255]" />
+                        )}
+                      </button>
+                      <span className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-[#1F2937] text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                        {item.label}{totalApoUnread > 0 && ` (${totalApoUnread})`}
+                      </span>
+                    </div>
+                  )
+                })}
               </nav>
             </div>
           </aside>
@@ -3301,11 +4388,12 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
               <nav className="p-2 space-y-1 overflow-y-auto">
                 {(secondaryNavMap[activeView] || []).map((item) => {
                   const isActive = getActiveSecondaryId() === item.id
+                  const badgeCount = activeView === 'apo' ? unreadCounts[item.id] || 0 : 0
                   return (
                     <button
                       key={item.id}
                       type="button"
-                      className={`w-full text-left px-3 py-2.5 rounded-[6px] text-sm font-medium border-l-4 transition-colors ${
+                      className={`w-full flex items-center text-left px-3 py-2.5 rounded-[6px] text-sm font-medium border-l-4 transition-colors ${
                         isActive
                           ? theme.secondaryActive
                           : 'border-transparent text-[#E5E7EB] hover:bg-[#3c4255] hover:text-white'
@@ -3315,7 +4403,8 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
                         handleSecondarySelect(item.id)
                       }}
                     >
-                      {item.label}
+                      <span>{item.label}</span>
+                      <UnreadBadge count={badgeCount} />
                     </button>
                   )
                 })}
@@ -3753,30 +4842,58 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
                             <div key={group.month}>
                               <h3 className={`text-lg font-semibold ${theme.text} mb-4`}>{monthNames[group.month]}</h3>
                               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                                {group.items.map((msg) => (
-                                  <button
-                                    key={msg.id}
-                                    type="button"
-                                    onClick={() => setSelectedApoMessage({ ...msg, type: 'amk' })}
-                                    className={`text-left ${theme.panel} rounded-2xl border ${theme.border} p-5 ${theme.cardShadow} ${theme.cardHoverShadow} hover:border-[#6AA9F0] transition-all flex flex-col h-full`}
-                                  >
-                                    <div className="flex items-center gap-2 mb-3">
-                                      <span className="w-2 h-2 rounded-full bg-amber-500" />
-                                      <span className={`text-xs ${theme.textMuted}`}>
-                                        {msg.date ? new Date(msg.date).toLocaleDateString('de-DE') : ''}
-                                      </span>
-                                    </div>
-                                    <h3 className={`font-semibold ${theme.text} line-clamp-2 mb-2`}>{msg.title}</h3>
-                                    <p className={`text-sm ${theme.textMuted} line-clamp-3 flex-grow`}>
-                                      {msg.description || msg.full_text?.substring(0, 150) || ''}
-                                    </p>
-                                    {msg.category && (
-                                      <span className={`inline-block mt-3 text-xs px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 font-medium`}>
-                                        {msg.category}
-                                      </span>
-                                    )}
-                                  </button>
-                                ))}
+                                {group.items.map((msg) => {
+                                  // Nur als ungelesen markieren wenn: nicht gelesen UND nach Nutzer-Erstellung
+                                  const userCreatedAt = currentStaff?.created_at ? new Date(currentStaff.created_at) : new Date(0)
+                                  const msgDate = msg.date ? new Date(msg.date) : new Date(0)
+                                  const isUnread = !readMessageIds.amk.has(String(msg.id)) && msgDate >= userCreatedAt
+                                  return (
+                                    <button
+                                      key={msg.id}
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedApoMessage({ ...msg, type: 'amk' })
+                                        markAsRead('amk', msg.id)
+                                        loadDokumentationen(msg.id, 'amk')
+                                      }}
+                                      className={`text-left ${theme.panel} rounded-2xl border ${theme.border} p-5 ${theme.cardShadow} ${theme.cardHoverShadow} hover:border-[#6AA9F0] transition-all flex flex-col h-full ${isUnread ? 'ring-2 ring-blue-400' : ''}`}
+                                    >
+                                      <div className="flex items-center gap-2 mb-3">
+                                        <span className="w-2 h-2 rounded-full bg-amber-500" />
+                                        <span className={`text-xs ${theme.textMuted}`}>
+                                          {msg.date ? new Date(msg.date).toLocaleDateString('de-DE') : ''}
+                                        </span>
+                                        {isUnread && <span className="text-xs text-blue-500 font-medium ml-auto">Neu</span>}
+                                      </div>
+                                      <h3 className={`font-semibold ${theme.text} line-clamp-2 mb-2`}>{msg.title}</h3>
+                                      <p className={`text-sm ${theme.textMuted} line-clamp-3 flex-grow`}>
+                                        {msg.description || msg.full_text?.substring(0, 150) || ''}
+                                      </p>
+                                      {msg.category && (
+                                        <span className={`inline-block mt-3 text-xs px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 font-medium`}>
+                                          {msg.category}
+                                        </span>
+                                      )}
+                                      {/* Bearbeitungsstatus anzeigen - ERSTER Bearbeiter wird angezeigt */}
+                                      {msg.dokumentationen && msg.dokumentationen.length > 0 && (() => {
+                                        // Älteste Dokumentation (erster Bearbeiter) - Array ist DESC sortiert, also letztes Element
+                                        const firstDok = msg.dokumentationen[msg.dokumentationen.length - 1]
+                                        const hasSignature = msg.dokumentationen.some(d => d.unterschrift_data)
+                                        return (
+                                          <div className={`mt-3 -mx-5 -mb-5 px-5 py-3 rounded-b-2xl ${hasSignature ? 'bg-green-50' : 'bg-amber-50'}`}>
+                                            <div className="flex items-center gap-2">
+                                              <span className={`w-2 h-2 rounded-full ${hasSignature ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                                              <span className={`text-xs ${hasSignature ? 'text-green-700' : 'text-amber-700'}`}>
+                                                {firstDok.erstellt_von_name || 'Bearbeitet'}
+                                                {firstDok.erstellt_am && ` · ${new Date(firstDok.erstellt_am).toLocaleDateString('de-DE')}`}
+                                              </span>
+                                            </div>
+                                          </div>
+                                        )
+                                      })()}
+                                    </button>
+                                  )
+                                })}
                               </div>
                             </div>
                           ))}
@@ -3799,30 +4916,63 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
                             <div key={group.month}>
                               <h3 className={`text-lg font-semibold ${theme.text} mb-4`}>{monthNames[group.month]}</h3>
                               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                                {group.items.map((msg) => (
-                                  <button
-                                    key={msg.id}
-                                    type="button"
-                                    onClick={() => setSelectedApoMessage({ ...msg, type: 'recall' })}
-                                    className={`text-left ${theme.panel} rounded-2xl border ${theme.border} p-5 ${theme.cardShadow} ${theme.cardHoverShadow} hover:border-[#6AA9F0] transition-all flex flex-col h-full`}
-                                  >
-                                    <div className="flex items-center gap-2 mb-3">
-                                      <span className="w-2 h-2 rounded-full bg-red-500" />
-                                      <span className={`text-xs ${theme.textMuted}`}>
-                                        {msg.date ? new Date(msg.date).toLocaleDateString('de-DE') : ''}
-                                      </span>
-                                    </div>
-                                    <h3 className={`font-semibold ${theme.text} line-clamp-2 mb-2`}>{msg.title}</h3>
-                                    <p className={`text-sm ${theme.textMuted} line-clamp-3 flex-grow`}>
-                                      {msg.description || msg.full_text?.substring(0, 150) || ''}
-                                    </p>
-                                    {msg.product_name && (
-                                      <span className={`inline-block mt-3 text-xs px-2.5 py-1 rounded-lg bg-red-50 text-red-700 font-medium`}>
-                                        {msg.product_name}
-                                      </span>
-                                    )}
-                                  </button>
-                                ))}
+                                {group.items.map((msg) => {
+                                  // Nur als ungelesen markieren wenn: nicht gelesen UND nach Nutzer-Erstellung
+                                  const userCreatedAt = currentStaff?.created_at ? new Date(currentStaff.created_at) : new Date(0)
+                                  const msgDate = msg.date ? new Date(msg.date) : new Date(0)
+                                  const isUnread = !readMessageIds.recall.has(String(msg.id)) && msgDate >= userCreatedAt
+                                  return (
+                                    <button
+                                      key={msg.id}
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedApoMessage({ ...msg, type: 'recall' })
+                                        markAsRead('recall', msg.id)
+                                        loadDokumentationen(msg.id, 'recall')
+                                      }}
+                                      className={`text-left ${theme.panel} rounded-2xl border ${theme.border} p-5 ${theme.cardShadow} ${theme.cardHoverShadow} hover:border-[#6AA9F0] transition-all flex flex-col h-full ${isUnread ? 'ring-2 ring-blue-400' : ''}`}
+                                    >
+                                      <div className="flex items-center gap-2 mb-3">
+                                        <span className="w-2 h-2 rounded-full bg-red-500" />
+                                        <span className={`text-xs ${theme.textMuted}`}>
+                                          {msg.date ? new Date(msg.date).toLocaleDateString('de-DE') : ''}
+                                        </span>
+                                        {isUnread && <span className="text-xs text-blue-500 font-medium ml-auto">Neu</span>}
+                                      </div>
+                                      <h3 className={`font-semibold ${theme.text} line-clamp-2 mb-2`}>{msg.title}</h3>
+                                      {msg.ai_zusammenfassung ? (
+                                        <div className={`text-sm ${theme.text} line-clamp-4 flex-grow`}>
+                                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.ai_zusammenfassung}</ReactMarkdown>
+                                        </div>
+                                      ) : (
+                                        <p className={`text-sm ${theme.textMuted} line-clamp-3 flex-grow`}>
+                                          {msg.description || msg.full_text?.substring(0, 150) || ''}
+                                        </p>
+                                      )}
+                                      {msg.product_name && (
+                                        <span className={`inline-block mt-3 text-xs px-2.5 py-1 rounded-lg bg-red-50 text-red-700 font-medium`}>
+                                          {msg.product_name}
+                                        </span>
+                                      )}
+                                      {msg.dokumentationen && msg.dokumentationen.length > 0 && (() => {
+                                        // Älteste Dokumentation (erster Bearbeiter) - Array ist DESC sortiert, also letztes Element
+                                        const firstDok = msg.dokumentationen[msg.dokumentationen.length - 1]
+                                        const hasSignature = msg.dokumentationen.some(d => d.unterschrift_data)
+                                        return (
+                                          <div className={`mt-3 -mx-5 -mb-5 px-5 py-3 rounded-b-2xl ${hasSignature ? 'bg-green-50' : 'bg-amber-50'}`}>
+                                            <div className="flex items-center gap-2">
+                                              <span className={`w-2 h-2 rounded-full ${hasSignature ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                                              <span className={`text-xs ${hasSignature ? 'text-green-700' : 'text-amber-700'}`}>
+                                                {firstDok.erstellt_von_name || 'Bearbeitet'}
+                                                {firstDok.erstellt_am && ` · ${new Date(firstDok.erstellt_am).toLocaleDateString('de-DE')}`}
+                                              </span>
+                                            </div>
+                                          </div>
+                                        )
+                                      })()}
+                                    </button>
+                                  )
+                                })}
                               </div>
                             </div>
                           ))}
@@ -3845,39 +4995,49 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
                             <div key={group.month}>
                               <h3 className={`text-lg font-semibold ${theme.text} mb-4`}>{monthNames[group.month]}</h3>
                               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                                {group.items.map((ausgabe) => (
-                                  <button
-                                    key={ausgabe.id}
-                                    type="button"
-                                    onClick={() => setSelectedApoMessage({ ...ausgabe, type: 'lav' })}
-                                    className={`text-left ${theme.panel} rounded-2xl border ${theme.border} p-5 ${theme.cardShadow} ${theme.cardHoverShadow} hover:border-[#6AA9F0] transition-all flex flex-col h-full`}
-                                  >
-                                    <div className="flex items-center gap-2 mb-3">
-                                      <span className="w-2 h-2 rounded-full bg-blue-500" />
-                                      <span className={`text-xs ${theme.textMuted}`}>
-                                        {ausgabe.datum ? new Date(ausgabe.datum).toLocaleDateString('de-DE') : ''}
-                                      </span>
-                                    </div>
-                                    <h3 className={`font-semibold ${theme.text} line-clamp-2 mb-2`}>{ausgabe.subject || `LAV-Info ${ausgabe.ausgabe}`}</h3>
-                                    <p className={`text-sm ${theme.textMuted} mb-3`}>
-                                      Ausgabe {ausgabe.ausgabe} - {ausgabe.lav_themes?.length || 0} Themen
-                                    </p>
-                                    {ausgabe.lav_themes && ausgabe.lav_themes.length > 0 && (
-                                      <div className="flex flex-wrap gap-1.5 mt-auto">
-                                        {ausgabe.lav_themes.slice(0, 2).map((t) => (
-                                          <span key={t.id} className={`text-xs px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 font-medium`}>
-                                            {t.titel?.substring(0, 25) || 'Thema'}{t.titel?.length > 25 ? '...' : ''}
-                                          </span>
-                                        ))}
-                                        {ausgabe.lav_themes.length > 2 && (
-                                          <span className={`text-xs px-2.5 py-1 rounded-lg bg-gray-100 text-gray-600 font-medium`}>
-                                            +{ausgabe.lav_themes.length - 2}
-                                          </span>
-                                        )}
+                                {group.items.map((ausgabe) => {
+                                  // Nur als ungelesen markieren wenn: nicht gelesen UND nach Nutzer-Erstellung
+                                  const userCreatedAt = currentStaff?.created_at ? new Date(currentStaff.created_at) : new Date(0)
+                                  const msgDate = ausgabe.datum ? new Date(ausgabe.datum) : new Date(0)
+                                  const isUnread = !readMessageIds.lav.has(String(ausgabe.id)) && msgDate >= userCreatedAt
+                                  return (
+                                    <button
+                                      key={ausgabe.id}
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedApoMessage({ ...ausgabe, type: 'lav' })
+                                        markAsRead('lav', ausgabe.id)
+                                      }}
+                                      className={`text-left ${theme.panel} rounded-2xl border ${theme.border} p-5 ${theme.cardShadow} ${theme.cardHoverShadow} hover:border-[#6AA9F0] transition-all flex flex-col h-full ${isUnread ? 'ring-2 ring-blue-400' : ''}`}
+                                    >
+                                      <div className="flex items-center gap-2 mb-3">
+                                        <span className="w-2 h-2 rounded-full bg-blue-500" />
+                                        <span className={`text-xs ${theme.textMuted}`}>
+                                          {ausgabe.datum ? new Date(ausgabe.datum).toLocaleDateString('de-DE') : ''}
+                                        </span>
+                                        {isUnread && <span className="text-xs text-blue-500 font-medium ml-auto">Neu</span>}
                                       </div>
-                                    )}
-                                  </button>
-                                ))}
+                                      <h3 className={`font-semibold ${theme.text} line-clamp-2 mb-2`}>{ausgabe.subject || `LAV-Info ${ausgabe.ausgabe}`}</h3>
+                                      <p className={`text-sm ${theme.textMuted} mb-3`}>
+                                        Ausgabe {ausgabe.ausgabe} - {ausgabe.lav_themes?.length || 0} Themen
+                                      </p>
+                                      {ausgabe.lav_themes && ausgabe.lav_themes.length > 0 && (
+                                        <div className="flex flex-wrap gap-1.5 mt-auto">
+                                          {ausgabe.lav_themes.slice(0, 2).map((t) => (
+                                            <span key={t.id} className={`text-xs px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 font-medium`}>
+                                              {t.titel?.substring(0, 25) || 'Thema'}{t.titel?.length > 25 ? '...' : ''}
+                                            </span>
+                                          ))}
+                                          {ausgabe.lav_themes.length > 2 && (
+                                            <span className={`text-xs px-2.5 py-1 rounded-lg bg-gray-100 text-gray-600 font-medium`}>
+                                              +{ausgabe.lav_themes.length - 2}
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
+                                    </button>
+                                  )
+                                })}
                               </div>
                             </div>
                           ))}
@@ -5079,6 +6239,86 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
                         </div>
                     )}
 
+                    {settingsTab === 'card-enhance' && (
+                      <div className={`${theme.panel} rounded-2xl p-5 border ${theme.border} ${theme.cardShadow}`}>
+                        <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+                          <div>
+                            <h3 className="text-base font-semibold">Visitenkarten-Enhance (Test)</h3>
+                            <p className={`text-xs ${theme.textMuted}`}>Google Nano Banana Pro: zuschneiden + Lesbarkeit verbessern.</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={fetchGoogleApiKey}
+                            className={`text-xs font-medium ${theme.accentText} hover:opacity-80`}
+                            title="Google API Key aus DB laden"
+                          >
+                            Key laden
+                          </button>
+                        </div>
+
+                        {enhanceMessage && (
+                          <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3 mb-3">
+                            <p className="text-rose-400 text-sm">{enhanceMessage}</p>
+                          </div>
+                        )}
+
+                        <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleEnhanceFileChange}
+                            className={`flex-1 text-sm ${theme.input} ${theme.inputPlaceholder} border rounded-xl px-3 py-2`}
+                          />
+                          <button
+                            type="button"
+                            onClick={runBusinessCardEnhance}
+                            disabled={!enhanceFile || enhanceLoading}
+                            className={`h-10 px-4 rounded-xl text-sm font-medium ${theme.accent} text-white disabled:opacity-50 disabled:cursor-not-allowed`}
+                          >
+                            {enhanceLoading ? 'Verbessere...' : 'Verbessern'}
+                          </button>
+                        </div>
+
+                        {enhanceLoading && (
+                          <div className={`mb-4 flex items-center gap-2 text-xs ${theme.textMuted}`}>
+                            <span className="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-transparent border-t-current" />
+                            Nano Banana Pro arbeitet im Hintergrund...
+                          </div>
+                        )}
+
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <div className={`rounded-xl border ${theme.border} p-3`}>
+                            <p className={`text-xs ${theme.textMuted} mb-2`}>Vorher</p>
+                            {enhancePreview ? (
+                              <img
+                                src={enhancePreview}
+                                alt="Original"
+                                className="w-full max-h-[360px] object-contain rounded-lg bg-white"
+                              />
+                            ) : (
+                              <div className={`h-48 rounded-lg ${theme.bgHover} flex items-center justify-center text-xs ${theme.textMuted}`}>
+                                Kein Bild ausgewahlt
+                              </div>
+                            )}
+                          </div>
+                          <div className={`rounded-xl border ${theme.border} p-3`}>
+                            <p className={`text-xs ${theme.textMuted} mb-2`}>Nachher</p>
+                            {enhanceResultPreview ? (
+                              <img
+                                src={enhanceResultPreview}
+                                alt="Verbessert"
+                                className="w-full max-h-[360px] object-contain rounded-lg bg-white"
+                              />
+                            ) : (
+                              <div className={`h-48 rounded-lg ${theme.bgHover} flex items-center justify-center text-xs ${theme.textMuted}`}>
+                                Noch kein Ergebnis
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     {settingsTab === 'contacts' && (
                       <div className={`${theme.panel} rounded-2xl p-5 border ${theme.border} ${theme.cardShadow}`}>
                         <div className="flex items-center justify-between mb-3">
@@ -5200,13 +6440,13 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
                                 key={contact.id}
                                 className={`rounded-xl border ${theme.border} p-4 ${theme.bgHover} text-left ${contact.staff_id ? 'border-l-4 border-l-[#4A90E2]' : ''}`}
                                 title={contact.staff_id ? 'Mitarbeiter - wird über Kollegium gepflegt' : 'Kontakt anzeigen'}
-                                onClick={() => setSelectedContact(contact)}
+                                onClick={() => openContactDetail(contact)}
                               >
                                 <div className="flex items-start justify-between gap-2">
                                   <div className="flex items-center gap-2">
-                                    {contact.business_card_url ? (
+                                    {(contact.business_card_url_enhanced || contact.business_card_url) ? (
                                       <img
-                                        src={contact.business_card_url}
+                                        src={contact.business_card_url_enhanced || contact.business_card_url}
                                         alt="Visitenkarte"
                                         className={`h-10 w-14 rounded object-cover border ${theme.border}`}
                                       />
@@ -5247,6 +6487,11 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
                                       Mobil: <span className={theme.text}>{contact.mobile}</span>
                                     </p>
                                   )}
+                                  {contact.fax && (
+                                    <p className={theme.textMuted}>
+                                      Fax: <span className={theme.text}>{contact.fax}</span>
+                                    </p>
+                                  )}
                                   {contact.email && (
                                     <p className={theme.textMuted}>
                                       E-Mail: <span className={theme.text}>{contact.email}</span>
@@ -5280,7 +6525,7 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
                                     key={contact.id}
                                     className={`border-b ${theme.border} ${theme.bgHover} cursor-pointer ${contact.staff_id ? 'border-l-4 border-l-[#4A90E2]' : ''}`}
                                     title={contact.staff_id ? 'Mitarbeiter - wird über Kollegium gepflegt' : 'Kontakt anzeigen'}
-                                    onClick={() => setSelectedContact(contact)}
+                                    onClick={() => openContactDetail(contact)}
                                   >
                                     <td className={`px-4 py-3 ${theme.text}`}>
                                       <div className="flex items-center gap-2">
@@ -5330,6 +6575,22 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
             </div>
           </main>
         </div>
+
+        {/* Visitenkarten-Scan Verarbeitungs-Modal */}
+        {businessCardScanning && (
+          <div className={`fixed inset-0 z-50 ${theme.overlay} flex items-center justify-center p-4`}>
+            <div className={`${theme.panel} rounded-2xl border ${theme.border} ${theme.cardShadow} px-8 py-6 flex flex-col items-center gap-4`}>
+              <svg className="w-10 h-10 animate-spin text-[#4A90E2]" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              <div className="text-center">
+                <p className={`text-sm font-medium ${theme.textPrimary}`}>Visitenkarte wird verarbeitet</p>
+                <p className={`text-xs ${theme.textMuted} mt-1`}>OCR und Texterkennung läuft...</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {editingPharmacy && (
           <div
@@ -5814,18 +7075,40 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
                 <div className="grid gap-6 lg:grid-cols-2">
                   {/* Visitenkarte / Bild */}
                   <div>
-                    <h4 className={`text-xs font-medium mb-2 ${theme.textSecondary}`}>Visitenkarte</h4>
-                    {selectedContact.business_card_url ? (
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className={`text-xs font-medium ${theme.textSecondary}`}>Visitenkarte</h4>
+                      {selectedCardHasEnhanced && selectedCardHasOriginal && (
+                        <div className={`flex items-center rounded-lg border ${theme.border} overflow-hidden`}>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedContactCardView('enhanced')}
+                            className={`px-2.5 py-1 text-[11px] ${selectedContactCardView === 'enhanced' ? theme.accent + ' text-white' : theme.bgHover + ' ' + theme.textMuted}`}
+                            title="KI-optimiert anzeigen"
+                          >
+                            KI
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedContactCardView('original')}
+                            className={`px-2.5 py-1 text-[11px] ${selectedContactCardView === 'original' ? theme.accent + ' text-white' : theme.bgHover + ' ' + theme.textMuted}`}
+                            title="Original anzeigen"
+                          >
+                            Original
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    {selectedCardUrl ? (
                       <a
-                        href={selectedContact.business_card_url}
+                        href={selectedCardUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="block"
                       >
-                        {selectedContact.business_card_url.toLowerCase().endsWith('.pdf') ? (
+                        {selectedCardUrl.toLowerCase().endsWith('.pdf') ? (
                           <div className={`rounded-xl border ${theme.border} overflow-hidden`}>
                             <iframe
-                              src={selectedContact.business_card_url}
+                              src={selectedCardUrl}
                               className="w-full h-80"
                               title="Visitenkarte PDF"
                             />
@@ -5835,7 +7118,7 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
                           </div>
                         ) : (
                           <img
-                            src={selectedContact.business_card_url}
+                            src={selectedCardUrl}
                             alt="Visitenkarte"
                             className={`w-full rounded-xl border ${theme.border} object-contain max-h-80`}
                           />
@@ -5877,6 +7160,14 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
                             <span className={`text-sm ${theme.text}`}>{selectedContact.mobile}</span>
                           </a>
                         )}
+                        {selectedContact.fax && (
+                          <div className={`flex items-center gap-3 px-4 py-3`}>
+                            <svg className={`w-4 h-4 ${theme.textMuted}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                            </svg>
+                            <span className={`text-sm ${theme.text}`}>{selectedContact.fax}</span>
+                          </div>
+                        )}
                         {selectedContact.website && (
                           <a href={selectedContact.website.startsWith('http') ? selectedContact.website : `https://${selectedContact.website}`} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-3 px-4 py-3 ${theme.bgHover}`}>
                             <svg className={`w-4 h-4 ${theme.textMuted}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -5885,7 +7176,7 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
                             <span className={`text-sm ${theme.text}`}>{selectedContact.website}</span>
                           </a>
                         )}
-                        {!selectedContact.email && !selectedContact.phone && !selectedContact.mobile && !selectedContact.website && (
+                        {!selectedContact.email && !selectedContact.phone && !selectedContact.mobile && !selectedContact.fax && !selectedContact.website && (
                           <p className={`px-4 py-3 text-sm ${theme.textMuted}`}>Keine Kontaktdaten</p>
                         )}
                       </div>
@@ -6087,29 +7378,30 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
                           className={`h-20 w-32 rounded-lg object-cover border ${theme.border}`}
                           style={{ transform: `rotate(${contactCardRotation}deg)` }}
                         />
-                        {/* Dreh-Buttons */}
-                        <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 flex gap-1">
-                          <button
-                            type="button"
-                            onClick={() => setContactCardRotation((r) => (r - 90 + 360) % 360)}
-                            className={`p-1 rounded ${theme.surface} border ${theme.border} ${theme.bgHover}`}
-                            title="90° nach links drehen"
-                          >
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                            </svg>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setContactCardRotation((r) => (r + 90) % 360)}
-                            className={`p-1 rounded ${theme.surface} border ${theme.border} ${theme.bgHover}`}
-                            title="90° nach rechts drehen"
-                          >
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 10H11a8 8 0 00-8 8v2m18-10l-6 6m6-6l-6-6" />
-                            </svg>
-                          </button>
-                        </div>
+                        {!contactCardEnhancedPreview && (
+                          <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 flex gap-1">
+                            <button
+                              type="button"
+                              onClick={() => setContactCardRotation((r) => (r - 90 + 360) % 360)}
+                              className={`p-1 rounded ${theme.surface} border ${theme.border} ${theme.bgHover}`}
+                              title="90° nach links drehen"
+                            >
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                              </svg>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setContactCardRotation((r) => (r + 90) % 360)}
+                              className={`p-1 rounded ${theme.surface} border ${theme.border} ${theme.bgHover}`}
+                              title="90° nach rechts drehen"
+                            >
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 10H11a8 8 0 00-8 8v2m18-10l-6 6m6-6l-6-6" />
+                              </svg>
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className={`h-20 w-32 rounded-lg border-2 border-dashed ${theme.border} flex items-center justify-center ${theme.textMuted}`}>
@@ -6137,8 +7429,12 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
                           onClick={() => {
                             setContactCardFile(null)
                             setContactCardPreview('')
+                            setContactCardEnhancedFile(null)
+                            setContactCardEnhancedPreview('')
+                            setContactCardEnhancing(false)
                             setContactCardRotation(0)
                             handleContactInput('businessCardUrl', '')
+                            handleContactInput('businessCardUrlEnhanced', '')
                           }}
                           className={`px-3 py-1.5 rounded-lg text-xs font-medium ${theme.danger}`}
                         >
@@ -6147,6 +7443,12 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
                       )}
                     </div>
                   </div>
+                  {contactCardEnhancing && (
+                    <div className={`mt-3 flex items-center gap-2 text-xs ${theme.textMuted}`}>
+                      <span className="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-transparent border-t-current" />
+                      KI-Optimierung läuft...
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -6231,6 +7533,16 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
                     <input
                       value={contactForm.mobile}
                       onChange={(e) => handleContactInput('mobile', e.target.value)}
+                      className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
+                    />
+                  </div>
+                  <div>
+                    <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
+                      Fax
+                    </label>
+                    <input
+                      value={contactForm.fax}
+                      onChange={(e) => handleContactInput('fax', e.target.value)}
                       className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
                     />
                   </div>
@@ -6610,26 +7922,62 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  {selectedApoMessage.type === 'amk' && (
-                    <button
-                      type="button"
-                      onClick={() => downloadAmkPdf(selectedApoMessage)}
-                      className={`${theme.accentText} ${theme.bgHover} p-2 rounded-lg`}
-                      title="Als PDF herunterladen"
-                    >
-                      <Icons.Download />
-                    </button>
-                  )}
-                  {selectedApoMessage.type === 'recall' && (
-                    <button
-                      type="button"
-                      onClick={() => downloadRecallPdf(selectedApoMessage)}
-                      className={`${theme.accentText} ${theme.bgHover} p-2 rounded-lg`}
-                      title="Als PDF herunterladen"
-                    >
-                      <Icons.Download />
-                    </button>
-                  )}
+                  {selectedApoMessage.type === 'amk' && (() => {
+                    const hasSignature = existingDokumentationen.some(dok => dok.unterschrift_data)
+                    const isComplete = existingDokumentationen.length > 0 && hasSignature
+                    return (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDokumentationBemerkung('')
+                          setDokumentationSignature(null)
+                          setShowSignatureCanvas(false)
+                          setShowDokumentationModal(true)
+                        }}
+                        className={`${isComplete ? theme.primaryBg : 'bg-red-500 hover:bg-red-600'} text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors`}
+                      >
+                        Bearbeiten
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => downloadAmkPdf(selectedApoMessage)}
+                        className={`${theme.accentText} ${theme.bgHover} p-2 rounded-lg`}
+                        title="Als PDF herunterladen"
+                      >
+                        <Icons.Download />
+                      </button>
+                    </>
+                    )
+                  })()}
+                  {selectedApoMessage.type === 'recall' && (() => {
+                    const hasSignature = existingDokumentationen.some(dok => dok.unterschrift_data)
+                    const isComplete = existingDokumentationen.length > 0 && hasSignature
+                    return (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDokumentationBemerkung('')
+                          setDokumentationSignature(null)
+                          setShowSignatureCanvas(false)
+                          setShowDokumentationModal(true)
+                        }}
+                        className={`${isComplete ? theme.primaryBg : 'bg-red-500 hover:bg-red-600'} text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors`}
+                      >
+                        Bearbeiten
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => downloadRecallPdf(selectedApoMessage)}
+                        className={`${theme.accentText} ${theme.bgHover} p-2 rounded-lg`}
+                        title="Als PDF herunterladen"
+                      >
+                        <Icons.Download />
+                      </button>
+                    </>
+                    )
+                  })()}
                   <button
                     type="button"
                     onClick={() => setSelectedApoMessage(null)}
@@ -6646,6 +7994,7 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
                     <strong>Institution:</strong> {selectedApoMessage.institution}
                   </p>
                 )}
+
                 {selectedApoMessage.type === 'recall' && selectedApoMessage.product_name && (
                   <p className={`text-sm ${theme.textSecondary} mb-3`}>
                     <strong>Produkt:</strong> {selectedApoMessage.product_name}
@@ -6657,20 +8006,17 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
                   </p>
                 )}
 
-                {/* AI-Analyse Felder für Rückrufe */}
-                {selectedApoMessage.type === 'recall' && selectedApoMessage.ai_zusammenfassung && (
-                  <div className={`mb-4 p-3 rounded-lg ${theme.surface} border ${theme.border}`}>
-                    <p className={`text-sm font-medium ${theme.accentText} mb-1`}>KI-Zusammenfassung:</p>
+                {/* Volltext für Rückrufe - oben anzeigen */}
+                {selectedApoMessage.type === 'recall' && selectedApoMessage.full_text && (
+                  <div className="mb-4">
+                    <p className={`text-sm font-medium ${theme.textSecondary} mb-1`}>Vollständiger Text:</p>
                     <div className={`text-sm ${theme.text} markdown-content`}>
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedApoMessage.ai_zusammenfassung}</ReactMarkdown>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedApoMessage.full_text}</ReactMarkdown>
                     </div>
-                    {selectedApoMessage.ai_analysiert_am && (
-                      <p className={`text-xs ${theme.textMuted} mt-2`}>
-                        Analysiert am: {new Date(selectedApoMessage.ai_analysiert_am).toLocaleString('de-DE')}
-                      </p>
-                    )}
                   </div>
                 )}
+
+                {/* AI-Analyse Felder für Rückrufe */}
                 {selectedApoMessage.type === 'recall' && selectedApoMessage.ai_chargen_alle !== null && (
                   <p className={`text-sm ${theme.textSecondary} mb-3`}>
                     <strong>Alle Chargen betroffen:</strong> {selectedApoMessage.ai_chargen_alle ? 'Ja' : 'Nein'}
@@ -6690,12 +8036,25 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
                 )}
                 {selectedApoMessage.type === 'recall' && selectedApoMessage.ai_pzn_betroffen && selectedApoMessage.ai_pzn_betroffen.length > 0 && (
                   <div className="mb-4">
-                    <p className={`text-sm font-medium ${theme.textSecondary} mb-1`}>Betroffene PZN:</p>
+                    <p className={`text-sm font-medium ${theme.textSecondary} mb-1`}>Betroffene PZN (antippen für Foto):</p>
                     <div className="flex flex-wrap gap-1">
                       {selectedApoMessage.ai_pzn_betroffen.map((pzn, i) => (
-                        <span key={i} className={`text-xs px-2 py-1 rounded ${theme.accent} text-white font-mono`}>
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => handlePznClick(pzn)}
+                          disabled={pznFotoUploading}
+                          className={`text-xs px-2 py-1 rounded ${theme.accent} text-white font-mono hover:opacity-80 transition-opacity relative ${pznFotoUploading ? 'opacity-50' : ''}`}
+                          title={savedPznFotos[pzn] ? `Foto für PZN ${pzn} ersetzen` : `Foto für PZN ${pzn} aufnehmen`}
+                        >
                           {pzn}
-                        </span>
+                          {pznFotoUploading && activePzn === pzn && (
+                            <span className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-500 rounded-full border border-white animate-pulse" />
+                          )}
+                          {savedPznFotos[pzn] && !(pznFotoUploading && activePzn === pzn) && (
+                            <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border border-white" />
+                          )}
+                        </button>
                       ))}
                     </div>
                   </div>
@@ -6833,7 +8192,7 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
                     </ul>
                   </div>
                 )}
-                {selectedApoMessage.full_text && (
+                {selectedApoMessage.type !== 'recall' && selectedApoMessage.full_text && (
                   <div>
                     {selectedApoMessage.type !== 'amk' && (
                       <p className={`text-sm font-medium ${theme.textSecondary} mb-1`}>Vollständiger Text:</p>
@@ -6867,6 +8226,30 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
                     Zur Originalquelle →
                   </a>
                 )}
+
+                {/* Gespeicherte Dokumentationen für AMK und Rückrufe - ganz unten */}
+                {(selectedApoMessage.type === 'amk' || selectedApoMessage.type === 'recall') && existingDokumentationen.length > 0 && (
+                  <div className={`mt-6 p-3 rounded-xl ${theme.surface} border ${theme.border}`}>
+                    <p className={`text-sm font-medium ${theme.accentText} mb-2`}>Dokumentation:</p>
+                    <div className="space-y-2">
+                      {existingDokumentationen.map((dok) => (
+                        <div key={dok.id} className={`p-2 rounded-lg bg-white border ${theme.border}`}>
+                          {dok.bemerkung && (
+                            <p className={`text-sm ${theme.text}`}>{dok.bemerkung}</p>
+                          )}
+                          {dok.unterschrift_data && (
+                            <img src={dok.unterschrift_data} alt="Unterschrift" className="h-12 mt-2 border rounded" />
+                          )}
+                          <p className={`text-xs ${theme.textMuted} mt-1`}>
+                            {dok.erstellt_von_name && <span className="font-medium">{dok.erstellt_von_name}</span>}
+                            {dok.erstellt_von_name && dok.erstellt_am && ' · '}
+                            {dok.erstellt_am ? new Date(dok.erstellt_am).toLocaleString('de-DE') : ''}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className={`flex justify-end p-4 border-t ${theme.border}`}>
@@ -6877,6 +8260,188 @@ Fülle nur Felder aus, die du eindeutig erkennen kannst. Lasse unbekannte Felder
                 >
                   Schließen
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Dokumentation Modal (AMK und Rückrufe) */}
+        {showDokumentationModal && (selectedApoMessage?.type === 'amk' || selectedApoMessage?.type === 'recall') && (
+          <div className={`fixed inset-0 ${theme.overlay} flex items-center justify-center z-[60] p-4`}>
+            <div className={`${theme.panel} rounded-2xl border ${theme.border} ${theme.cardShadow} w-full max-w-lg max-h-[90vh] flex flex-col`}>
+              <div className={`flex items-center justify-between p-4 border-b ${theme.border}`}>
+                <h3 className={`text-lg font-semibold ${theme.text}`}>Dokumentation</h3>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDokumentationModal(false)
+                    setShowSignatureCanvas(false)
+                  }}
+                  className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
+                >
+                  <Icons.X />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-auto p-4 space-y-4">
+                {/* Bestehende Dokumentationen */}
+                {existingDokumentationen.length > 0 && (
+                  <div className="space-y-3">
+                    <p className={`text-sm font-medium ${theme.textSecondary}`}>Bisherige Einträge:</p>
+                    {existingDokumentationen.map((dok) => (
+                      <div key={dok.id} className={`p-3 rounded-lg ${theme.surface} border ${theme.border}`}>
+                        {dok.bemerkung && (
+                          <p className={`text-sm ${theme.text} mb-2`}>{dok.bemerkung}</p>
+                        )}
+                        {dok.unterschrift_data && (
+                          <img src={dok.unterschrift_data} alt="Unterschrift" className="h-16 border rounded" />
+                        )}
+                        {/* PZN-Fotos anzeigen */}
+                        {dok.pzn_fotos && Object.keys(dok.pzn_fotos).length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {Object.entries(dok.pzn_fotos).map(([pzn, path]) => (
+                              <a
+                                key={pzn}
+                                href={`${supabaseUrl}/storage/v1/object/public/recall-fotos/${path}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="relative block"
+                              >
+                                <img
+                                  src={`${supabaseUrl}/storage/v1/object/public/recall-fotos/${path}`}
+                                  alt={`PZN ${pzn}`}
+                                  className="h-16 rounded border hover:opacity-80 transition-opacity"
+                                />
+                                <span className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs px-1 text-center rounded-b">
+                                  {pzn}
+                                </span>
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                        <p className={`text-xs ${theme.textMuted} mt-2`}>
+                          {dok.erstellt_am ? new Date(dok.erstellt_am).toLocaleString('de-DE') : ''}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Neuer Eintrag */}
+                {(() => {
+                  const hasExistingSignature = existingDokumentationen.some(dok => dok.unterschrift_data)
+                  return (
+                <div className="space-y-3">
+                  <p className={`text-sm font-medium ${theme.textSecondary}`}>
+                    {hasExistingSignature ? 'Ergänzung hinzufügen:' : 'Neuer Eintrag:'}
+                  </p>
+                  <textarea
+                    value={dokumentationBemerkung}
+                    onChange={(e) => setDokumentationBemerkung(e.target.value)}
+                    placeholder={hasExistingSignature ? 'Ergänzende Bemerkung...' : 'Bemerkung eingeben...'}
+                    rows={4}
+                    className={`w-full px-3 py-2 rounded-xl border ${theme.input} ${theme.inputPlaceholder} resize-none`}
+                  />
+
+                  {/* PZN-Fotos Vorschau (nur für Rückrufe) */}
+                  {selectedApoMessage?.type === 'recall' && Object.keys(savedPznFotos).length > 0 && (
+                    <div className="space-y-2">
+                      <p className={`text-sm font-medium ${theme.textSecondary}`}>
+                        Gespeicherte PZN-Fotos ({Object.keys(savedPznFotos).length}):
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {Object.entries(savedPznFotos).map(([pzn, path]) => (
+                          <div key={pzn} className="relative">
+                            <img
+                              src={`${supabaseUrl}/storage/v1/object/public/recall-fotos/${path}`}
+                              alt={`PZN ${pzn}`}
+                              className="h-20 rounded border"
+                            />
+                            <span className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs px-1 text-center rounded-b">
+                              {pzn}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Unterschrift-Bereich - nur wenn noch keine Unterschrift existiert */}
+                  {!hasExistingSignature && !showSignatureCanvas && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowSignatureCanvas(true)
+                        setTimeout(initSignatureCanvas, 50)
+                      }}
+                      className={`w-full px-4 py-3 rounded-xl border-2 border-dashed ${theme.border} ${theme.textMuted} hover:border-[#4A90E2] hover:text-[#4A90E2] transition-colors`}
+                    >
+                      Unterschreiben
+                    </button>
+                  )}
+                  {!hasExistingSignature && showSignatureCanvas && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className={`text-sm font-medium ${theme.textSecondary}`}>Unterschrift:</p>
+                        <button
+                          type="button"
+                          onClick={clearSignature}
+                          className={`text-xs ${theme.accentText} hover:underline`}
+                        >
+                          Löschen
+                        </button>
+                      </div>
+                      <canvas
+                        ref={signatureCanvasRef}
+                        width={400}
+                        height={150}
+                        className={`w-full border ${theme.border} rounded-xl bg-white touch-none cursor-crosshair`}
+                        onMouseDown={startDrawing}
+                        onMouseMove={draw}
+                        onMouseUp={stopDrawing}
+                        onMouseLeave={stopDrawing}
+                        onTouchStart={startDrawing}
+                        onTouchMove={draw}
+                        onTouchEnd={stopDrawing}
+                      />
+                    </div>
+                  )}
+                </div>
+                  )
+                })()}
+              </div>
+
+              <div className={`flex justify-end gap-3 p-4 border-t ${theme.border}`}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDokumentationModal(false)
+                    setShowSignatureCanvas(false)
+                  }}
+                  className={`px-4 py-2.5 rounded-lg ${theme.bgHover} ${theme.text} font-medium`}
+                >
+                  Abbrechen
+                </button>
+                {(() => {
+                  const hasExistingSignature = existingDokumentationen.some(dok => dok.unterschrift_data)
+                  const hasSavedPznFotos = Object.keys(savedPznFotos).length > 0
+                  // Wenn bereits unterschrieben: Text ODER PZN-Fotos erforderlich
+                  // Wenn noch nicht unterschrieben: (Text ODER PZN-Fotos) UND Unterschrift erforderlich
+                  const hasContent = dokumentationBemerkung.trim() || hasSavedPznFotos
+                  const isDisabled = hasExistingSignature
+                    ? !hasContent
+                    : (!hasContent || !dokumentationSignature)
+                  return (
+                    <button
+                      type="button"
+                      onClick={saveDokumentation}
+                      disabled={dokumentationLoading || isDisabled}
+                      className={`px-4 py-2.5 rounded-lg ${theme.accent} text-white font-medium disabled:opacity-50`}
+                    >
+                      {dokumentationLoading ? 'Speichern...' : hasExistingSignature ? 'Hinzufügen' : 'Speichern'}
+                    </button>
+                  )
+                })()}
               </div>
             </div>
           </div>
