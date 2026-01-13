@@ -179,9 +179,21 @@ class JMAPClient {
    * E-Mail senden
    */
   async sendEmail({ to, cc, bcc, subject, textBody, htmlBody, replyTo, inReplyTo }) {
+    // Identity ID holen (benötigt für Stalwart)
+    const identityResponses = await this.request([
+      ['Identity/get', { accountId: this.accountId }, 'identity']
+    ])
+    const identityResult = identityResponses.find(r => r[0] === 'Identity/get')
+    const identities = identityResult?.[1]?.list || []
+    const identity = identities[0]
+
+    if (!identity) {
+      throw new Error('Keine E-Mail-Identität gefunden')
+    }
+
     // E-Mail Draft erstellen
     const email = {
-      from: [{ email: this.session.username }],
+      from: [{ email: identity.email, name: identity.name }],
       to: to.map(addr => typeof addr === 'string' ? { email: addr } : addr),
       subject,
       bodyValues: {},
@@ -224,8 +236,9 @@ class JMAPClient {
         create: {
           submission: {
             emailId: '#draft',
+            identityId: identity.id,
             envelope: {
-              mailFrom: { email: this.session.username },
+              mailFrom: { email: identity.email },
               rcptTo: [
                 ...to.map(addr => ({ email: typeof addr === 'string' ? addr : addr.email })),
                 ...(cc || []).map(addr => ({ email: typeof addr === 'string' ? addr : addr.email })),
@@ -242,6 +255,19 @@ class JMAPClient {
         }
       }, 'b']
     ])
+
+    // Fehler in JMAP-Antwort prüfen
+    for (const [method, result, id] of responses) {
+      if (method === 'error') {
+        throw new Error(result.description || result.type || 'JMAP Fehler')
+      }
+      if (result.notCreated) {
+        const errors = Object.values(result.notCreated)
+        if (errors.length > 0) {
+          throw new Error(errors[0].description || errors[0].type || 'E-Mail konnte nicht erstellt werden')
+        }
+      }
+    }
 
     return responses
   }
