@@ -155,8 +155,10 @@ export default function useCalendar({ session, activeView }) {
   const fetchDashboardEvents = async () => {
     setDashboardEventsLoading(true)
     const today = new Date()
+    today.setHours(0, 0, 0, 0) // Anfang des Tages, damit heutige Termine gefunden werden
     const endOfWeek = new Date(today)
     endOfWeek.setDate(today.getDate() + 7)
+    endOfWeek.setHours(23, 59, 59, 999)
 
     const { data: calsData } = await supabase
       .from('calendars')
@@ -435,7 +437,7 @@ export default function useCalendar({ session, activeView }) {
 
   // useEffect: Dashboard Events laden
   useEffect(() => {
-    if (session && activeView === 'dashboard' && dashboardEvents.length === 0 && !dashboardEventsLoading) {
+    if (session && activeView === 'dashboard') {
       fetchDashboardEvents()
     }
   }, [session, activeView])

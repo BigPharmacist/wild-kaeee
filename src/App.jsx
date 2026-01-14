@@ -555,8 +555,8 @@ function App() {
     sidebarBg: 'bg-[#3C4255]',
     sidebarHover: 'hover:bg-[#4F5469]',
     sidebarActive: 'border-[#FD8916] bg-transparent',
-    sidebarText: 'text-[#FFEBB0]',
-    sidebarTextActive: 'text-[#FFEBB0]',
+    sidebarText: 'text-[#E5E7EB]',
+    sidebarTextActive: 'text-[#E5E7EB]',
     secondarySidebarBg: 'bg-[#4F5469]',
     secondaryActive: 'border-l-4 border-[#FD8916] bg-[#3C4255] text-[#FFEBB0]',
     // Inputs

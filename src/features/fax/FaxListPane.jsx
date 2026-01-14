@@ -1,10 +1,11 @@
 import { CircleNotch, Printer } from '@phosphor-icons/react'
 
-// Hintergrundfarben für ROT, ORANGE und GRÜN (ganze Zeile)
+// Hintergrundfarben für ROT, ORANGE, GRÜN und GRAU (ganze Zeile)
 const rowBackgroundColors = {
   ROT: 'bg-red-100',
   ORANGE: 'bg-orange-100',
   'GRÜN': 'bg-green-100',
+  GRAU: 'bg-gray-100',
 }
 
 // Badge-Farben nur für BLAU (GRAU wird nicht angezeigt)
@@ -54,7 +55,7 @@ export default function FaxListPane({
         ) : (
           <>
             {faxe.map(fax => {
-              const isHighlighted = fax.prioritaet === 'ROT' || fax.prioritaet === 'ORANGE' || fax.prioritaet === 'GRÜN'
+              const isHighlighted = fax.prioritaet === 'ROT' || fax.prioritaet === 'ORANGE' || fax.prioritaet === 'GRÜN' || fax.prioritaet === 'GRAU'
               const rowBg = rowBackgroundColors[fax.prioritaet] || ''
               const showBadge = fax.prioritaet && badgeColors[fax.prioritaet]
 

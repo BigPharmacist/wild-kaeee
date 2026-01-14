@@ -129,11 +129,11 @@ const DashboardHome = ({
           const todayEvents = dashboardEvents.filter((e) => e.start_time.substring(0, 10) === todayStr)
           const weekEvents = dashboardEvents.filter((e) => {
             const eventDate = e.start_time.substring(0, 10)
-            return eventDate > todayStr && eventDate <= endOfWeekStr && !e.calendarName.toLowerCase().includes('notdienst')
+            return eventDate > todayStr && eventDate <= endOfWeekStr
           })
           const futureEvents = dashboardEvents.filter((e) => {
             const eventDate = e.start_time.substring(0, 10)
-            return eventDate > endOfWeekStr && !e.calendarName.toLowerCase().includes('notdienst')
+            return eventDate > endOfWeekStr
           }).slice(0, 5)
 
           const formatTime = (dateStr) => {
