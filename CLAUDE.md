@@ -31,6 +31,47 @@ Single-page app with two main views:
 2. **Dashboard** - Header + resizable sidebar + main content area
 3. **Settings** - Unterpunkt "Apotheken" zum Erfassen und Anzeigen von Apotheken
 
+### Code-Organisation (Feature-Based)
+
+**Wichtig:** Neue Komponenten und Logik werden nach Features organisiert, nicht nach Dateityp.
+
+```
+src/
+├── features/           # Feature-Module (eine Funktion = ein Ordner)
+│   ├── apo/           # Apotheken-Ansicht
+│   ├── auth/          # Authentifizierung
+│   ├── calendar/      # Kalender
+│   ├── chat/          # Chat-Funktion
+│   ├── contacts/      # Kontakte + Visitenkarten-Scan
+│   │   └── scan/      # Sub-Feature für Scannen
+│   ├── dashboard/     # Header, Sidebar, Home
+│   ├── email/         # E-Mail (Compose, List, Detail, Hooks)
+│   ├── photos/        # Fotos-Ansicht
+│   ├── plan/          # Planansicht
+│   └── settings/      # Einstellungen
+├── shared/            # Geteilte, wiederverwendbare Komponenten
+│   └── ui/            # UI-Bausteine (Icons, Badges, etc.)
+├── lib/               # Externe Services (supabase.js)
+└── App.jsx            # Nur Routing und Top-Level-State
+```
+
+**Regeln:**
+
+1. **Ein Feature = Ein Ordner** mit eigenem `index.js` für Exports
+2. **Komponenten, Hooks und Utils** eines Features bleiben zusammen
+3. **Shared-Komponenten** nur für echte Wiederverwendung (≥2 Features)
+4. **App.jsx bleibt schlank** - nur Imports, Routing, globaler State
+5. **Neue Views** immer unter `src/features/<name>/` anlegen
+
+**Beispiel neues Feature:**
+```bash
+src/features/invoices/
+├── index.js              # export { InvoicesView, useInvoices }
+├── InvoicesView.jsx      # Hauptkomponente
+├── InvoiceDetail.jsx     # Detail-Ansicht
+└── useInvoices.js        # Daten-Hook
+```
+
 ### State Management
 
 All state via React hooks in `App.jsx`:
@@ -257,7 +298,8 @@ cardHoverShadow: 'hover:shadow-[0_8px_20px_rgba(0,0,0,0.08)]'
 
 ### Icons
 
-SVG-Icons als React-Komponenten in `App.jsx`:
+SVG-Icons als React-Komponenten in `src/shared/ui/Icons.jsx`:
+- Import: `import { Icons } from './shared/ui'`
 - Größe: `w-5 h-5` (Standard) / `w-6 h-6` (Menu)
 - Stil: Outline mit `strokeWidth={2}`
 - Verfügbar: Sun, Moon, Home, Chart, Settings, Logout, Menu, X, Photo, Pill, Calendar, Chat, etc.

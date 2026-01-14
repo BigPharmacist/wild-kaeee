@@ -5,13 +5,14 @@ import { EmailAccountModal, EmailSettingsSection, EmailView, useEmailSettings } 
 import { ContactDetailModal, ContactFormModal, ContactsSettingsSection, useContacts } from './features/contacts'
 import { contactScan } from './features/contacts'
 import { AuthView } from './features/auth'
-import { DashboardHeader, SidebarNav, DashboardHome } from './features/dashboard'
+import { DashboardHeader, SidebarNav, DashboardHome, useWeather } from './features/dashboard'
 import { ApoView } from './features/apo'
 import { PhotosView } from './features/photos'
 import { ChatView } from './features/chat'
-import { SettingsView } from './features/settings'
+import { SettingsView, usePharmacies, useStaff } from './features/settings'
 import { PlanView } from './features/plan'
 import { CalendarView } from './features/calendar'
+import { useRechnungen } from './features/rechnungen'
 import ReactCrop from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 import { jsPDF } from 'jspdf'
@@ -34,48 +35,45 @@ function App() {
   const [secondaryTab, setSecondaryTab] = useState(() => localStorage.getItem('nav_secondaryTab') || 'overview')
   const [activeView, setActiveView] = useState(() => localStorage.getItem('nav_activeView') || 'dashboard')
   const [settingsTab, setSettingsTab] = useState(() => localStorage.getItem('nav_settingsTab') || 'pharmacies')
-  const [pharmacies, setPharmacies] = useState([])
-  const [pharmaciesLoading, setPharmaciesLoading] = useState(false)
-  const [pharmaciesMessage, setPharmaciesMessage] = useState('')
-  const [editingPharmacy, setEditingPharmacy] = useState(null)
-  const [editForm, setEditForm] = useState({
-    name: '',
-    street: '',
-    postalCode: '',
-    city: '',
-    phone: '',
-    owner: '',
-    ownerRole: '',
-    website: '',
-    email: '',
-    fax: '',
-  })
-  const [editLoading, setEditLoading] = useState(false)
-  const [editMessage, setEditMessage] = useState('')
-  const [staff, setStaff] = useState([])
-  const [staffLoading, setStaffLoading] = useState(false)
-  const [staffMessage, setStaffMessage] = useState('')
-  const [editingStaff, setEditingStaff] = useState(null)
-  const [staffForm, setStaffForm] = useState({
-    firstName: '',
-    lastName: '',
-    street: '',
-    postalCode: '',
-    city: '',
-    mobile: '',
-    email: '',
-    role: '',
-    pharmacyId: '',
-    authUserId: '',
-    isAdmin: false,
-    avatarUrl: '',
-    employedSince: '',
-  })
-  const [staffSaveLoading, setStaffSaveLoading] = useState(false)
-  const [staffSaveMessage, setStaffSaveMessage] = useState('')
-  const [staffInviteLoading, setStaffInviteLoading] = useState(false)
-  const [staffInviteMessage, setStaffInviteMessage] = useState('')
-  const [staffAvatarFile, setStaffAvatarFile] = useState(null)
+  const {
+    pharmacies,
+    pharmaciesLoading,
+    pharmaciesMessage,
+    editingPharmacy,
+    editForm,
+    editLoading,
+    editMessage,
+    pharmacyLookup,
+    fetchPharmacies,
+    handleEditInput,
+    openCreateModal: openPharmacyCreateModal,
+    openEditModal,
+    closeEditModal,
+    handleEditSubmit,
+  } = usePharmacies()
+  const {
+    staff,
+    staffLoading,
+    staffMessage,
+    editingStaff,
+    staffForm,
+    staffSaveLoading,
+    staffSaveMessage,
+    staffInviteLoading,
+    staffInviteMessage,
+    staffAvatarFile,
+    staffAvatarPreview,
+    currentStaff,
+    staffByAuthId,
+    fetchStaff,
+    openStaffModal,
+    closeStaffModal,
+    handleStaffInput,
+    handleStaffAvatarChange,
+    linkCurrentUser,
+    handleStaffSubmit,
+    handleSendInvite,
+  } = useStaff({ session, pharmacies })
   const {
     emailAccounts,
     emailPermissions,
@@ -356,14 +354,21 @@ function App() {
   const businessCardScanRef = useRef(null)
   const mobileNavTimerRef = useRef(null)
   const isInitialMount = useRef(true)
-  const [staffAvatarPreview, setStaffAvatarPreview] = useState('')
-  const [weatherLocation, setWeatherLocation] = useState('')
-  const [weatherInput, setWeatherInput] = useState('')
-  const [weatherData, setWeatherData] = useState(null)
-  const [weatherLoading, setWeatherLoading] = useState(false)
-  const [weatherError, setWeatherError] = useState('')
-  const [weatherModalOpen, setWeatherModalOpen] = useState(false)
-  const [currentStaff, setCurrentStaff] = useState(null)
+  const {
+    weatherLocation,
+    weatherInput,
+    weatherData,
+    weatherLoading,
+    weatherError,
+    weatherModalOpen,
+    setWeatherLocation,
+    setWeatherInput,
+    weatherDescription,
+    WeatherIcon,
+    fetchWeather,
+    openWeatherModal,
+    closeWeatherModal,
+  } = useWeather({ pharmacies })
   const [chatMessages, setChatMessages] = useState([])
   const [chatLoading, setChatLoading] = useState(false)
   const [chatError, setChatError] = useState('')
@@ -461,12 +466,18 @@ function App() {
   const [dashboardEvents, setDashboardEvents] = useState([])
   const [dashboardEventsLoading, setDashboardEventsLoading] = useState(false)
 
-  // GH-Rechnungen State
-  const [rechnungen, setRechnungen] = useState([])
-  const [rechnungenLoading, setRechnungenLoading] = useState(false)
-  const [collapsedDays, setCollapsedDays] = useState({})
-  const [pdfModalOpen, setPdfModalOpen] = useState(false)
-  const [selectedPdf, setSelectedPdf] = useState(null)
+  // GH-Rechnungen
+  const {
+    rechnungen,
+    rechnungenLoading,
+    collapsedDays,
+    pdfModalOpen,
+    selectedPdf,
+    fetchRechnungen,
+    openPdfModal,
+    closePdfModal,
+    setCollapsedDays,
+  } = useRechnungen()
 
   const theme = {
     bgApp: 'bg-[#F5F7FA]',
@@ -627,15 +638,6 @@ function App() {
       setSecondaryTab(itemId)
     }
   }
-
-  const pharmacyLookup = Object.fromEntries(
-    pharmacies.map((pharmacy) => [pharmacy.id, pharmacy.name]),
-  )
-  const staffByAuthId = Object.fromEntries(
-    staff
-      .filter((member) => member.auth_user_id)
-      .map((member) => [member.auth_user_id, member]),
-  )
 
   // PDF-Download für AMK-Meldungen
   const downloadAmkPdf = async (msg) => {
@@ -1164,86 +1166,6 @@ function App() {
     // Download
     const filename = `Rueckruf_${msg.product_name?.substring(0, 30).replace(/[^a-zA-Z0-9äöüÄÖÜß]/g, '_') || msg.title?.substring(0, 30).replace(/[^a-zA-Z0-9äöüÄÖÜß]/g, '_') || 'Meldung'}.pdf`
     doc.save(filename)
-  }
-
-  const fetchPharmacies = async () => {
-    setPharmaciesLoading(true)
-    const { data, error } = await supabase
-      .from('pharmacies')
-      .select('id, name, street, postal_code, city, phone, owner, owner_role, website, email, fax')
-      .order('name', { ascending: true })
-
-    if (error) {
-      setPharmaciesMessage(error.message)
-      setPharmacies([])
-    } else {
-      setPharmaciesMessage('')
-      setPharmacies(data || [])
-    }
-    setPharmaciesLoading(false)
-  }
-
-  const fetchStaff = async () => {
-    setStaffLoading(true)
-    const { data, error } = await supabase
-      .from('staff')
-      .select('id, first_name, last_name, street, postal_code, city, mobile, email, role, pharmacy_id, auth_user_id, is_admin, avatar_url, created_at')
-      .order('last_name', { ascending: true })
-
-    if (error) {
-      setStaffMessage(error.message)
-      setStaff([])
-    } else {
-      setStaffMessage('')
-      setStaff(data || [])
-      if (session?.user?.id) {
-        const matched = (data || []).find((member) => member.auth_user_id === session.user.id)
-        setCurrentStaff(matched || null)
-      }
-    }
-    setStaffLoading(false)
-  }
-
-  // GH-Rechnungen laden
-  const fetchRechnungen = async () => {
-    setRechnungenLoading(true)
-    const { data, error } = await supabase
-      .from('rechnungen')
-      .select('*')
-      .order('datum', { ascending: false })
-      .limit(100)
-
-    if (error) {
-      console.error('Fehler beim Laden der Rechnungen:', error.message)
-      setRechnungen([])
-    } else {
-      setRechnungen(data || [])
-    }
-    setRechnungenLoading(false)
-  }
-
-  // PDF im Modal öffnen
-  const openPdfModal = async (rechnung) => {
-    // Signierte URL für das PDF holen
-    const { data, error } = await supabase.storage
-      .from('rechnungen')
-      .createSignedUrl(rechnung.storage_path, 3600) // 1 Stunde gültig
-
-    if (error) {
-      console.error('Fehler beim Erstellen der PDF-URL:', error.message)
-      return
-    }
-
-    setSelectedPdf({
-      ...rechnung,
-      url: data.signedUrl
-    })
-    setPdfModalOpen(true)
-  }
-
-  const closePdfModal = () => {
-    setPdfModalOpen(false)
-    setSelectedPdf(null)
   }
 
   // EXIF-Orientation aus JPEG auslesen (1-8)
@@ -2201,198 +2123,9 @@ function App() {
     return cal?.color || '#10b981'
   }
 
-  const weatherDescription = (code) => {
-    const map = {
-      0: 'Klar',
-      1: 'Überwiegend klar',
-      2: 'Leicht bewölkt',
-      3: 'Bedeckt',
-      45: 'Nebel',
-      48: 'Reifnebel',
-      51: 'Nieselregen',
-      53: 'Nieselregen',
-      55: 'Nieselregen',
-      61: 'Regen',
-      63: 'Regen',
-      65: 'Starker Regen',
-      71: 'Schnee',
-      73: 'Schnee',
-      75: 'Starker Schnee',
-      80: 'Schauer',
-      81: 'Schauer',
-      82: 'Starke Schauer',
-      95: 'Gewitter',
-    }
-    return map[code] || 'Wetter'
-  }
-
-  const WeatherIcon = ({ code, className = "w-5 h-5" }) => {
-    // 0: Klar, 1-3: Bewölkt, 45-48: Nebel, 51-55: Niesel, 61-65: Regen, 71-75: Schnee, 80-82: Schauer, 95: Gewitter
-    if (code === 0) return <Icons.SunLarge className={className} />
-    if (code === 1 || code === 2) return <Icons.CloudSun className={className} />
-    if (code === 3) return <Icons.Cloud className={className} />
-    if (code === 45 || code === 48) return <Icons.CloudFog className={className} />
-    if (code >= 51 && code <= 55) return <Icons.CloudRain className={className} />
-    if (code >= 61 && code <= 65) return <Icons.CloudRain className={className} />
-    if (code >= 71 && code <= 75) return <Icons.CloudSnow className={className} />
-    if (code >= 80 && code <= 82) return <Icons.CloudRain className={className} />
-    if (code === 95) return <Icons.CloudBolt className={className} />
-    return <Icons.Cloud className={className} />
-  }
-
-  const fetchWeather = async (location) => {
-    if (!location) return
-    setWeatherLoading(true)
-    setWeatherError('')
-    setWeatherData(null)
-    try {
-      const geocode = async (query) => {
-        const geoResponse = await fetch(
-          `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=1&language=de&format=json`,
-        )
-        if (!geoResponse.ok) return null
-        const geoData = await geoResponse.json()
-        return geoData.results && geoData.results[0]
-      }
-
-      const parts = location.split(' ').filter(Boolean)
-      const cityOnly = parts.length > 1 ? parts.slice(1).join(' ') : location
-      const candidates = [location, cityOnly, parts[0]].filter(Boolean)
-      let result = null
-      for (const candidate of candidates) {
-        result = await geocode(candidate)
-        if (result) break
-      }
-
-      if (!result) throw new Error('Ort nicht gefunden.')
-
-      const weatherResponse = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${result.latitude}&longitude=${result.longitude}&current=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,weathercode,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,weathercode,sunrise,sunset&forecast_days=5&timezone=auto`,
-      )
-      if (!weatherResponse.ok) throw new Error('Wetterdaten konnten nicht geladen werden.')
-      const weatherJson = await weatherResponse.json()
-      const daily = weatherJson.daily || {}
-      const dailyEntries = (daily.time || []).map((date, index) => ({
-        date,
-        min: daily.temperature_2m_min?.[index],
-        max: daily.temperature_2m_max?.[index],
-        precipitation: daily.precipitation_sum?.[index],
-        precipitationProbability: daily.precipitation_probability_max?.[index],
-        weatherCode: daily.weathercode?.[index],
-        sunrise: daily.sunrise?.[index],
-        sunset: daily.sunset?.[index],
-      }))
-      setWeatherData({
-        name: `${result.name}${result.admin1 ? `, ${result.admin1}` : ''}`,
-        temperature: weatherJson.current?.temperature_2m,
-        feelsLike: weatherJson.current?.apparent_temperature,
-        humidity: weatherJson.current?.relative_humidity_2m,
-        precipitation: weatherJson.current?.precipitation,
-        weatherCode: weatherJson.current?.weathercode,
-        wind: weatherJson.current?.wind_speed_10m,
-        daily: dailyEntries,
-      })
-    } catch (error) {
-      setWeatherError(error.message || 'Fehler beim Laden der Wetterdaten.')
-    } finally {
-      setWeatherLoading(false)
-    }
-  }
-
-  const openWeatherModal = () => {
-    setWeatherInput(weatherLocation)
-    setWeatherModalOpen(true)
-  }
-
-  const closeWeatherModal = () => {
-    setWeatherModalOpen(false)
-  }
-
-  const handleEditInput = (field, value) => {
-    setEditForm((prev) => ({ ...prev, [field]: value }))
-  }
-
   const openCreateModal = () => {
-    setEditingPharmacy({ id: null })
-    setEditMessage('')
-    setEditForm({
-      name: '',
-      street: '',
-      postalCode: '',
-      city: '',
-      phone: '',
-      owner: '',
-      ownerRole: '',
-      website: '',
-      email: '',
-      fax: '',
-    })
+    openPharmacyCreateModal()
     setWeatherModalOpen(false)
-  }
-
-  const openEditModal = (pharmacy) => {
-    setEditingPharmacy(pharmacy)
-    setEditMessage('')
-    setEditForm({
-      name: pharmacy.name || '',
-      street: pharmacy.street || '',
-      postalCode: pharmacy.postal_code || '',
-      city: pharmacy.city || '',
-      phone: pharmacy.phone || '',
-      owner: pharmacy.owner || '',
-      ownerRole: pharmacy.owner_role || '',
-      website: pharmacy.website || '',
-      email: pharmacy.email || '',
-      fax: pharmacy.fax || '',
-    })
-  }
-
-  const closeEditModal = () => {
-    setEditingPharmacy(null)
-    setEditMessage('')
-  }
-
-  const openStaffModal = (member = null) => {
-    const fallbackPharmacyId = pharmacies[0]?.id || ''
-    setEditingStaff(member || { id: null })
-    setStaffSaveMessage('')
-    setStaffInviteMessage('')
-    setStaffForm({
-      firstName: member?.first_name || '',
-      lastName: member?.last_name || '',
-      street: member?.street || '',
-      postalCode: member?.postal_code || '',
-      city: member?.city || '',
-      mobile: member?.mobile || '',
-      email: member?.email || '',
-      role: member?.role || '',
-      pharmacyId: member?.pharmacy_id || fallbackPharmacyId,
-      authUserId: member?.auth_user_id || '',
-      isAdmin: member?.is_admin || false,
-      avatarUrl: member?.avatar_url || '',
-      employedSince: member?.employed_since || '',
-    })
-    setStaffAvatarFile(null)
-    setStaffAvatarPreview(member?.avatar_url || '')
-  }
-
-  const closeStaffModal = () => {
-    setEditingStaff(null)
-    setStaffSaveMessage('')
-    setStaffInviteMessage('')
-    setStaffAvatarFile(null)
-    setStaffAvatarPreview('')
-  }
-
-  const handleStaffInput = (field, value) => {
-    setStaffForm((prev) => ({ ...prev, [field]: value }))
-  }
-
-  const handleStaffAvatarChange = (event) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-    setStaffAvatarFile(file)
-    setStaffAvatarPreview(URL.createObjectURL(file))
   }
 
   const fetchLatestPhoto = async () => {
@@ -2926,193 +2659,6 @@ function App() {
     }, 'image/jpeg', 0.9)
   }
 
-  const linkCurrentUser = () => {
-    if (!session?.user?.id) return
-    setStaffForm((prev) => ({
-      ...prev,
-      authUserId: session.user.id,
-      email: prev.email || session.user.email || '',
-    }))
-  }
-
-  const handleEditSubmit = async (e) => {
-    e.preventDefault()
-    if (!editingPharmacy) return
-    if (!editingPharmacy.id && pharmacies.length >= 4) {
-      setEditMessage('Maximal 4 Apotheken erlaubt.')
-      return
-    }
-    if (!editForm.name.trim()) {
-      setEditMessage('Bitte einen Namen eingeben.')
-      return
-    }
-    if (!editForm.ownerRole) {
-      setEditMessage('Bitte Inhaber oder Filialleiter wählen.')
-      return
-    }
-
-    setEditLoading(true)
-    const payload = {
-      name: editForm.name.trim(),
-      street: editForm.street.trim(),
-      postal_code: editForm.postalCode.trim(),
-      city: editForm.city.trim(),
-      phone: editForm.phone.trim(),
-      owner: editForm.owner.trim(),
-      owner_role: editForm.ownerRole,
-      website: editForm.website.trim(),
-      email: editForm.email.trim(),
-      fax: editForm.fax.trim(),
-    }
-
-    const { error } = editingPharmacy.id
-      ? await supabase
-          .from('pharmacies')
-          .update(payload)
-          .eq('id', editingPharmacy.id)
-      : await supabase
-          .from('pharmacies')
-          .insert(payload)
-
-    if (error) {
-      setEditMessage(error.message)
-      setEditLoading(false)
-      return
-    }
-
-    await fetchPharmacies()
-    setEditLoading(false)
-    closeEditModal()
-  }
-
-  const handleStaffSubmit = async (e) => {
-    e.preventDefault()
-    if (!editingStaff) return
-    if (!staffForm.firstName.trim() || !staffForm.lastName.trim()) {
-      setStaffSaveMessage('Bitte Vor- und Nachnamen eingeben.')
-      return
-    }
-    if (!staffForm.role) {
-      setStaffSaveMessage('Bitte Beruf wählen.')
-      return
-    }
-    if (!staffForm.pharmacyId) {
-      setStaffSaveMessage('Bitte Apotheke zuordnen.')
-      return
-    }
-
-    setStaffSaveLoading(true)
-    const payload = {
-      first_name: staffForm.firstName.trim(),
-      last_name: staffForm.lastName.trim(),
-      street: staffForm.street.trim(),
-      postal_code: staffForm.postalCode.trim(),
-      city: staffForm.city.trim(),
-      mobile: staffForm.mobile.trim(),
-      email: staffForm.email.trim(),
-      role: staffForm.role,
-      pharmacy_id: staffForm.pharmacyId,
-      auth_user_id: staffForm.authUserId || null,
-      is_admin: staffForm.isAdmin,
-      avatar_url: staffForm.avatarUrl || null,
-      employed_since: staffForm.employedSince || null,
-    }
-
-    const uploadAvatar = async (staffId) => {
-      if (!staffAvatarFile) return null
-      const fileExt = staffAvatarFile.name.split('.').pop() || 'jpg'
-      const filePath = `staff/${staffId}/${Date.now()}.${fileExt}`
-      const { error: uploadError } = await supabase
-        .storage
-        .from('avatars')
-        .upload(filePath, staffAvatarFile, { upsert: true })
-
-      if (uploadError) {
-        throw new Error(uploadError.message)
-      }
-
-      const { data } = supabase
-        .storage
-        .from('avatars')
-        .getPublicUrl(filePath)
-      return data.publicUrl
-    }
-
-    let saveError = null
-    let savedId = editingStaff.id
-    if (editingStaff.id) {
-      const { error } = await supabase
-        .from('staff')
-        .update(payload)
-        .eq('id', editingStaff.id)
-      saveError = error
-    } else {
-      const { data, error } = await supabase
-        .from('staff')
-        .insert(payload)
-        .select('id')
-        .single()
-      saveError = error
-      savedId = data?.id
-    }
-
-    if (saveError) {
-      setStaffSaveMessage(saveError.message)
-      setStaffSaveLoading(false)
-      return
-    }
-
-    if (staffAvatarFile && savedId) {
-      try {
-        const avatarUrl = await uploadAvatar(savedId)
-        if (avatarUrl) {
-          await supabase
-            .from('staff')
-            .update({ avatar_url: avatarUrl })
-            .eq('id', savedId)
-        }
-      } catch (error) {
-        setStaffSaveMessage(error.message || 'Avatar konnte nicht gespeichert werden.')
-        setStaffSaveLoading(false)
-        return
-      }
-    }
-
-    await fetchStaff()
-    setStaffSaveLoading(false)
-    closeStaffModal()
-  }
-
-  const handleSendInvite = async () => {
-    if (!staffForm.email.trim()) {
-      setStaffInviteMessage('Bitte E-Mail-Adresse eingeben')
-      return
-    }
-    setStaffInviteLoading(true)
-    setStaffInviteMessage('')
-    try {
-      const response = await fetch(`${supabaseUrl}/functions/v1/invite-user`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`,
-        },
-        body: JSON.stringify({
-          email: staffForm.email.trim(),
-          staffId: editingStaff?.id || null,
-        }),
-      })
-      const data = await response.json()
-      if (!response.ok) {
-        throw new Error(data.error || 'Einladung fehlgeschlagen')
-      }
-      setStaffInviteMessage('Einladung wurde gesendet!')
-    } catch (error) {
-      setStaffInviteMessage(error.message)
-    }
-    setStaffInviteLoading(false)
-  }
-
   useEffect(() => {
     // Check URL for invite or recovery tokens
     const hashParams = new URLSearchParams(window.location.hash.substring(1))
@@ -3227,30 +2773,6 @@ function App() {
       setSavedPznFotos({})
     }
   }, [selectedApoMessage?.id, selectedApoMessage?.type])
-
-  useEffect(() => {
-    if (session?.user?.id) {
-      const matched = staff.find((member) => member.auth_user_id === session.user.id)
-      setCurrentStaff(matched || null)
-    }
-  }, [staff, session])
-
-  useEffect(() => {
-    if (!weatherLocation && pharmacies.length > 0) {
-      const primary = pharmacies[0]
-      const cityLabel = primary.city ? [primary.postal_code, primary.city].filter(Boolean).join(' ') : ''
-      const fallback = cityLabel || primary.name
-      if (fallback) {
-        setWeatherLocation(fallback)
-      }
-    }
-  }, [pharmacies, weatherLocation])
-
-  useEffect(() => {
-    if (weatherLocation) {
-      fetchWeather(weatherLocation)
-    }
-  }, [weatherLocation])
 
   useEffect(() => {
     if (!session || activeView !== 'chat') return
