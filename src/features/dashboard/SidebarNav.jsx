@@ -49,6 +49,7 @@ const SidebarNav = ({
           <nav className="p-2 space-y-1 border-b border-[#3c4255]">
             {navItems.map((item) => {
               const totalApoUnread = item.id === 'apo' ? unreadCounts.amk + unreadCounts.recall + unreadCounts.lav : 0
+              const hasPostUnread = item.id === 'post' && unreadCounts.fax > 0
               return (
                 <button
                   key={item.id}
@@ -60,13 +61,16 @@ const SidebarNav = ({
                 >
                   <div className="relative">
                     <item.icon />
-                    {totalApoUnread > 0 && (
+                    {(totalApoUnread > 0 || hasPostUnread) && (
                       <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
                     )}
                   </div>
                   <span className="flex-1">{item.label}</span>
                   {totalApoUnread > 0 && (
                     <span className="text-xs text-red-400">({totalApoUnread})</span>
+                  )}
+                  {hasPostUnread && (
+                    <span className="text-xs text-red-400">({unreadCounts.fax})</span>
                   )}
                 </button>
               )
@@ -76,7 +80,11 @@ const SidebarNav = ({
           <nav className="p-2 space-y-1">
             {(secondaryNavMap[activeView] || []).map((item) => {
               const isActive = getActiveSecondaryId() === item.id
-              const badgeCount = activeView === 'apo' ? unreadCounts[item.id] || 0 : 0
+              const badgeCount = activeView === 'apo'
+                ? unreadCounts[item.id] || 0
+                : (activeView === 'post' && item.id === 'fax')
+                  ? unreadCounts.fax || 0
+                  : 0
               return (
                 <button
                   key={item.id}
@@ -106,6 +114,7 @@ const SidebarNav = ({
         <nav className="py-3 space-y-1 flex flex-col items-center">
           {navItems.map((item) => {
             const totalApoUnread = item.id === 'apo' ? unreadCounts.amk + unreadCounts.recall + unreadCounts.lav : 0
+            const hasPostUnread = item.id === 'post' && unreadCounts.fax > 0
             return (
               <div key={item.id} className="relative group">
                 <button
@@ -118,12 +127,12 @@ const SidebarNav = ({
                   }}
                 >
                   <item.icon />
-                  {totalApoUnread > 0 && (
+                  {(totalApoUnread > 0 || hasPostUnread) && (
                     <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#3c4255]" />
                   )}
                 </button>
                 <span className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-[#1F2937] text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
-                  {item.label}{totalApoUnread > 0 && ` (${totalApoUnread})`}
+                  {item.label}{totalApoUnread > 0 && ` (${totalApoUnread})`}{hasPostUnread && ` (${unreadCounts.fax})`}
                 </span>
               </div>
             )
@@ -149,7 +158,11 @@ const SidebarNav = ({
         <nav className="p-2 space-y-1 overflow-y-auto">
           {(secondaryNavMap[activeView] || []).map((item) => {
             const isActive = getActiveSecondaryId() === item.id
-            const badgeCount = activeView === 'apo' ? unreadCounts[item.id] || 0 : 0
+            const badgeCount = activeView === 'apo'
+              ? unreadCounts[item.id] || 0
+              : (activeView === 'post' && item.id === 'fax')
+                ? unreadCounts.fax || 0
+                : 0
             return (
               <button
                 key={item.id}

@@ -22,6 +22,11 @@ const SettingsView = ({
   handleDeleteEmailAccount,
   emailPermissions,
   toggleEmailPermission,
+  aiSettings,
+  setAiSettings,
+  saveAiSettings,
+  aiSettingsSaving,
+  aiSettingsMessage,
   Icons,
   enhanceMessage,
   fetchGoogleApiKey,
@@ -263,6 +268,11 @@ const SettingsView = ({
           emailPermissions={emailPermissions}
           onToggleEmailPermission={toggleEmailPermission}
           CloseIcon={Icons.X}
+          aiSettings={aiSettings}
+          onAiSettingsChange={setAiSettings}
+          onSaveAiSettings={saveAiSettings}
+          aiSettingsSaving={aiSettingsSaving}
+          aiSettingsMessage={aiSettingsMessage}
         />
       )}
 

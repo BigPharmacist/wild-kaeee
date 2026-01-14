@@ -1,8 +1,12 @@
-import { CircleNotch, EnvelopeSimple, Paperclip, PaperPlaneTilt } from '@phosphor-icons/react'
+import { useState, useRef, useEffect } from 'react'
+import { CaretDown, CircleNotch, EnvelopeSimple, Paperclip, PaperPlaneTilt } from '@phosphor-icons/react'
 
 export default function EmailListPane({
   theme,
+  mailboxes,
   selectedMailbox,
+  onSelectMailbox,
+  getMailboxIcon,
   emailsTotal,
   emailsLoading,
   emailsLoadingMore,
@@ -14,10 +18,82 @@ export default function EmailListPane({
   listRef,
   formatDate,
 }) {
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const dropdownRef = useRef(null)
+
+  // Dropdown schließen bei Klick außerhalb
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setDropdownOpen(false)
+      }
+    }
+    if (dropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [dropdownOpen])
+
+  const handleSelectMailbox = (mailbox) => {
+    onSelectMailbox(mailbox)
+    setDropdownOpen(false)
+  }
+
   return (
     <div className={`w-80 flex-shrink-0 border-r ${theme.border} flex flex-col ${selectedEmail ? 'hidden lg:flex' : 'flex'}`}>
-      <div className={`p-3 border-b ${theme.border} flex items-center justify-between`}>
-        <h4 className="font-medium text-sm">{selectedMailbox?.name || 'E-Mails'}</h4>
+      <div className={`p-3 border-b ${theme.border} flex items-center gap-2`}>
+        {/* Ordner-Dropdown */}
+        <div className="relative flex-1" ref={dropdownRef}>
+          <button
+            type="button"
+            onClick={() => setDropdownOpen(!dropdownOpen)}
+            className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg border ${theme.border} ${theme.surface} ${theme.bgHover} text-sm font-medium`}
+          >
+            <span className={theme.textMuted}>{getMailboxIcon(selectedMailbox?.role)}</span>
+            <span className="flex-1 text-left truncate">{selectedMailbox?.name || 'Ordner wählen'}</span>
+            {selectedMailbox?.unreadEmails > 0 && (
+              <span className={`text-xs font-medium ${theme.accentText}`}>{selectedMailbox.unreadEmails}</span>
+            )}
+            <CaretDown size={16} className={`${theme.textMuted} transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {dropdownOpen && (
+            <div className={`absolute top-full left-0 right-0 mt-1 ${theme.surface} border ${theme.border} rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto`}>
+              {mailboxes.map(mailbox => (
+                <button
+                  key={mailbox.id}
+                  type="button"
+                  onClick={() => handleSelectMailbox(mailbox)}
+                  className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
+                    selectedMailbox?.id === mailbox.id
+                      ? theme.navActive
+                      : `${theme.text} ${theme.bgHover}`
+                  }`}
+                >
+                  <span className={theme.textMuted}>{getMailboxIcon(mailbox.role)}</span>
+                  <span className="flex-1 truncate">{mailbox.name}</span>
+                  {mailbox.unreadEmails > 0 && (
+                    <span className={`text-xs font-medium ${theme.accentText}`}>{mailbox.unreadEmails}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Verfassen Button */}
+        <button
+          type="button"
+          onClick={() => onCompose('new')}
+          className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg ${theme.primaryBg} text-white font-medium text-sm ${theme.primaryHover}`}
+          title="Neue E-Mail verfassen"
+        >
+          <PaperPlaneTilt size={18} />
+          <span className="hidden sm:inline">Verfassen</span>
+        </button>
+      </div>
+
+      <div className={`px-3 py-1.5 border-b ${theme.border} flex items-center justify-end`}>
         <span className={`text-xs ${theme.textMuted}`}>{emailsTotal} E-Mails</span>
       </div>
 
@@ -84,16 +160,6 @@ export default function EmailListPane({
         )}
       </div>
 
-      <div className={`p-3 border-t ${theme.border} md:hidden`}>
-        <button
-          type="button"
-          onClick={() => onCompose('new')}
-          className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg ${theme.primaryBg} text-white font-medium text-sm ${theme.primaryHover}`}
-        >
-          <PaperPlaneTilt size={18} />
-          Verfassen
-        </button>
-      </div>
     </div>
   )
 }

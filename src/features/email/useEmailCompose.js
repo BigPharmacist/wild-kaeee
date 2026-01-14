@@ -1,9 +1,10 @@
 import { useCallback, useState } from 'react'
 import { jmap } from '../../lib/jmap'
 
-export default function useEmailCompose({ selectedMailbox, loadEmails, formatDate }) {
+export default function useEmailCompose({ selectedMailbox, loadEmails, formatDate, signature = '' }) {
   const [showCompose, setShowCompose] = useState(false)
   const [composeMode, setComposeMode] = useState('new')
+  const [originalEmail, setOriginalEmail] = useState(null) // Original-E-Mail für KI-Kontext
   const [composeData, setComposeData] = useState({
     to: '',
     cc: '',
@@ -16,14 +17,19 @@ export default function useEmailCompose({ selectedMailbox, loadEmails, formatDat
 
   const closeCompose = useCallback(() => {
     setShowCompose(false)
+    setOriginalEmail(null)
   }, [])
 
   const openCompose = useCallback((mode = 'new', replyToEmail = null) => {
     setComposeMode(mode)
     setSendError('')
+    setOriginalEmail(replyToEmail) // Original-E-Mail für KI-Kontext speichern
+
+    // Signatur formatieren (mit Abstand oben für Eingabe und grauer Trennlinie)
+    const signatureBlock = signature ? `<br><br><br><hr style="border:none;border-top:1px solid #ccc;margin:8px 0">${signature}` : ''
 
     if (mode === 'new') {
-      setComposeData({ to: '', cc: '', bcc: '', subject: '', body: '' })
+      setComposeData({ to: '', cc: '', bcc: '', subject: '', body: signatureBlock })
     } else if (mode === 'reply' && replyToEmail) {
       const from = replyToEmail.from?.[0]
       setComposeData({
@@ -31,7 +37,7 @@ export default function useEmailCompose({ selectedMailbox, loadEmails, formatDat
         cc: '',
         bcc: '',
         subject: `Re: ${replyToEmail.subject || ''}`,
-        body: `\n\n---\nAm ${formatDate(replyToEmail.receivedAt)} schrieb ${from?.name || from?.email}:\n> ${replyToEmail.preview || ''}`
+        body: `${signatureBlock}\n\n---\nAm ${formatDate(replyToEmail.receivedAt)} schrieb ${from?.name || from?.email}:\n> ${replyToEmail.preview || ''}`
       })
     } else if (mode === 'forward' && replyToEmail) {
       setComposeData({
@@ -39,12 +45,12 @@ export default function useEmailCompose({ selectedMailbox, loadEmails, formatDat
         cc: '',
         bcc: '',
         subject: `Fwd: ${replyToEmail.subject || ''}`,
-        body: `\n\n---\nWeitergeleitete Nachricht:\nVon: ${replyToEmail.from?.[0]?.email}\nDatum: ${formatDate(replyToEmail.receivedAt)}\nBetreff: ${replyToEmail.subject}\n\n${replyToEmail.preview || ''}`
+        body: `${signatureBlock}\n\n---\nWeitergeleitete Nachricht:\nVon: ${replyToEmail.from?.[0]?.email}\nDatum: ${formatDate(replyToEmail.receivedAt)}\nBetreff: ${replyToEmail.subject}\n\n${replyToEmail.preview || ''}`
       })
     }
 
     setShowCompose(true)
-  }, [formatDate])
+  }, [formatDate, signature])
 
   const handleSend = useCallback(async () => {
     if (!composeData.to.trim()) {
@@ -85,6 +91,7 @@ export default function useEmailCompose({ selectedMailbox, loadEmails, formatDat
     showCompose,
     composeMode,
     composeData,
+    originalEmail,
     sending,
     sendError,
     openCompose,

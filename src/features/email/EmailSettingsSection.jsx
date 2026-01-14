@@ -1,4 +1,5 @@
-import { EnvelopeSimple, GearSix } from '@phosphor-icons/react'
+import { EnvelopeSimple, GearSix, Sparkle } from '@phosphor-icons/react'
+import { AI_MODELS } from './useEmailSettings'
 
 export default function EmailSettingsSection({
   theme,
@@ -12,6 +13,12 @@ export default function EmailSettingsSection({
   emailPermissions,
   onToggleEmailPermission,
   CloseIcon,
+  // KI-Assistent
+  aiSettings,
+  onAiSettingsChange,
+  onSaveAiSettings,
+  aiSettingsSaving,
+  aiSettingsMessage,
 }) {
   return (
     <div className="space-y-4">
@@ -147,6 +154,92 @@ export default function EmailSettingsSection({
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* KI-Assistent Einstellungen (nur für Admins sichtbar) */}
+      {currentStaff?.is_admin && (
+        <div className={`${theme.panel} rounded-2xl p-5 border ${theme.border} ${theme.cardShadow} border-violet-200 bg-gradient-to-br from-white to-violet-50`}>
+          <div className="flex items-center gap-2 mb-4">
+            <div className="p-2 rounded-lg bg-violet-100">
+              <Sparkle size={20} weight="fill" className="text-violet-600" />
+            </div>
+            <div>
+              <h3 className="text-base font-semibold">Kaeee-Assistent</h3>
+              <p className={`text-xs ${theme.textMuted}`}>KI-gestützte E-Mail-Generierung mit Nebius AI.</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {/* API-Key */}
+            <div>
+              <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
+                Nebius API-Key
+              </label>
+              <input
+                type="password"
+                value={aiSettings?.api_key || ''}
+                onChange={(e) => onAiSettingsChange({ ...aiSettings, api_key: e.target.value })}
+                placeholder="Dein Nebius API-Key"
+                className={`w-full px-3 py-2 ${theme.input} border rounded-xl outline-none ${theme.text} text-sm`}
+              />
+              <p className={`text-xs ${theme.textMuted} mt-1`}>
+                Erstelle einen Key unter <a href="https://studio.nebius.ai" target="_blank" rel="noopener noreferrer" className="text-violet-600 hover:underline">studio.nebius.ai</a>
+              </p>
+            </div>
+
+            {/* Modellauswahl */}
+            <div>
+              <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
+                KI-Modell
+              </label>
+              <select
+                value={aiSettings?.model || 'Qwen/Qwen2.5-72B-Instruct'}
+                onChange={(e) => onAiSettingsChange({ ...aiSettings, model: e.target.value })}
+                className={`w-full px-3 py-2 ${theme.input} border rounded-xl outline-none ${theme.text} text-sm`}
+              >
+                {AI_MODELS.map((model) => (
+                  <option key={model.id} value={model.id}>
+                    {model.name} ({model.provider})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* System-Prompt */}
+            <div>
+              <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
+                System-Prompt
+              </label>
+              <textarea
+                value={aiSettings?.system_prompt || ''}
+                onChange={(e) => onAiSettingsChange({ ...aiSettings, system_prompt: e.target.value })}
+                placeholder="Instruktionen für die KI..."
+                rows={4}
+                className={`w-full px-3 py-2 ${theme.input} border rounded-xl outline-none ${theme.text} text-sm resize-none`}
+              />
+              <p className={`text-xs ${theme.textMuted} mt-1`}>
+                Dieser Prompt wird bei jeder E-Mail-Generierung als Kontext verwendet.
+              </p>
+            </div>
+
+            {/* Speichern */}
+            <div className="flex items-center justify-between pt-2">
+              {aiSettingsMessage && (
+                <p className={`text-sm ${aiSettingsMessage.includes('Fehler') ? 'text-rose-500' : 'text-emerald-600'}`}>
+                  {aiSettingsMessage}
+                </p>
+              )}
+              <button
+                type="button"
+                onClick={onSaveAiSettings}
+                disabled={aiSettingsSaving}
+                className="ml-auto px-4 py-2 rounded-xl bg-violet-500 text-white font-medium text-sm hover:bg-violet-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {aiSettingsSaving ? 'Speichern...' : 'Speichern'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

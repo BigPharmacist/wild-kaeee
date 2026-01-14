@@ -1,15 +1,14 @@
-import { useCallback, useRef } from 'react'
-import { CircleNotch, EnvelopeSimple, File, Folder, GearSix, PaperPlaneRight, Tray, Trash, Warning } from '@phosphor-icons/react'
+import { useCallback, useRef, useState } from 'react'
+import { CircleNotch, EnvelopeSimple, File, Folder, GearSix, MagnifyingGlass, PaperPlaneRight, Tray, Trash, Warning, X } from '@phosphor-icons/react'
 import EmailComposeModal from './EmailComposeModal'
 import EmailDetailPane from './EmailDetailPane'
 import EmailListPane from './EmailListPane'
-import EmailMailboxSidebar from './EmailMailboxSidebar'
 import { formatEmailDate, getEmailBodyHtml } from './emailUtils'
 import useEmailAttachments from './useEmailAttachments'
 import useEmailCompose from './useEmailCompose'
 import useJmapMail from './useJmapMail'
 
-export default function EmailView({ theme, account, hasAccess, onConfigureClick }) {
+export default function EmailView({ theme, account, hasAccess, onConfigureClick, aiSettings }) {
   // Berechtigungsprüfung
   if (!hasAccess) {
     return (
@@ -63,15 +62,19 @@ export default function EmailView({ theme, account, hasAccess, onConfigureClick 
     showCompose,
     composeMode,
     composeData,
+    originalEmail,
     sending,
     sendError,
     openCompose,
     closeCompose,
     handleSend,
     setComposeData,
-  } = useEmailCompose({ selectedMailbox, loadEmails, formatDate: formatEmailDate })
+  } = useEmailCompose({ selectedMailbox, loadEmails, formatDate: formatEmailDate, signature: account?.signature || '' })
 
   const { downloadingAttachmentId, downloadAttachment } = useEmailAttachments()
+
+  // Suche
+  const [searchQuery, setSearchQuery] = useState('')
 
   // Refs
   const emailListRef = useRef(null)
@@ -158,27 +161,57 @@ export default function EmailView({ theme, account, hasAccess, onConfigureClick 
     )
   }
 
+  // E-Mails filtern basierend auf Suche
+  const filteredEmails = searchQuery.trim()
+    ? emails.filter(email => {
+        const query = searchQuery.toLowerCase()
+        const from = email.from?.[0]
+        return (
+          email.subject?.toLowerCase().includes(query) ||
+          email.preview?.toLowerCase().includes(query) ||
+          from?.name?.toLowerCase().includes(query) ||
+          from?.email?.toLowerCase().includes(query)
+        )
+      })
+    : emails
+
   // Main Email View
   return (
     <div className={`${theme.panel} rounded-2xl border ${theme.border} ${theme.cardShadow} overflow-hidden`}>
-      <div className="flex h-[calc(100vh-220px)] min-h-[500px]">
-        <EmailMailboxSidebar
+      {/* Suchfeld */}
+      <div className={`p-3 border-b ${theme.border}`}>
+        <div className="relative">
+          <MagnifyingGlass size={18} className={`absolute left-3 top-1/2 -translate-y-1/2 ${theme.textMuted}`} />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="E-Mails durchsuchen..."
+            className={`w-full pl-10 pr-10 py-2 rounded-lg border ${theme.border} ${theme.surface} ${theme.text} text-sm outline-none focus:border-[#4A90E2] focus:ring-1 focus:ring-[#4A90E2]`}
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className={`absolute right-3 top-1/2 -translate-y-1/2 ${theme.textMuted} hover:${theme.text}`}
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="flex h-[calc(100vh-280px)] min-h-[500px]">
+        <EmailListPane
           theme={theme}
-          account={account}
           mailboxes={mailboxes}
           selectedMailbox={selectedMailbox}
           onSelectMailbox={setSelectedMailbox}
-          onCompose={openCompose}
           getMailboxIcon={getMailboxIcon}
-        />
-
-        <EmailListPane
-          theme={theme}
-          selectedMailbox={selectedMailbox}
-          emailsTotal={emailsTotal}
+          emailsTotal={searchQuery ? filteredEmails.length : emailsTotal}
           emailsLoading={emailsLoading}
           emailsLoadingMore={emailsLoadingMore}
-          emails={emails}
+          emails={filteredEmails}
           selectedEmail={selectedEmail}
           onSelectEmail={handleSelectEmail}
           onCompose={openCompose}
@@ -207,11 +240,13 @@ export default function EmailView({ theme, account, hasAccess, onConfigureClick 
         show={showCompose}
         composeMode={composeMode}
         composeData={composeData}
+        originalEmail={originalEmail}
         sendError={sendError}
         sending={sending}
         onClose={closeCompose}
         onSend={handleSend}
         setComposeData={setComposeData}
+        aiSettings={aiSettings}
       />
     </div>
   )

@@ -178,3 +178,10 @@ html {
 .markdown-content input[type="checkbox"] {
   margin-right: 0.5rem;
 }
+
+/* Contenteditable Placeholder */
+[contenteditable]:empty:before {
+  content: attr(data-placeholder);
+  color: #9CA3AF;
+  pointer-events: none;
+}

@@ -1,6 +1,16 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 
+// Verfügbare KI-Modelle für Nebius Token Factory (sortiert nach Größe)
+export const AI_MODELS = [
+  { id: 'deepseek-ai/DeepSeek-V3-0324', name: 'DeepSeek V3 (671B)', provider: 'DeepSeek' },
+  { id: 'Qwen/Qwen3-Coder-480B-A35B-Instruct', name: 'Qwen 3 Coder (480B)', provider: 'Qwen' },
+  { id: 'NousResearch/Hermes-4-405B', name: 'Hermes 4 (405B)', provider: 'NousResearch' },
+  { id: 'nvidia/Llama-3_1-Nemotron-Ultra-253B-v1', name: 'Nemotron Ultra (253B)', provider: 'NVIDIA' },
+  { id: 'Qwen/Qwen3-235B-A22B-Instruct-2507', name: 'Qwen 3 (235B)', provider: 'Qwen' },
+  { id: 'meta-llama/Llama-3.3-70B-Instruct', name: 'Llama 3.3 (70B)', provider: 'Meta' },
+]
+
 export default function useEmailSettings({ sessionUserId }) {
   const [emailAccounts, setEmailAccounts] = useState([])
   const [emailAccountsLoading, setEmailAccountsLoading] = useState(false)
@@ -11,10 +21,21 @@ export default function useEmailSettings({ sessionUserId }) {
     name: '',
     email: '',
     password: '',
+    signature: '',
   })
   const [emailAccountSaving, setEmailAccountSaving] = useState(false)
   const [emailAccountMessage, setEmailAccountMessage] = useState('')
   const [selectedEmailAccount, setSelectedEmailAccount] = useState(null)
+
+  // KI-Assistent Einstellungen
+  const [aiSettings, setAiSettings] = useState({
+    api_key: '',
+    model: 'Qwen/Qwen3-235B-A22B-Instruct-2507',
+    system_prompt: 'Du bist ein professioneller E-Mail-Assistent. Schreibe höfliche, klare und professionelle E-Mails auf Deutsch. Verwende eine angemessene Anrede und Grußformel. Halte den Text prägnant aber freundlich.',
+  })
+  const [aiSettingsLoading, setAiSettingsLoading] = useState(false)
+  const [aiSettingsSaving, setAiSettingsSaving] = useState(false)
+  const [aiSettingsMessage, setAiSettingsMessage] = useState('')
 
   useEffect(() => {
     if (sessionUserId) return
@@ -23,7 +44,7 @@ export default function useEmailSettings({ sessionUserId }) {
     setCurrentUserEmailAccess(false)
     setSelectedEmailAccount(null)
     setEditingEmailAccount(null)
-    setEmailAccountForm({ name: '', email: '', password: '' })
+    setEmailAccountForm({ name: '', email: '', password: '', signature: '' })
     setEmailAccountMessage('')
   }, [sessionUserId])
 
@@ -32,7 +53,7 @@ export default function useEmailSettings({ sessionUserId }) {
     setEmailAccountsLoading(true)
     const { data, error } = await supabase
       .from('email_accounts')
-      .select('id, name, email, password')
+      .select('id, name, email, password, signature')
       .order('name', { ascending: true })
 
     if (error) {
@@ -52,6 +73,7 @@ export default function useEmailSettings({ sessionUserId }) {
         name: account.name || '',
         email: account.email || '',
         password: account.password || '',
+        signature: account.signature || '',
       })
     } else {
       setEditingEmailAccount('new')
@@ -59,6 +81,7 @@ export default function useEmailSettings({ sessionUserId }) {
         name: '',
         email: '',
         password: '',
+        signature: '',
       })
     }
     setEmailAccountMessage('')
@@ -66,7 +89,7 @@ export default function useEmailSettings({ sessionUserId }) {
 
   const closeEmailAccountModal = useCallback(() => {
     setEditingEmailAccount(null)
-    setEmailAccountForm({ name: '', email: '', password: '' })
+    setEmailAccountForm({ name: '', email: '', password: '', signature: '' })
     setEmailAccountMessage('')
   }, [])
 
@@ -96,6 +119,7 @@ export default function useEmailSettings({ sessionUserId }) {
         name: emailAccountForm.name || emailAccountForm.email.split('@')[0],
         email: emailAccountForm.email,
         password: emailAccountForm.password,
+        signature: emailAccountForm.signature || '',
       }
 
       let savedAccount
@@ -132,6 +156,7 @@ export default function useEmailSettings({ sessionUserId }) {
     emailAccountForm.email,
     emailAccountForm.name,
     emailAccountForm.password,
+    emailAccountForm.signature,
     fetchEmailAccounts,
   ])
 
@@ -192,6 +217,72 @@ export default function useEmailSettings({ sessionUserId }) {
     }
   }, [emailPermissions, fetchEmailPermissions])
 
+  // KI-Einstellungen laden
+  const fetchAiSettings = useCallback(async () => {
+    if (!sessionUserId) return
+    setAiSettingsLoading(true)
+    const { data, error } = await supabase
+      .from('ai_settings')
+      .select('*')
+      .limit(1)
+      .single()
+
+    if (!error && data) {
+      setAiSettings({
+        api_key: data.api_key || '',
+        model: data.model || 'Qwen/Qwen2.5-72B-Instruct',
+        system_prompt: data.system_prompt || '',
+      })
+    }
+    setAiSettingsLoading(false)
+  }, [sessionUserId])
+
+  // KI-Einstellungen speichern
+  const saveAiSettings = useCallback(async () => {
+    setAiSettingsSaving(true)
+    setAiSettingsMessage('')
+
+    try {
+      // Erst prüfen ob bereits ein Eintrag existiert
+      const { data: existing } = await supabase
+        .from('ai_settings')
+        .select('id')
+        .limit(1)
+        .single()
+
+      if (existing) {
+        const { error } = await supabase
+          .from('ai_settings')
+          .update({
+            api_key: aiSettings.api_key,
+            model: aiSettings.model,
+            system_prompt: aiSettings.system_prompt,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existing.id)
+
+        if (error) throw error
+      } else {
+        const { error } = await supabase
+          .from('ai_settings')
+          .insert({
+            api_key: aiSettings.api_key,
+            model: aiSettings.model,
+            system_prompt: aiSettings.system_prompt,
+          })
+
+        if (error) throw error
+      }
+
+      setAiSettingsMessage('Einstellungen gespeichert')
+      setTimeout(() => setAiSettingsMessage(''), 3000)
+    } catch (err) {
+      setAiSettingsMessage('Fehler beim Speichern: ' + err.message)
+    } finally {
+      setAiSettingsSaving(false)
+    }
+  }, [aiSettings])
+
   return {
     emailAccounts,
     emailAccountsLoading,
@@ -211,5 +302,13 @@ export default function useEmailSettings({ sessionUserId }) {
     handleDeleteEmailAccount,
     handleSelectEmailAccount,
     toggleEmailPermission,
+    // KI-Assistent
+    aiSettings,
+    setAiSettings,
+    aiSettingsLoading,
+    aiSettingsSaving,
+    aiSettingsMessage,
+    fetchAiSettings,
+    saveAiSettings,
   }
 }
