@@ -1,173 +1,24 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase, supabaseUrl } from './lib/supabase'
 import { House, Camera, Pill, CalendarDots, CalendarBlank, ChatCircle, GearSix, EnvelopeSimple, Printer } from '@phosphor-icons/react'
-import EmailView from './components/EmailView'
+import { EmailAccountModal, EmailSettingsSection, EmailView, useEmailSettings } from './features/email'
+import { ContactDetailModal, ContactFormModal, ContactsSettingsSection, useContacts } from './features/contacts'
+import { contactScan } from './features/contacts'
+import { AuthView } from './features/auth'
+import { DashboardHeader, SidebarNav, DashboardHome } from './features/dashboard'
+import { ApoView } from './features/apo'
+import { PhotosView } from './features/photos'
+import { ChatView } from './features/chat'
+import { SettingsView } from './features/settings'
+import { PlanView } from './features/plan'
+import { CalendarView } from './features/calendar'
 import ReactCrop from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 import { jsPDF } from 'jspdf'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { Icons, UnreadBadge } from './shared/ui'
 
-
-// SVG Icons as components for modern look
-const Icons = {
-  Sun: () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-    </svg>
-  ),
-  Moon: () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-    </svg>
-  ),
-  Home: () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-    </svg>
-  ),
-  Chart: () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-    </svg>
-  ),
-  Calendar: () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-    </svg>
-  ),
-  Settings: () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-    </svg>
-  ),
-  Chat: () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h8M8 14h5" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M5 20l3.5-3.5H19a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v11a2 2 0 002 2h0z" />
-    </svg>
-  ),
-  Logout: () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-    </svg>
-  ),
-  Menu: () => (
-    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-    </svg>
-  ),
-  X: () => (
-    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-    </svg>
-  ),
-  Download: () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-    </svg>
-  ),
-  Camera: () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-    </svg>
-  ),
-  Photo: () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-    </svg>
-  ),
-  Pill: () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714a2.25 2.25 0 00.659 1.591L19 14.5M14.25 3.104c.251.023.501.05.75.082M19 14.5l-2.47 2.47a3.187 3.187 0 01-4.508 0L5 14.5m14 0l-4.5 4.5m-5-4.5l4.5 4.5" />
-    </svg>
-  ),
-  ChevronLeft: () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-    </svg>
-  ),
-  ChevronRight: () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-    </svg>
-  ),
-  // Wetter-Icons
-  Cloud: ({ className = "w-5 h-5" }) => (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15a4.5 4.5 0 004.5 4.5H18a3.75 3.75 0 001.332-7.257 3 3 0 00-3.758-3.848 5.25 5.25 0 00-10.233 2.33A4.502 4.502 0 002.25 15z" />
-    </svg>
-  ),
-  CloudSun: ({ className = "w-5 h-5" }) => (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15a4.5 4.5 0 004.5 4.5H18a3.75 3.75 0 001.332-7.257 3 3 0 00-3.758-3.848 5.25 5.25 0 00-10.233 2.33A4.502 4.502 0 002.25 15z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 0V3m4.22 1.78l-.707.707m.707-.707l-.707.707M21 12h-1m1 0h-1m-1.78 4.22l-.707-.707" />
-    </svg>
-  ),
-  CloudRain: ({ className = "w-5 h-5" }) => (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15a4.5 4.5 0 004.5 4.5H18a3.75 3.75 0 001.332-7.257 3 3 0 00-3.758-3.848 5.25 5.25 0 00-10.233 2.33A4.502 4.502 0 002.25 15z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M8 19v2m4-2v2m4-2v2" />
-    </svg>
-  ),
-  CloudSnow: ({ className = "w-5 h-5" }) => (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15a4.5 4.5 0 004.5 4.5H18a3.75 3.75 0 001.332-7.257 3 3 0 00-3.758-3.848 5.25 5.25 0 00-10.233 2.33A4.502 4.502 0 002.25 15z" />
-      <circle cx="8" cy="20" r="1" fill="currentColor" />
-      <circle cx="12" cy="21" r="1" fill="currentColor" />
-      <circle cx="16" cy="20" r="1" fill="currentColor" />
-    </svg>
-  ),
-  CloudFog: ({ className = "w-5 h-5" }) => (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15a4.5 4.5 0 004.5 4.5H18a3.75 3.75 0 001.332-7.257 3 3 0 00-3.758-3.848 5.25 5.25 0 00-10.233 2.33A4.502 4.502 0 002.25 15z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 21h18M6 18h12" />
-    </svg>
-  ),
-  CloudBolt: ({ className = "w-5 h-5" }) => (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15a4.5 4.5 0 004.5 4.5H18a3.75 3.75 0 001.332-7.257 3 3 0 00-3.758-3.848 5.25 5.25 0 00-10.233 2.33A4.502 4.502 0 002.25 15z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M13 11l-2 4h3l-2 4" />
-    </svg>
-  ),
-  Droplet: ({ className = "w-5 h-5" }) => (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 21.5c-3.5 0-6.5-2.5-6.5-6.5 0-4.5 6.5-11 6.5-11s6.5 6.5 6.5 11c0 4-3 6.5-6.5 6.5z" />
-    </svg>
-  ),
-  SunLarge: ({ className = "w-5 h-5" }) => (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-    </svg>
-  ),
-  Search: ({ className = "w-5 h-5" }) => (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-    </svg>
-  ),
-  FileText: ({ className = "w-5 h-5" }) => (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-    </svg>
-  ),
-  PostHorn: ({ className = "w-5 h-5" }) => (
-    <svg className={className} viewBox="66 400 1167 562" fill="currentColor" style={{ transform: 'scaleX(-1)' }}>
-      <path d="M319 417.928C304.902 423.374 292.454 431.34 274.356 446.5C270.416 449.8 264.112 455.065 260.347 458.201C248.998 467.651 222.25 495.564 208.125 512.696C205.315 516.104 202 519.999 200.758 521.351C199.516 522.703 198.05 524.43 197.5 525.189C196.95 525.947 194.686 528.803 192.469 531.534C187.94 537.114 175.915 553.161 171.137 560C163.488 570.95 142 603.686 142 604.389C142 604.612 140.22 607.726 138.044 611.307C135.869 614.888 131.984 621.796 129.412 626.659C126.839 631.521 123.604 637.525 122.223 640C114.982 652.973 105.078 673.901 98.972 689.132C94.14 701.184 87.049 721.367 86.019 726C85.591 727.925 84.422 733.1 83.421 737.5C82.192 742.904 81.596 749.556 81.587 758C81.573 770.163 81.663 770.688 84.943 777.472C90.839 789.666 101.271 797.807 115 800.929C122.126 802.55 133.251 801.893 154 798.627C177.944 794.858 201.068 795.055 222 799.208C233.184 801.426 253.752 806.997 262 810.041C266.675 811.767 271.625 813.536 273 813.972C276.303 815.02 295.296 822.639 301 825.204C307.466 828.112 312.476 830.32 321 834.021C325.125 835.811 333 839.403 338.5 842.004C344 844.604 350.637 847.692 353.25 848.866C355.863 850.039 360.137 851.961 362.75 853.134C365.363 854.308 372.225 857.508 378 860.245C383.775 862.981 390.714 866.094 393.419 867.162C398.519 869.175 402.928 871.112 414 876.202C417.575 877.846 425.971 881.378 432.658 884.052C439.345 886.726 449.062 890.728 454.251 892.945C464.727 897.421 485.45 904.89 506 911.596C524.751 917.716 524.844 917.745 531 919.4C534.025 920.213 541.225 922.26 547 923.948C552.775 925.636 560.2 927.671 563.5 928.472C571.636 930.444 593.944 935.017 605.5 937.08C608.8 937.669 613.525 938.539 616 939.013C618.475 939.487 624.325 940.373 629 940.982C633.675 941.59 638.85 942.313 640.5 942.589C662.684 946.293 719.576 946.46 749.5 942.909C768.912 940.605 813.395 930.756 825.5 926.082C828.25 925.02 834.775 922.599 840 920.703C845.225 918.806 851.975 916.196 855 914.902C864.167 910.981 892.845 896.203 897.497 893.002C899.897 891.351 902.134 890 902.469 890C903.502 890 920.974 878.047 931.5 870.139C943.081 861.438 957.727 849.259 963.533 843.5C965.751 841.3 968.676 838.557 970.033 837.405C974.55 833.569 1001.946 804.666 1006.014 799.443C1006.846 798.375 1009.096 795.475 1011.014 793C1012.931 790.525 1014.767 788.275 1015.094 788C1015.79 787.415 1038.18 757.587 1042.868 751C1048.746 742.741 1069.448 711.441 1073.5 704.686C1080.778 692.552 1106.159 654.612 1111.421 648C1114.266 644.425 1119.145 638.28 1122.264 634.343C1128.854 626.028 1144.231 610.244 1151.615 604.215C1154.428 601.919 1159.828 598.172 1163.615 595.889C1167.402 593.607 1170.673 591.587 1170.885 591.401C1172.122 590.315 1154.735 568.956 1144.845 559.411C1134.558 549.483 1119.097 537.325 1111 532.799C1108.525 531.415 1104.7 529.253 1102.5 527.994C1095.06 523.736 1079.928 518.006 1079.534 519.297C1079.332 519.959 1078.904 524.419 1078.581 529.209C1078.259 533.999 1077.59 538.949 1077.095 540.209C1076.6 541.469 1075.469 545.743 1074.582 549.707C1072.338 559.732 1065.576 579.949 1060.937 590.5C1060.453 591.6 1057.985 597.45 1055.451 603.5C1049.774 617.055 1029.19 658.837 1023.895 667.553C1021.753 671.079 1020 674.228 1020 674.552C1020 674.875 1018.65 677.102 1017 679.5C1015.35 681.898 1014 684.141 1014 684.485C1014 685.174 990.105 721.198 989.116 722C988.158 722.778 982.716 730.003 979.175 735.2C974.567 741.963 954.152 766.102 944.946 775.672C928.388 792.886 906.454 811.374 890.5 821.564C887.2 823.672 881.575 827.287 878 829.596C870.682 834.324 848.353 845.76 840 849.059C825.127 854.932 809.501 860.222 798.75 863.023C796.688 863.56 793.313 864.447 791.25 864.993C762.994 872.475 717.485 874.156 685 868.916C664.459 865.603 643.498 859.956 618.976 851.13C608.172 847.241 582.328 834.698 573.061 828.845C553.828 816.699 540.284 807.47 538 804.954C537.725 804.651 535.925 803.322 534 802C532.075 800.678 530.275 799.336 530 799.019C529.725 798.701 525.45 795.013 520.5 790.824C509.448 781.47 491.875 764.199 482.5 753.476C456.966 724.273 431.798 685.306 417.603 653C416.032 649.425 413.678 644.124 412.373 641.22C411.068 638.317 410 635.306 410 634.529C410 633.753 409.55 632.84 409 632.5C408.45 632.16 408 631.229 408 630.43C408 629.632 407.173 627.071 406.163 624.739C402.401 616.056 401.02 611.58 395.143 589C388.571 563.754 384.017 533.392 383.97 514.5C383.937 501.621 381.442 468.281 380.077 462.5C376.816 448.684 373.209 440.195 367.051 431.839C362.119 425.148 355.027 419.937 347.101 417.182C341.906 415.376 324.406 415.841 319 417.928M329.702 461.75C329.46 466.563 328.957 471.85 328.584 473.5C327.029 480.373 322.494 495.966 321.023 499.5C320.565 500.6 318.721 505.325 316.924 510C305.951 538.553 290.473 568.687 270.366 600.645C259.314 618.211 226.349 664.153 219.741 671.199C216.47 674.686 211.251 680.926 209 684.041C206.268 687.82 198.92 695.822 183.5 711.805C162.402 733.674 139.479 750.45 124.248 755.171C119.389 756.676 119.323 757.7 123.912 760.381C126.327 761.791 129.266 762.308 135.332 762.39C152.964 762.627 175.901 751.642 204.5 729.265C213.037 722.585 237.09 698.289 246.837 686.5C257.562 673.528 256.389 675.014 265.011 663.488C294.216 624.446 316.327 586.734 332.722 548C333.537 546.075 334.585 543.6 335.052 542.5C339.739 531.44 346 503.463 346 493.576C346 487.337 344.185 475.555 342.388 470.127C339.953 462.774 333.473 453 331.032 453C330.542 453 329.944 456.938 329.702 461.75M704.5 461.987C676.22 465.335 655.402 470.436 635.861 478.804C613.232 488.496 594.667 498.811 581.323 509.107C577.57 512.002 572.718 515.75 570.54 517.435C557.925 527.199 536.361 550.801 525.939 566.251C522.673 571.093 520 575.222 520 575.425C520 575.629 518.194 578.768 515.987 582.401C513.78 586.034 510.63 591.93 508.987 595.503C507.344 599.076 504.713 604.813 503.14 608.25C497.694 620.153 493.858 633.395 489.598 655C487.01 668.124 485.704 688.534 486.228 707.663L486.73 725.97L492.615 732.729C517.03 760.768 546.096 786.107 574.107 803.77C579.777 807.346 581.576 807.306 578.171 803.682C576.977 802.411 576 801.045 576 800.647C576 800.249 573.396 796.003 570.214 791.212C565.247 783.732 561.454 776.378 555.407 762.5C553.213 757.465 548.25 741.798 547.17 736.5C546.61 733.75 545.555 728.575 544.826 725C543.017 716.133 543.021 677.658 544.831 669.5C545.563 666.2 546.576 661.587 547.081 659.25C551.05 640.893 554.857 630.204 563.073 614.348C578.299 584.969 602.746 559.015 632 541.176C646.682 532.223 669.842 522.961 686.185 519.508C690.208 518.658 695.975 517.408 699 516.731C707.903 514.738 749.241 515.117 761.191 517.301C783.123 521.31 805.714 529.851 824.113 541.091C835.18 547.852 837.798 549.721 848.263 558.331C878.593 583.285 901.846 620.588 909.558 656.659C912.808 671.861 913.929 681.64 913.965 695.091C914.016 714.751 912.192 728.288 907.241 745C901.134 765.61 892.798 782.755 881.242 798.474C878.422 802.31 876.302 805.636 876.532 805.865C876.761 806.095 879.323 804.506 882.225 802.334C885.126 800.163 890.168 796.386 893.429 793.943C915.533 777.38 938.735 753.563 959.618 726C972.118 709.501 971.198 712.059 971.068 694.146C970.897 670.576 968.661 655.175 961.829 630.5C957.767 615.829 946.473 591.319 936.027 574.5C920.547 549.579 892.585 520.522 868.5 504.33C826.357 475.998 783.147 462.397 732.5 461.522C720.95 461.322 708.35 461.531 704.5 461.987M1096.5 465.604C1092.59 466.589 1085.627 470.527 1082.805 473.348C1076.863 479.291 1074.001 487.894 1075.039 496.696C1075.928 504.237 1076.565 505.316 1079.769 504.704C1082.336 504.213 1093.895 506.023 1099.628 507.814C1110.4 511.178 1134.412 524.433 1138 528.996C1138.275 529.346 1140.525 531.012 1143 532.699C1150.076 537.522 1164.972 553.61 1171.709 563.705C1175.087 568.767 1179.123 576.3 1180.676 580.444L1183.5 587.978L1190.261 587.989C1198.7 588.003 1204.558 585.445 1209.844 579.439C1216.921 571.4 1218.121 559.633 1213.013 548.368C1210.245 542.265 1202.753 530.435 1197.682 524.162C1194.342 520.03 1174.967 500.812 1170.5 497.2C1155.639 485.182 1133.686 472.262 1120.958 468.044C1114.714 465.975 1100.611 464.568 1096.5 465.604"/>
-    </svg>
-  ),
-}
-
-// Unread Badge Komponente für Apo-Tabs
-const UnreadBadge = ({ count }) => {
-  if (!count || count === 0) return null
-  return (
-    <span className="ml-auto flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-red-500 rounded-full">
-      {count > 99 ? '99+' : count}
-    </span>
-  )
-}
 
 function App() {
   const [session, setSession] = useState(null)
@@ -225,69 +76,286 @@ function App() {
   const [staffInviteLoading, setStaffInviteLoading] = useState(false)
   const [staffInviteMessage, setStaffInviteMessage] = useState('')
   const [staffAvatarFile, setStaffAvatarFile] = useState(null)
-  // Email Settings state
-  const [emailAccounts, setEmailAccounts] = useState([])
-  const [emailAccountsLoading, setEmailAccountsLoading] = useState(false)
-  const [emailPermissions, setEmailPermissions] = useState([])
-  const [currentUserEmailAccess, setCurrentUserEmailAccess] = useState(false)
-  const [editingEmailAccount, setEditingEmailAccount] = useState(null)
-  const [emailAccountForm, setEmailAccountForm] = useState({
-    name: '',
-    email: '',
-    password: '',
+  const {
+    emailAccounts,
+    emailPermissions,
+    currentUserEmailAccess,
+    editingEmailAccount,
+    emailAccountForm,
+    emailAccountSaving,
+    emailAccountMessage,
+    selectedEmailAccount,
+    setEmailAccountForm,
+    fetchEmailAccounts,
+    fetchEmailPermissions,
+    openEmailAccountModal,
+    closeEmailAccountModal,
+    handleSaveEmailAccount,
+    handleDeleteEmailAccount,
+    handleSelectEmailAccount,
+    toggleEmailPermission,
+  } = useEmailSettings({ sessionUserId: session?.user?.id })
+  const {
+    contacts,
+    contactsLoading,
+    contactsMessage,
+    editingContact,
+    contactForm,
+    contactSaveLoading,
+    contactSaveMessage,
+    ocrError,
+    contactCardFile,
+    contactCardPreview,
+    contactCardEnhancedFile,
+    contactCardEnhancedPreview,
+    contactCardRotation,
+    contactCardEnhancing,
+    businessCardScanning,
+    duplicateCheckResult,
+    duplicateDialogOpen,
+    contactSearch,
+    contactViewMode,
+    selectedContact,
+    selectedContactCardView,
+    selectedCardUrl,
+    selectedCardHasEnhanced,
+    selectedCardHasOriginal,
+    contactTypeLabels,
+    filteredContacts,
+    setContactSearch,
+    setContactViewMode,
+    setSelectedContact,
+    setSelectedContactCardView,
+    fetchContacts,
+    openContactModal,
+    closeContactModal,
+    handleContactInput,
+    deleteContact,
+    saveContact,
+    openContactDetail,
+    contactScanApi,
+  } = useContacts({ sessionUserId: session?.user?.id })
+
+  const {
+    checkContactDuplicates,
+    openContactFormWithOcrData,
+    handleDuplicateUpdate,
+    handleNewRepresentative,
+    handleCreateNewContact,
+  } = contactScan.useContactDuplicates({
+    supabase,
+    fetchContacts,
+    contactsApi: contactScanApi,
   })
-  const [emailAccountSaving, setEmailAccountSaving] = useState(false)
-  const [emailAccountMessage, setEmailAccountMessage] = useState('')
-  const [selectedEmailAccount, setSelectedEmailAccount] = useState(null)
-  // Contacts state
-  const [contacts, setContacts] = useState([])
-  const [contactsLoading, setContactsLoading] = useState(false)
-  const [contactsMessage, setContactsMessage] = useState('')
-  const [editingContact, setEditingContact] = useState(null)
-  const [contactForm, setContactForm] = useState({
-    firstName: '',
-    lastName: '',
-    company: '',
-    position: '',
-    email: '',
-    phone: '',
-    mobile: '',
-    fax: '',
-    website: '',
-    street: '',
-    postalCode: '',
-    city: '',
-    country: 'DE',
-    contactType: 'business',
-    tags: [],
-    notes: '',
-    shared: true,
-    businessCardUrl: '',
-    businessCardUrlEnhanced: '',
-    status: 'aktiv',
-    predecessorId: null,
-    transitionDate: null,
+
+  const [mistralApiKey, setMistralApiKey] = useState(null)
+  const [googleApiKey, setGoogleApiKey] = useState(null)
+
+  // API Key Fetch-Funktionen (müssen vor useBusinessCardScan definiert sein)
+  const fetchMistralApiKey = async () => {
+    const { data, error } = await supabase
+      .from('api_keys')
+      .select('key')
+      .eq('name', 'Mistral')
+      .single()
+    if (!error && data) {
+      setMistralApiKey(data.key)
+      return data.key
+    }
+    return null
+  }
+
+  const fetchGoogleApiKey = async () => {
+    console.log('fetchGoogleApiKey: Suche nach Google Nano Banana Key...')
+    const { data, error } = await supabase
+      .from('api_keys')
+      .select('key')
+      .eq('name', 'Google Nano Banana')
+      .single()
+    console.log('fetchGoogleApiKey Result:', { found: !!data, error: error?.message })
+    if (!error && data) {
+      setGoogleApiKey(data.key)
+      return data.key
+    }
+    const { data: fallbackData, error: fallbackError } = await supabase
+      .from('api_keys')
+      .select('key')
+      .ilike('name', '%google%nano%banana%')
+      .limit(1)
+      .single()
+    console.log('fetchGoogleApiKey Fallback:', { found: !!fallbackData, error: fallbackError?.message })
+    if (!fallbackError && fallbackData) {
+      setGoogleApiKey(fallbackData.key)
+      return fallbackData.key
+    }
+    return null
+  }
+
+  // Bildverarbeitungsfunktionen (müssen vor useBusinessCardScan definiert sein)
+  const detectRotationWithAI = async (file, apiKey) => {
+    const base64 = await new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result.split(',')[1])
+      reader.readAsDataURL(file)
+    })
+    const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'pixtral-12b-2409',
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: 'Analysiere dieses Bild einer Visitenkarte. Um wie viel Grad im Uhrzeigersinn muss es gedreht werden, damit der Text richtig lesbar ist (horizontal, von links nach rechts)? Antworte NUR mit einer Zahl: 0, 90, 180 oder 270'
+            },
+            {
+              type: 'image_url',
+              image_url: { url: `data:image/jpeg;base64,${base64}` }
+            }
+          ]
+        }],
+        max_tokens: 10,
+      }),
+    })
+    const result = await response.json()
+    const content = result.choices?.[0]?.message?.content || '0'
+    const match = content.match(/\b(0|90|180|270)\b/)
+    return match ? parseInt(match[1], 10) : 0
+  }
+
+  const rotateImageByDegrees = (file, degrees) => {
+    if (degrees === 0) return Promise.resolve(file)
+    return new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const img = new Image()
+        img.onload = () => {
+          const canvas = document.createElement('canvas')
+          const ctx = canvas.getContext('2d')
+          if (degrees === 90 || degrees === 270) {
+            canvas.width = img.height
+            canvas.height = img.width
+          } else {
+            canvas.width = img.width
+            canvas.height = img.height
+          }
+          ctx.translate(canvas.width / 2, canvas.height / 2)
+          ctx.rotate((degrees * Math.PI) / 180)
+          ctx.drawImage(img, -img.width / 2, -img.height / 2)
+          canvas.toBlob((blob) => {
+            resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }))
+          }, 'image/jpeg', 0.95)
+        }
+        img.src = e.target.result
+      }
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const compressImage = (file, maxWidth = 800, quality = 0.7) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const img = new Image()
+        img.onload = () => {
+          const canvas = document.createElement('canvas')
+          let width = img.width
+          let height = img.height
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width
+            width = maxWidth
+          }
+          canvas.width = width
+          canvas.height = height
+          const ctx = canvas.getContext('2d')
+          ctx.drawImage(img, 0, 0, width, height)
+          canvas.toBlob((blob) => {
+            resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }))
+          }, 'image/jpeg', quality)
+        }
+        img.src = e.target.result
+      }
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const getEnhancedImage = async (file, apiKey) => {
+    const base64 = await new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result.split(',')[1])
+      reader.readAsDataURL(file)
+    })
+    const response = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey,
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              {
+                inline_data: {
+                  mime_type: file.type || 'image/jpeg',
+                  data: base64
+                }
+              },
+              {
+                text: `Enhance this business card photo:
+1. Crop tightly to the card edges
+2. Correct perspective distortion (make edges straight and rectangular)
+3. Improve sharpness and readability
+4. Keep all text, logos, and colors exactly as they are
+5. Output as a clean, professional-looking scan`
+              }
+            ]
+          }],
+          generationConfig: {
+            responseModalities: ['TEXT', 'IMAGE'],
+          }
+        })
+      }
+    )
+    const result = await response.json()
+    console.log('Nano Banana Pro Response:', response.status, result)
+    const imagePart = result.candidates?.[0]?.content?.parts?.find(p => p.inlineData)
+    if (imagePart?.inlineData?.data) {
+      const binaryString = atob(imagePart.inlineData.data)
+      const bytes = new Uint8Array(binaryString.length)
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i)
+      }
+      const blob = new Blob([bytes], { type: imagePart.inlineData.mimeType || 'image/png' })
+      const previewUrl = URL.createObjectURL(blob)
+      const enhancedFile = new File([blob], 'enhanced.png', { type: blob.type })
+      return { previewUrl, enhancedFile }
+    }
+    throw new Error('Keine verbesserte Bilddaten in der Antwort')
+  }
+
+  const { handleBusinessCardScan } = contactScan.useBusinessCardScan({
+    mistralApiKey,
+    googleApiKey,
+    fetchMistralApiKey,
+    fetchGoogleApiKey,
+    detectRotationWithAI,
+    rotateImageByDegrees,
+    compressImage,
+    getEnhancedImage,
+    checkContactDuplicates,
+    openContactFormWithOcrData,
+    contactsApi: contactScanApi,
   })
-  const [contactSaveLoading, setContactSaveLoading] = useState(false)
-  const [contactSaveMessage, setContactSaveMessage] = useState('')
-  const [contactCardFile, setContactCardFile] = useState(null)
-  const [contactCardPreview, setContactCardPreview] = useState('')
-  const [contactCardEnhancedFile, setContactCardEnhancedFile] = useState(null)
-  const [contactCardEnhancedPreview, setContactCardEnhancedPreview] = useState('')
-  const [contactCardRotation, setContactCardRotation] = useState(0)
-  const [contactCardEnhancing, setContactCardEnhancing] = useState(false)
-  const contactCardInputRef = useRef(null)
   const businessCardScanRef = useRef(null)
   const mobileNavTimerRef = useRef(null)
   const isInitialMount = useRef(true)
-  const [businessCardScanning, setBusinessCardScanning] = useState(false)
-  const [businessCardOcrResult, setBusinessCardOcrResult] = useState(null)
-  const [duplicateCheckResult, setDuplicateCheckResult] = useState(null) // { type: 'email'|'phone'|'company', matches: [], ocrData: {} }
-  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false)
-  const [contactSearch, setContactSearch] = useState('')
-  const [contactViewMode, setContactViewMode] = useState('cards') // 'cards' | 'list'
-  const [selectedContact, setSelectedContact] = useState(null) // Für Detail-Ansicht
-  const [selectedContactCardView, setSelectedContactCardView] = useState('enhanced') // 'enhanced' | 'original'
   const [staffAvatarPreview, setStaffAvatarPreview] = useState('')
   const [weatherLocation, setWeatherLocation] = useState('')
   const [weatherInput, setWeatherInput] = useState('')
@@ -322,8 +390,6 @@ function App() {
   const pznCameraInputRef = useRef(null)
   const [isDrawing, setIsDrawing] = useState(false)
   const [photoOcrData, setPhotoOcrData] = useState({})
-  const [mistralApiKey, setMistralApiKey] = useState(null)
-  const [googleApiKey, setGoogleApiKey] = useState(null)
   const [enhanceFile, setEnhanceFile] = useState(null)
   const [enhancePreview, setEnhancePreview] = useState('')
   const [enhanceResultPreview, setEnhanceResultPreview] = useState('')
@@ -1138,200 +1204,6 @@ function App() {
     setStaffLoading(false)
   }
 
-  // Email Account functions (Supabase)
-  const fetchEmailAccounts = async () => {
-    if (!session?.user?.id) return
-    setEmailAccountsLoading(true)
-    const { data, error } = await supabase
-      .from('email_accounts')
-      .select('id, name, email, password')
-      .order('name', { ascending: true })
-
-    if (error) {
-      console.error('Fehler beim Laden der E-Mail-Accounts:', error.message)
-      setEmailAccounts([])
-    } else {
-      setEmailAccounts(data || [])
-      // Wenn Accounts vorhanden und keiner ausgewählt, ersten auswählen
-      if (data?.length > 0 && !selectedEmailAccount) {
-        setSelectedEmailAccount(data[0].id)
-      }
-    }
-    setEmailAccountsLoading(false)
-  }
-
-  const openEmailAccountModal = (account = null) => {
-    if (account) {
-      setEditingEmailAccount(account.id)
-      setEmailAccountForm({
-        name: account.name || '',
-        email: account.email || '',
-        password: account.password || '',
-      })
-    } else {
-      setEditingEmailAccount('new')
-      setEmailAccountForm({
-        name: '',
-        email: '',
-        password: '',
-      })
-    }
-    setEmailAccountMessage('')
-  }
-
-  const closeEmailAccountModal = () => {
-    setEditingEmailAccount(null)
-    setEmailAccountForm({ name: '', email: '', password: '' })
-    setEmailAccountMessage('')
-  }
-
-  const handleSaveEmailAccount = async () => {
-    if (!emailAccountForm.email || !emailAccountForm.password) {
-      setEmailAccountMessage('E-Mail und Passwort sind erforderlich')
-      return
-    }
-
-    setEmailAccountSaving(true)
-    setEmailAccountMessage('')
-
-    // Test der Verbindung über Proxy
-    const jmapBaseUrl = import.meta.env.VITE_JMAP_URL || ''
-    try {
-      const credentials = btoa(`${emailAccountForm.email}:${emailAccountForm.password}`)
-      const response = await fetch(`${jmapBaseUrl}/jmap/session`, {
-        headers: { 'Authorization': `Basic ${credentials}` }
-      })
-
-      if (!response.ok) {
-        throw new Error('Authentifizierung fehlgeschlagen - bitte Zugangsdaten prüfen')
-      }
-
-      // Verbindung erfolgreich - Account in Supabase speichern (global für alle)
-      const accountData = {
-        name: emailAccountForm.name || emailAccountForm.email.split('@')[0],
-        email: emailAccountForm.email,
-        password: emailAccountForm.password,
-      }
-
-      let savedAccount
-      if (editingEmailAccount === 'new') {
-        const { data, error } = await supabase
-          .from('email_accounts')
-          .insert(accountData)
-          .select()
-          .single()
-        if (error) throw new Error(error.message)
-        savedAccount = data
-      } else {
-        const { data, error } = await supabase
-          .from('email_accounts')
-          .update(accountData)
-          .eq('id', editingEmailAccount)
-          .select()
-          .single()
-        if (error) throw new Error(error.message)
-        savedAccount = data
-      }
-
-      // Accounts neu laden
-      await fetchEmailAccounts()
-
-      // Wenn erster Account oder keiner ausgewählt, diesen auswählen
-      if (emailAccounts.length === 0 || !selectedEmailAccount) {
-        setSelectedEmailAccount(savedAccount.id)
-      }
-
-      closeEmailAccountModal()
-    } catch (err) {
-      setEmailAccountMessage(err.message || 'Verbindung fehlgeschlagen')
-    } finally {
-      setEmailAccountSaving(false)
-    }
-  }
-
-  const handleDeleteEmailAccount = async (accountId) => {
-    const { error } = await supabase
-      .from('email_accounts')
-      .delete()
-      .eq('id', accountId)
-
-    if (error) {
-      console.error('Fehler beim Löschen:', error.message)
-      return
-    }
-
-    // Accounts neu laden
-    await fetchEmailAccounts()
-
-    if (selectedEmailAccount === accountId) {
-      const remaining = emailAccounts.filter(a => a.id !== accountId)
-      setSelectedEmailAccount(remaining[0]?.id || null)
-    }
-  }
-
-  const handleSelectEmailAccount = (accountId) => {
-    setSelectedEmailAccount(accountId)
-  }
-
-  // Email Permissions functions (Admin only)
-  const fetchEmailPermissions = async () => {
-    const { data, error } = await supabase
-      .from('email_permissions')
-      .select('*')
-
-    if (!error && data) {
-      setEmailPermissions(data)
-      // Prüfen ob aktueller Nutzer Zugriff hat
-      const currentUserPermission = data.find(p => p.user_id === session?.user?.id)
-      setCurrentUserEmailAccess(currentUserPermission?.has_access || false)
-    }
-  }
-
-  const toggleEmailPermission = async (userId, currentAccess) => {
-    // Prüfen ob Permission bereits existiert
-    const existing = emailPermissions.find(p => p.user_id === userId)
-
-    if (existing) {
-      // Update
-      const { error } = await supabase
-        .from('email_permissions')
-        .update({ has_access: !currentAccess, updated_at: new Date().toISOString() })
-        .eq('user_id', userId)
-
-      if (!error) {
-        await fetchEmailPermissions()
-      }
-    } else {
-      // Insert
-      const { error } = await supabase
-        .from('email_permissions')
-        .insert({ user_id: userId, has_access: true })
-
-      if (!error) {
-        await fetchEmailPermissions()
-      }
-    }
-  }
-
-  // Contacts functions
-  const fetchContacts = async () => {
-    setContactsLoading(true)
-    const { data, error } = await supabase
-      .from('contacts')
-      .select('*')
-      .order('company', { ascending: true })
-      .order('last_name', { ascending: true })
-
-    if (error) {
-      setContactsMessage(error.message)
-      setContacts([])
-    } else {
-      setContactsMessage('')
-      setContacts(data || [])
-    }
-    setContactsLoading(false)
-  }
-
   // GH-Rechnungen laden
   const fetchRechnungen = async () => {
     setRechnungenLoading(true)
@@ -1372,53 +1244,6 @@ function App() {
   const closePdfModal = () => {
     setPdfModalOpen(false)
     setSelectedPdf(null)
-  }
-
-  const openContactModal = (contact = null) => {
-    setEditingContact(contact || { id: null })
-    setContactSaveMessage('')
-    setContactForm({
-      firstName: contact?.first_name || '',
-      lastName: contact?.last_name || '',
-      company: contact?.company || '',
-      position: contact?.position || '',
-      email: contact?.email || '',
-      phone: contact?.phone || '',
-      mobile: contact?.mobile || '',
-      fax: contact?.fax || '',
-      website: contact?.website || '',
-      street: contact?.street || '',
-      postalCode: contact?.postal_code || '',
-      city: contact?.city || '',
-      country: contact?.country || 'DE',
-      contactType: contact?.contact_type || 'business',
-      tags: contact?.tags || [],
-      notes: contact?.notes || '',
-      shared: contact?.shared ?? true,
-      businessCardUrl: contact?.business_card_url || '',
-      businessCardUrlEnhanced: contact?.business_card_url_enhanced || '',
-    })
-    setContactCardFile(null)
-    setContactCardEnhancedFile(null)
-    setContactCardEnhancedPreview(contact?.business_card_url_enhanced || '')
-    setContactCardPreview(contact?.business_card_url_enhanced || contact?.business_card_url || '')
-    setContactCardEnhancing(false)
-    setContactCardRotation(0)
-  }
-
-  const closeContactModal = () => {
-    setEditingContact(null)
-    setContactSaveMessage('')
-    setContactCardFile(null)
-    setContactCardPreview('')
-    setContactCardEnhancedFile(null)
-    setContactCardEnhancedPreview('')
-    setContactCardEnhancing(false)
-    setContactCardRotation(0)
-  }
-
-  const handleContactInput = (field, value) => {
-    setContactForm((prev) => ({ ...prev, [field]: value }))
   }
 
   // EXIF-Orientation aus JPEG auslesen (1-8)
@@ -1508,110 +1333,6 @@ function App() {
     })
   }
 
-  // KI-basierte Rotationserkennung für Visitenkarten
-  const detectRotationWithAI = async (file, apiKey) => {
-    const base64 = await new Promise((resolve) => {
-      const reader = new FileReader()
-      reader.onload = () => resolve(reader.result.split(',')[1])
-      reader.readAsDataURL(file)
-    })
-
-    const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'pixtral-12b-2409',
-        messages: [{
-          role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: 'Analysiere dieses Bild einer Visitenkarte. Um wie viel Grad im Uhrzeigersinn muss es gedreht werden, damit der Text richtig lesbar ist (horizontal, von links nach rechts)? Antworte NUR mit einer Zahl: 0, 90, 180 oder 270'
-            },
-            {
-              type: 'image_url',
-              image_url: { url: `data:image/jpeg;base64,${base64}` }
-            }
-          ]
-        }],
-        max_tokens: 10,
-      }),
-    })
-
-    const result = await response.json()
-    const content = result.choices?.[0]?.message?.content || '0'
-    const match = content.match(/\b(0|90|180|270)\b/)
-    return match ? parseInt(match[1], 10) : 0
-  }
-
-  // Bild um bestimmten Winkel drehen
-  const rotateImageByDegrees = (file, degrees) => {
-    if (degrees === 0) return Promise.resolve(file)
-
-    return new Promise((resolve) => {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const img = new Image()
-        img.onload = () => {
-          const canvas = document.createElement('canvas')
-          const ctx = canvas.getContext('2d')
-
-          if (degrees === 90 || degrees === 270) {
-            canvas.width = img.height
-            canvas.height = img.width
-          } else {
-            canvas.width = img.width
-            canvas.height = img.height
-          }
-
-          ctx.translate(canvas.width / 2, canvas.height / 2)
-          ctx.rotate((degrees * Math.PI) / 180)
-          ctx.drawImage(img, -img.width / 2, -img.height / 2)
-
-          canvas.toBlob((blob) => {
-            resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }))
-          }, 'image/jpeg', 0.95)
-        }
-        img.src = e.target.result
-      }
-      reader.readAsDataURL(file)
-    })
-  }
-
-  // Bild komprimieren (max 800px Breite, 70% Qualität)
-  const compressImage = (file, maxWidth = 800, quality = 0.7) => {
-    return new Promise((resolve) => {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const img = new Image()
-        img.onload = () => {
-          const canvas = document.createElement('canvas')
-          let width = img.width
-          let height = img.height
-
-          if (width > maxWidth) {
-            height = (height * maxWidth) / width
-            width = maxWidth
-          }
-
-          canvas.width = width
-          canvas.height = height
-          const ctx = canvas.getContext('2d')
-          ctx.drawImage(img, 0, 0, width, height)
-
-          canvas.toBlob((blob) => {
-            resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }))
-          }, 'image/jpeg', quality)
-        }
-        img.src = e.target.result
-      }
-      reader.readAsDataURL(file)
-    })
-  }
-
   const rotateImage = (file, degrees) => {
     return new Promise((resolve) => {
       if (degrees === 0) {
@@ -1643,12 +1364,12 @@ function App() {
   const handleContactCardChange = (event) => {
     const file = event.target.files?.[0]
     if (!file) return
-    setContactCardFile(file)
-    setContactCardPreview(URL.createObjectURL(file))
-    setContactCardEnhancedFile(null)
-    setContactCardEnhancedPreview('')
-    setContactCardEnhancing(false)
-    setContactCardRotation(0)
+    contactScanApi.setContactCardFile(file)
+    contactScanApi.setContactCardPreview(URL.createObjectURL(file))
+    contactScanApi.setContactCardEnhancedFile(null)
+    contactScanApi.setContactCardEnhancedPreview('')
+    contactScanApi.setContactCardEnhancing(false)
+    contactScanApi.setContactCardRotation(0)
   }
 
   const handleEnhanceFileChange = (event) => {
@@ -1658,81 +1379,6 @@ function App() {
     setEnhancePreview(URL.createObjectURL(file))
     setEnhanceResultPreview('')
     setEnhanceMessage('')
-  }
-
-  const getEnhancedImage = async (file, apiKey) => {
-    // Bild als Base64 konvertieren
-    const base64 = await new Promise((resolve) => {
-      const reader = new FileReader()
-      reader.onload = () => resolve(reader.result.split(',')[1])
-      reader.readAsDataURL(file)
-    })
-
-    // Google Nano Banana Pro API aufrufen
-    const response = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': apiKey,
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              {
-                inline_data: {
-                  mime_type: file.type || 'image/jpeg',
-                  data: base64
-                }
-              },
-              {
-                text: `Enhance this business card photo:
-1. Crop tightly to the card edges
-2. Correct perspective distortion (make edges straight and rectangular)
-3. Improve sharpness and readability
-4. Keep all text, logos, and colors exactly as they are
-5. Output as a clean, professional-looking scan`
-              }
-            ]
-          }],
-          generationConfig: {
-            responseModalities: ['TEXT', 'IMAGE'],
-          }
-        })
-      }
-    )
-
-    const result = await response.json()
-    console.log('Nano Banana Pro Response:', response.status, result)
-
-    if (!response.ok) {
-      throw new Error(result?.error?.message || 'Google Nano Banana Pro Anfrage fehlgeschlagen.')
-    }
-
-    // Bild aus Response extrahieren
-    const parts = result?.candidates?.[0]?.content?.parts || []
-    console.log('Nano Banana Pro Parts:', parts.map(p => ({ hasImage: !!p.inlineData, hasText: !!p.text })))
-    const imagePart = parts.find(p => p.inlineData?.data)
-
-    if (!imagePart) {
-      throw new Error('Kein Bild von Nano Banana Pro erhalten. Parts: ' + JSON.stringify(parts.map(p => Object.keys(p))))
-    }
-
-    // Base64 zu Blob konvertieren
-    const byteString = atob(imagePart.inlineData.data)
-    const byteArray = new Uint8Array(byteString.length)
-    for (let i = 0; i < byteString.length; i += 1) {
-      byteArray[i] = byteString.charCodeAt(i)
-    }
-    const mimeType = imagePart.inlineData.mimeType || 'image/png'
-    const blob = new Blob([byteArray], { type: mimeType })
-
-    const previewUrl = URL.createObjectURL(blob)
-    const enhancedFile = new File([blob], 'business-card-enhanced.png', {
-      type: mimeType,
-    })
-    return { previewUrl, enhancedFile }
   }
 
   const runBusinessCardEnhance = async () => {
@@ -1763,497 +1409,6 @@ function App() {
       setEnhanceLoading(false)
     }
   }
-
-  // Duplikat-Prüfung für Kontakte
-  const checkContactDuplicates = async (ocrData) => {
-    const checks = []
-
-    // 1. Prüfe E-Mail
-    if (ocrData.email?.trim()) {
-      const { data: emailMatches } = await supabase
-        .from('contacts')
-        .select('*')
-        .ilike('email', ocrData.email.trim())
-        .eq('status', 'aktiv')
-      if (emailMatches?.length > 0) {
-        checks.push({ type: 'email', matches: emailMatches, field: ocrData.email })
-      }
-    }
-
-    // 2. Prüfe Telefon/Mobil
-    const phoneToCheck = ocrData.phone?.trim() || ocrData.mobile?.trim()
-    if (phoneToCheck) {
-      const normalizedPhone = phoneToCheck.replace(/[\s\-\/]/g, '')
-      const { data: phoneMatches } = await supabase
-        .from('contacts')
-        .select('*')
-        .eq('status', 'aktiv')
-        .or(`phone.ilike.%${normalizedPhone}%,mobile.ilike.%${normalizedPhone}%`)
-      if (phoneMatches?.length > 0) {
-        checks.push({ type: 'phone', matches: phoneMatches, field: phoneToCheck })
-      }
-    }
-
-    // 3. Prüfe Firma (für Vertreterwechsel)
-    if (ocrData.company?.trim()) {
-      const { data: companyMatches } = await supabase
-        .from('contacts')
-        .select('*')
-        .ilike('company', ocrData.company.trim())
-        .eq('status', 'aktiv')
-
-      // Nur wenn andere Person bei gleicher Firma
-      const differentPerson = companyMatches?.filter((c) =>
-        c.first_name?.toLowerCase() !== ocrData.firstName?.toLowerCase() ||
-        c.last_name?.toLowerCase() !== ocrData.lastName?.toLowerCase()
-      )
-      if (differentPerson?.length > 0) {
-        checks.push({ type: 'company', matches: differentPerson, field: ocrData.company })
-      }
-    }
-
-    return checks
-  }
-
-  // Visitenkarte scannen und OCR durchführen
-  const handleBusinessCardScan = async (event) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-
-    setBusinessCardScanning(true)
-    setBusinessCardOcrResult(null)
-    setDuplicateCheckResult(null)
-    setContactSaveMessage('')
-
-    try {
-      // API Keys holen
-      let apiKey = mistralApiKey
-      if (!apiKey) {
-        apiKey = await fetchMistralApiKey()
-      }
-      if (!apiKey) {
-        throw new Error('Mistral API Key nicht gefunden')
-      }
-
-      // 1. KI-basierte Rotationserkennung (ohne EXIF)
-      const aiRotation = await detectRotationWithAI(file, apiKey)
-      const rotatedFile = await rotateImageByDegrees(file, aiRotation)
-
-      // 2. Google Nano Banana Pro Enhancement parallel starten mit unkomprimiertem Bild
-      let googleKey = googleApiKey
-      if (!googleKey) {
-        googleKey = await fetchGoogleApiKey()
-      }
-      if (!googleKey) {
-        console.warn('Google Nano Banana API Key nicht gefunden - KI-Verbesserung übersprungen')
-      }
-      if (googleKey) {
-        setContactCardEnhancing(true)
-        getEnhancedImage(rotatedFile, googleKey)
-          .then(({ previewUrl, enhancedFile }) => {
-            setContactCardEnhancedFile(enhancedFile)
-            setContactCardEnhancedPreview(previewUrl)
-            setContactCardPreview(previewUrl)
-          })
-          .catch((error) => {
-            console.warn('Nano Banana Pro Enhance fehlgeschlagen:', error)
-          })
-          .finally(() => {
-            setContactCardEnhancing(false)
-          })
-      }
-
-      // 3. Komprimieren für Speicherung und Preview
-      const compressedFile = await compressImage(rotatedFile, 1200, 0.8)
-      setContactCardFile(compressedFile)
-      // NICHT setContactCardEnhancedFile(null) - das würde das KI-Ergebnis überschreiben!
-      setContactCardPreview(URL.createObjectURL(compressedFile))
-      setContactCardRotation(0)
-
-      // 4. Bild als Base64 für OCR (rotiertes Bild)
-      const base64 = await new Promise((resolve) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve(reader.result.split(',')[1])
-        reader.readAsDataURL(rotatedFile)
-      })
-
-      // 5. OCR mit mistral-ocr-latest über /v1/ocr Endpunkt
-      const ocrResponse = await fetch('https://api.mistral.ai/v1/ocr', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: 'mistral-ocr-latest',
-          document: {
-            type: 'image_url',
-            image_url: `data:image/jpeg;base64,${base64}`
-          }
-        }),
-      })
-
-      const ocrResult = await ocrResponse.json()
-      const ocrText = ocrResult.pages?.[0]?.markdown || ''
-
-      if (!ocrText) {
-        throw new Error('OCR hat keinen Text erkannt')
-      }
-
-      // 6. OCR-Text mit Pixtral in strukturiertes JSON umwandeln
-      const structureResponse = await fetch('https://api.mistral.ai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: 'mistral-small-latest',
-          messages: [{
-            role: 'user',
-            content: `Extrahiere aus diesem Visitenkarten-Text die Kontaktdaten als JSON. Antworte NUR mit dem JSON-Objekt, ohne Erklärung:
-
-Text von der Visitenkarte:
-${ocrText}
-
-Erwartetes Format:
-{
-  "firstName": "",
-  "lastName": "",
-  "company": "",
-  "position": "",
-  "email": "",
-  "phone": "",
-  "mobile": "",
-  "fax": "",
-  "website": "",
-  "street": "",
-  "postalCode": "",
-  "city": ""
-}
-Fülle nur Felder aus, die im Text eindeutig erkennbar sind. Lasse unbekannte Felder leer.`
-          }],
-          max_tokens: 500,
-        }),
-      })
-
-      const structureResult = await structureResponse.json()
-      const content = structureResult.choices?.[0]?.message?.content || ''
-
-      // JSON extrahieren
-      const jsonMatch = content.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0])
-        setBusinessCardOcrResult(parsed)
-
-        // Duplikat-Prüfung
-        const duplicates = await checkContactDuplicates(parsed)
-
-        if (duplicates.length > 0) {
-          // Duplikate gefunden - Dialog zeigen
-          setDuplicateCheckResult({ checks: duplicates, ocrData: parsed })
-          setDuplicateDialogOpen(true)
-        } else {
-          // Kein Duplikat - direkt Formular öffnen
-          openContactFormWithOcrData(parsed)
-        }
-      } else {
-        throw new Error('Konnte keine strukturierten Daten aus OCR-Text extrahieren')
-      }
-    } catch (err) {
-      console.error('Visitenkarten-Scan fehlgeschlagen:', err)
-      setContactSaveMessage('OCR fehlgeschlagen: ' + (err.message || 'Unbekannter Fehler'))
-    } finally {
-      setBusinessCardScanning(false)
-      // Input zurücksetzen für erneuten Scan
-      event.target.value = ''
-    }
-  }
-
-  // Kontaktformular mit OCR-Daten öffnen
-  const openContactFormWithOcrData = (ocrData, predecessorId = null, transitionDate = null) => {
-    setEditingContact({ id: null })
-    setContactSaveMessage('')
-    setContactForm({
-      firstName: ocrData.firstName || '',
-      lastName: ocrData.lastName || '',
-      company: ocrData.company || '',
-      position: ocrData.position || '',
-      email: ocrData.email || '',
-      phone: ocrData.phone || '',
-      mobile: ocrData.mobile || '',
-      fax: ocrData.fax || '',
-      website: ocrData.website || '',
-      street: ocrData.street || '',
-      postalCode: ocrData.postalCode || '',
-      city: ocrData.city || '',
-      country: 'DE',
-      contactType: 'business',
-      tags: [],
-      notes: '',
-      shared: true,
-      businessCardUrl: '',
-      businessCardUrlEnhanced: '',
-      status: 'aktiv',
-      predecessorId: predecessorId,
-      transitionDate: transitionDate,
-    })
-    setDuplicateDialogOpen(false)
-  }
-
-  // Duplikat-Dialog: Bestehenden Kontakt aktualisieren
-  const handleDuplicateUpdate = async (existingContact) => {
-    setEditingContact(existingContact)
-    setContactSaveMessage('')
-    const ocrData = duplicateCheckResult?.ocrData || {}
-    // Behalte das neue Foto (contactCardFile bleibt unverändert aus dem Scan)
-    // Preview zeigt das neue Foto, businessCardUrl bleibt leer damit das neue Foto hochgeladen wird
-    setContactForm({
-      firstName: ocrData.firstName || existingContact.first_name || '',
-      lastName: ocrData.lastName || existingContact.last_name || '',
-      company: ocrData.company || existingContact.company || '',
-      position: ocrData.position || existingContact.position || '',
-      email: ocrData.email || existingContact.email || '',
-      phone: ocrData.phone || existingContact.phone || '',
-      mobile: ocrData.mobile || existingContact.mobile || '',
-      fax: ocrData.fax || existingContact.fax || '',
-      website: ocrData.website || existingContact.website || '',
-      street: ocrData.street || existingContact.street || '',
-      postalCode: ocrData.postalCode || existingContact.postal_code || '',
-      city: ocrData.city || existingContact.city || '',
-      country: existingContact.country || 'DE',
-      contactType: existingContact.contact_type || 'business',
-      tags: existingContact.tags || [],
-      notes: existingContact.notes || '',
-      shared: existingContact.shared ?? true,
-      businessCardUrl: '', // Leer lassen - neues Foto wird beim Speichern hochgeladen
-      businessCardUrlEnhanced: '', // Leer lassen - neues KI-Bild wird beim Speichern hochgeladen
-      status: existingContact.status || 'aktiv',
-      predecessorId: existingContact.predecessor_id || null,
-      transitionDate: existingContact.transition_date || null,
-    })
-    // Preview zeigt das neue gescannte Foto (wurde in handleBusinessCardScan gesetzt)
-    setDuplicateDialogOpen(false)
-  }
-
-  // Duplikat-Dialog: Neuer Vertreter (Vorgänger wird inaktiv)
-  const handleNewRepresentative = async (predecessorContact) => {
-    const today = new Date().toISOString().split('T')[0]
-
-    // Alten Kontakt auf inaktiv setzen
-    await supabase
-      .from('contacts')
-      .update({ status: 'inaktiv' })
-      .eq('id', predecessorContact.id)
-
-    // Neuen Kontakt mit Vorgänger-Referenz öffnen
-    const ocrData = duplicateCheckResult?.ocrData || {}
-    openContactFormWithOcrData(ocrData, predecessorContact.id, today)
-
-    // Kontakte neu laden
-    fetchContacts()
-  }
-
-  // Duplikat-Dialog: Komplett neuen Kontakt erstellen
-  const handleCreateNewContact = () => {
-    const ocrData = duplicateCheckResult?.ocrData || {}
-    openContactFormWithOcrData(ocrData)
-  }
-
-  const handleContactSubmit = async (e) => {
-    e.preventDefault()
-    if (!editingContact) return
-    if (!contactForm.firstName.trim() && !contactForm.lastName.trim() && !contactForm.company.trim()) {
-      setContactSaveMessage('Bitte mindestens Name oder Firma eingeben.')
-      return
-    }
-
-    // Find current staff member for owner_id
-    if (!currentStaff?.id) {
-      setContactSaveMessage('Kein Mitarbeiter-Profil gefunden.')
-      return
-    }
-
-    if (contactCardEnhancing) {
-      setContactSaveMessage('KI-Verbesserung läuft noch, bitte kurz warten.')
-      return
-    }
-
-    setContactSaveLoading(true)
-    const payload = {
-      owner_id: editingContact.owner_id || currentStaff.id,
-      first_name: contactForm.firstName.trim(),
-      last_name: contactForm.lastName.trim(),
-      company: contactForm.company.trim(),
-      position: contactForm.position.trim(),
-      email: contactForm.email.trim(),
-      phone: contactForm.phone.trim(),
-      mobile: contactForm.mobile.trim(),
-      fax: contactForm.fax.trim(),
-      website: contactForm.website.trim(),
-      street: contactForm.street.trim(),
-      postal_code: contactForm.postalCode.trim(),
-      city: contactForm.city.trim(),
-      country: contactForm.country.trim() || 'DE',
-      contact_type: contactForm.contactType,
-      tags: contactForm.tags,
-      notes: contactForm.notes.trim(),
-      shared: contactForm.shared,
-      business_card_url: contactForm.businessCardUrl || null,
-      business_card_url_enhanced: contactForm.businessCardUrlEnhanced || null,
-      status: contactForm.status || 'aktiv',
-      predecessor_id: contactForm.predecessorId || null,
-      transition_date: contactForm.transitionDate || null,
-    }
-
-    const uploadBusinessCard = async (contactId, file, suffix, contentType = 'image/jpeg') => {
-      if (!file) return null
-      // Bild drehen falls nötig
-      const fileToUpload = suffix === 'original' && contactCardRotation !== 0
-        ? await rotateImage(file, contactCardRotation)
-        : file
-      const filePath = `${contactId}/${Date.now()}-${suffix}.${contentType === 'image/png' ? 'png' : 'jpg'}`
-      const { error: uploadError } = await supabase
-        .storage
-        .from('business-cards')
-        .upload(filePath, fileToUpload, { upsert: true, contentType })
-
-      if (uploadError) {
-        throw new Error(uploadError.message)
-      }
-
-      const { data } = supabase
-        .storage
-        .from('business-cards')
-        .getPublicUrl(filePath)
-      return data.publicUrl
-    }
-
-    let saveError = null
-    let savedId = editingContact.id
-    if (editingContact.id) {
-      const { error } = await supabase
-        .from('contacts')
-        .update(payload)
-        .eq('id', editingContact.id)
-      saveError = error
-    } else {
-      const { data, error } = await supabase
-        .from('contacts')
-        .insert(payload)
-        .select('id')
-        .single()
-      saveError = error
-      savedId = data?.id
-    }
-
-    if (saveError) {
-      setContactSaveMessage(saveError.message)
-      setContactSaveLoading(false)
-      return
-    }
-
-    if (contactCardFile && savedId) {
-      try {
-        const originalUrl = await uploadBusinessCard(savedId, contactCardFile, 'original', 'image/jpeg')
-        const enhancedUrl = contactCardEnhancedFile
-          ? await uploadBusinessCard(savedId, contactCardEnhancedFile, 'enhanced', contactCardEnhancedFile.type || 'image/png')
-          : null
-        const updatePayload = {
-          business_card_url: originalUrl || contactForm.businessCardUrl || null,
-          business_card_url_enhanced: enhancedUrl || contactForm.businessCardUrlEnhanced || null,
-        }
-        await supabase
-          .from('contacts')
-          .update(updatePayload)
-          .eq('id', savedId)
-      } catch (error) {
-        setContactSaveMessage(error.message || 'Visitenkarte konnte nicht gespeichert werden.')
-        setContactSaveLoading(false)
-        return
-      }
-    }
-
-    await fetchContacts()
-    setContactSaveLoading(false)
-    closeContactModal()
-  }
-
-  const deleteContact = async (contactId) => {
-    if (!window.confirm('Kontakt wirklich löschen?')) return
-    const { data: deletedContact, error } = await supabase
-      .from('contacts')
-      .delete()
-      .eq('id', contactId)
-      .select('business_card_url, business_card_url_enhanced')
-      .single()
-    if (error) {
-      setContactsMessage(error.message)
-      return
-    } else {
-      const urlsToDelete = [
-        deletedContact?.business_card_url,
-        deletedContact?.business_card_url_enhanced,
-      ].filter(Boolean)
-      const paths = urlsToDelete
-        .map((url) => url.match(/business-cards\/(.+)$/))
-        .filter(Boolean)
-        .map((match) => match[1])
-      if (paths.length > 0) {
-        const { error: storageError } = await supabase.storage.from('business-cards').remove(paths)
-        if (storageError) {
-          setContactsMessage(`Kontakt gelöscht, aber Dateien konnten nicht entfernt werden: ${storageError.message}`)
-        }
-      }
-      await fetchContacts()
-    }
-  }
-
-  const contactTypeLabels = {
-    business: 'Geschäftlich',
-    supplier: 'Lieferant',
-    customer: 'Kunde',
-    employee: 'Mitarbeiter',
-    other: 'Sonstige',
-  }
-
-  // Kontakte filtern nach Suchbegriff
-  const filteredContacts = contacts.filter((contact) => {
-    if (!contactSearch.trim()) return true
-    const search = contactSearch.toLowerCase()
-    return (
-      (contact.first_name || '').toLowerCase().includes(search) ||
-      (contact.last_name || '').toLowerCase().includes(search) ||
-      (contact.company || '').toLowerCase().includes(search) ||
-      (contact.position || '').toLowerCase().includes(search) ||
-      (contact.email || '').toLowerCase().includes(search) ||
-      (contact.phone || '').toLowerCase().includes(search) ||
-      (contact.mobile || '').toLowerCase().includes(search) ||
-      (contact.street || '').toLowerCase().includes(search) ||
-      (contact.postal_code || '').toLowerCase().includes(search) ||
-      (contact.city || '').toLowerCase().includes(search) ||
-      (contact.notes || '').toLowerCase().includes(search)
-    )
-  })
-
-  const openContactDetail = (contact) => {
-    setSelectedContact(contact)
-    setSelectedContactCardView(contact.business_card_url_enhanced ? 'enhanced' : 'original')
-  }
-
-  const getContactCardUrl = (contact, view = 'enhanced') => {
-    if (!contact) return ''
-    if (view === 'enhanced' && contact.business_card_url_enhanced) {
-      return contact.business_card_url_enhanced
-    }
-    return contact.business_card_url || contact.business_card_url_enhanced || ''
-  }
-
-  const selectedCardUrl = selectedContact
-    ? getContactCardUrl(selectedContact, selectedContactCardView)
-    : ''
-  const selectedCardHasEnhanced = !!selectedContact?.business_card_url_enhanced
-  const selectedCardHasOriginal = !!selectedContact?.business_card_url
 
   const fetchChatMessages = async () => {
     setChatLoading(true)
@@ -3405,48 +2560,6 @@ Fülle nur Felder aus, die im Text eindeutig erkennbar sind. Lasse unbekannte Fe
     setBusinessCards((prev) => prev.filter((c) => c.id !== card.id))
   }
 
-  const fetchMistralApiKey = async () => {
-    const { data, error } = await supabase
-      .from('api_keys')
-      .select('key')
-      .eq('name', 'Mistral')
-      .single()
-    if (!error && data) {
-      setMistralApiKey(data.key)
-      return data.key
-    }
-    return null
-  }
-
-  const fetchGoogleApiKey = async () => {
-    console.log('fetchGoogleApiKey: Suche nach Google Nano Banana Key...')
-    const { data, error } = await supabase
-      .from('api_keys')
-      .select('key')
-      .eq('name', 'Google Nano Banana')
-      .single()
-    console.log('fetchGoogleApiKey Result:', { found: !!data, error: error?.message })
-    if (!error && data) {
-      setGoogleApiKey(data.key)
-      return data.key
-    }
-
-    // Fallback: Suche nach ähnlichen Namen
-    const { data: fallbackData, error: fallbackError } = await supabase
-      .from('api_keys')
-      .select('key')
-      .ilike('name', '%google%nano%banana%')
-      .limit(1)
-      .single()
-    console.log('fetchGoogleApiKey Fallback:', { found: !!fallbackData, error: fallbackError?.message })
-    if (!fallbackError && fallbackData) {
-      setGoogleApiKey(fallbackData.key)
-      return fallbackData.key
-    }
-
-    return null
-  }
-
   const fetchPhotoOcrData = async () => {
     const { data, error } = await supabase
       .from('photo_ocr')
@@ -4275,6 +3388,12 @@ Fülle nur Felder aus, die im Text eindeutig erkennbar sind. Lasse unbekannte Fe
     setLoading(false)
   }
 
+  const handleAuthViewChange = (view) => {
+    setAuthView(view)
+    setMessage('')
+    setSuccessMessage('')
+  }
+
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     setMessage('')
@@ -4286,65 +3405,25 @@ Fülle nur Felder aus, die im Text eindeutig erkennbar sind. Lasse unbekannte Fe
   // Password reset view (even if logged in via invite link)
   if (authView === 'resetPassword') {
     return (
-      <div className={`min-h-screen ${theme.bg} ${theme.text} flex items-center justify-center p-4 relative overflow-hidden`}>
-        <div className={`${theme.panel} p-6 sm:p-8 rounded-2xl border ${theme.border} ${theme.cardShadow} max-w-sm w-full`}>
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <img src="/logo.png" alt="Kaeee" className="h-10" />
-              <p className={`text-sm ${theme.textMuted}`}>Neues Passwort setzen</p>
-            </div>
-          </div>
-
-          <form onSubmit={handleResetPassword} className="space-y-5">
-            <div>
-              <label className={`block text-sm font-medium mb-2 ${theme.textSecondary}`}>
-                Neues Passwort
-              </label>
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className={`w-full px-4 py-2.5 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text}`}
-                placeholder="••••••••"
-              />
-            </div>
-
-            <div>
-              <label className={`block text-sm font-medium mb-2 ${theme.textSecondary}`}>
-                Passwort bestätigen
-              </label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className={`w-full px-4 py-2.5 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text}`}
-                placeholder="••••••••"
-              />
-            </div>
-
-            {message && (
-              <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3">
-                <p className="text-rose-400 text-sm">{message}</p>
-              </div>
-            )}
-
-            {successMessage && (
-              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3">
-                <p className="text-emerald-600 text-sm">{successMessage}</p>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              title="Passwort speichern"
-              className={`w-full ${theme.accent} text-white font-medium py-2.5 px-4 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
-            >
-              {loading ? 'Wird gespeichert...' : 'Passwort speichern'}
-            </button>
-          </form>
-        </div>
-      </div>
+      <AuthView
+        authView={authView}
+        onAuthViewChange={handleAuthViewChange}
+        email={email}
+        setEmail={setEmail}
+        password={password}
+        setPassword={setPassword}
+        newPassword={newPassword}
+        setNewPassword={setNewPassword}
+        confirmPassword={confirmPassword}
+        setConfirmPassword={setConfirmPassword}
+        loading={loading}
+        message={message}
+        successMessage={successMessage}
+        handleSignIn={handleSignIn}
+        handleForgotPassword={handleForgotPassword}
+        handleResetPassword={handleResetPassword}
+        theme={theme}
+      />
     )
   }
 
@@ -4352,1739 +3431,167 @@ Fülle nur Felder aus, die im Text eindeutig erkennbar sind. Lasse unbekannte Fe
   if (session) {
     return (
       <div className={`min-h-screen ${theme.bgApp} ${theme.textPrimary} flex flex-col relative overflow-hidden`}>
-        {/* Header */}
-        <header className={`bg-white border-b ${theme.border} px-4 lg:px-6 py-3 flex items-center justify-between sticky top-0 z-40`}>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setMobileNavOpen(!mobileNavOpen)}
-              className={`lg:hidden p-2 rounded-[6px] ${theme.textSecondary} hover:bg-[#F5F7FA]`}
-              title={mobileNavOpen ? 'Menü schließen' : 'Menü öffnen'}
-            >
-              {mobileNavOpen ? <Icons.X /> : <Icons.Menu />}
-            </button>
-            <img src="/logo.png" alt="Kaeee" className="h-8" />
-          </div>
-
-          <div className="flex items-center gap-2 sm:gap-4">
-            {/* Camera button - kontextabhängig */}
-            <button
-              onClick={() => {
-                if (activeView === 'settings' && settingsTab === 'contacts') {
-                  businessCardScanRef.current?.click()
-                } else {
-                  cameraInputRef.current?.click()
-                }
-              }}
-              className={`p-2 rounded-[6px] hover:bg-[#F5F7FA] ${theme.textSecondary} transition-colors ${(photoUploading || businessCardScanning) ? 'opacity-50' : ''}`}
-              title={(activeView === 'settings' && settingsTab === 'contacts') ? 'Visitenkarte scannen' : 'Foto aufnehmen'}
-              disabled={photoUploading || businessCardScanning}
-            >
-              {businessCardScanning ? (
-                <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-              ) : (
-                <Icons.Camera />
-              )}
-            </button>
-            <input
-              ref={cameraInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={handleCameraCapture}
-              className="hidden"
-            />
-            {/* Separater Input für Visitenkarten-Scan (Header) */}
-            <input
-              ref={businessCardScanRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={handleBusinessCardScan}
-              className="hidden"
-            />
-            {/* Input für PZN-Fotos (Rückrufe) */}
-            <input
-              ref={pznCameraInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={handlePznCameraCapture}
-              className="hidden"
-            />
-
-            {/* GH-Rechnungen Button */}
-            <button
-              onClick={() => setActiveView('rechnungen')}
-              className={`p-2 rounded-[6px] hover:bg-[#F5F7FA] ${activeView === 'rechnungen' ? theme.accentText : theme.textSecondary} transition-colors`}
-              title="GH-Rechnungen"
-            >
-              <Icons.FileText />
-            </button>
-
-            {/* User email - hidden on mobile */}
-            <div className="hidden sm:flex items-center gap-2">
-              {currentStaff?.avatar_url ? (
-                <img
-                  src={currentStaff.avatar_url}
-                  alt={session.user.email}
-                  className={`h-9 w-9 rounded-full object-cover border ${theme.border}`}
-                />
-              ) : (
-                <div className={`h-9 w-9 rounded-full border ${theme.border} flex items-center justify-center text-xs ${theme.textMuted}`}>
-                  {session.user.email?.[0]?.toUpperCase() || '?'}
-                </div>
-              )}
-            </div>
-
-            {/* Sign out button */}
-            <button
-              onClick={handleSignOut}
-              className={`p-2 rounded-[6px] ${theme.danger} transition-colors`}
-              title="Ausloggen"
-            >
-              <Icons.Logout />
-            </button>
-          </div>
-        </header>
+        <DashboardHeader
+          theme={theme}
+          mobileNavOpen={mobileNavOpen}
+          setMobileNavOpen={setMobileNavOpen}
+          activeView={activeView}
+          settingsTab={settingsTab}
+          businessCardScanRef={businessCardScanRef}
+          cameraInputRef={cameraInputRef}
+          photoUploading={photoUploading}
+          businessCardScanning={businessCardScanning}
+          handleCameraCapture={handleCameraCapture}
+          BusinessCardScanInput={contactScan.BusinessCardScanInput}
+          handleBusinessCardScan={handleBusinessCardScan}
+          pznCameraInputRef={pznCameraInputRef}
+          handlePznCameraCapture={handlePznCameraCapture}
+          setActiveView={setActiveView}
+          currentStaff={currentStaff}
+          session={session}
+          handleSignOut={handleSignOut}
+          Icons={Icons}
+        />
 
         <div className="flex flex-1 overflow-hidden relative">
-          {/* Mobile nav overlay */}
-          {mobileNavOpen && (
-            <div
-              className={`fixed inset-0 ${theme.overlay} z-40 lg:hidden`}
-              onClick={() => setMobileNavOpen(false)}
-            />
-          )}
-
-          {/* Mobile nav drawer */}
-          <aside
-            className={`
-              mobile-nav-drawer
-              ${theme.sidebarBg} text-white fixed inset-y-0 left-0 z-50 w-[85%] max-w-[320px]
-              transform ${mobileNavOpen ? 'translate-x-0 duration-200' : '-translate-x-full duration-700'} transition-transform ease-out
-              lg:hidden
-            `}
-          >
-            <div className="h-full flex flex-col">
-              <div className="px-4 pt-4 pb-3 border-b border-[#3c4255] flex items-center justify-between">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.08em] text-[#9CA3AF]">Navigation</p>
-                  <h2 className="text-sm font-semibold text-[#E5E7EB] mt-1">
-                    {navItems.find((item) => item.id === activeView)?.label || 'Menü'}
-                  </h2>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setMobileNavOpen(false)}
-                  className="p-2 rounded-[6px] text-[#E5E7EB] hover:bg-[#4a5066]"
-                  title="Menü schließen"
-                >
-                  <Icons.X />
-                </button>
-              </div>
-              <div className="flex-1 overflow-y-auto">
-                <nav className="p-2 space-y-1 border-b border-[#3c4255]">
-                  {navItems.map((item) => {
-                    const totalApoUnread = item.id === 'apo' ? unreadCounts.amk + unreadCounts.recall + unreadCounts.lav : 0
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-[6px] text-sm font-medium transition-colors ${
-                          activeView === item.id ? 'bg-[#4a5066] text-white' : 'text-[#E5E7EB] hover:bg-[#4a5066]'
-                        }`}
-                        onClick={() => setActiveView(item.id)}
-                      >
-                        <div className="relative">
-                          <item.icon />
-                          {totalApoUnread > 0 && (
-                            <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
-                          )}
-                        </div>
-                        <span className="flex-1">{item.label}</span>
-                        {totalApoUnread > 0 && (
-                          <span className="text-xs text-red-400">({totalApoUnread})</span>
-                        )}
-                      </button>
-                    )
-                  })}
-                </nav>
-
-                <nav className="p-2 space-y-1">
-                  {(secondaryNavMap[activeView] || []).map((item) => {
-                    const isActive = getActiveSecondaryId() === item.id
-                    const badgeCount = activeView === 'apo' ? unreadCounts[item.id] || 0 : 0
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        className={`w-full flex items-center text-left px-3 py-2.5 rounded-[6px] text-sm font-medium border-l-4 transition-colors ${
-                          isActive
-                            ? theme.secondaryActive
-                            : 'border-transparent text-[#E5E7EB] hover:bg-[#4a5066] hover:text-white'
-                        }`}
-                        onClick={() => {
-                          handleSecondarySelect(item.id)
-                          setMobileNavOpen(false)
-                        }}
-                      >
-                        <span>{item.label}</span>
-                        <UnreadBadge count={badgeCount} />
-                      </button>
-                    )
-                  })}
-                </nav>
-              </div>
-            </div>
-          </aside>
-
-          {/* Primary Sidebar */}
-          <aside className={`hidden lg:flex flex-shrink-0 ${theme.sidebarBg} w-16 min-w-[4rem] max-w-[4rem] overflow-visible`}>
-            <div className="h-full flex flex-col">
-              <nav className="py-3 space-y-1 flex flex-col items-center">
-                {navItems.map((item) => {
-                  const totalApoUnread = item.id === 'apo' ? unreadCounts.amk + unreadCounts.recall + unreadCounts.lav : 0
-                  return (
-                    <div key={item.id} className="relative group">
-                      <button
-                        type="button"
-                        className={`w-10 h-10 flex items-center justify-center mx-auto rounded-[6px] border-l-[3px] border-transparent box-border transition-colors ${theme.sidebarText} ${
-                          activeView === item.id ? theme.sidebarActive : theme.sidebarHover
-                        }`}
-                        onClick={() => {
-                          setActiveView(item.id)
-                        }}
-                      >
-                        <item.icon />
-                        {totalApoUnread > 0 && (
-                          <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#3c4255]" />
-                        )}
-                      </button>
-                      <span className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-[#1F2937] text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
-                        {item.label}{totalApoUnread > 0 && ` (${totalApoUnread})`}
-                      </span>
-                    </div>
-                  )
-                })}
-              </nav>
-            </div>
-          </aside>
-
-          {/* Secondary Sidebar */}
-          <aside
-            className={`
-              ${theme.secondarySidebarBg} border-r ${theme.border} flex-shrink-0 z-40
-              hidden lg:flex lg:relative inset-y-0 left-0 top-0
-              w-48
-            `}
-          >
-            <div className="h-full flex flex-col">
-              <div className="px-4 pt-4 pb-3 border-b border-[#3c4255]">
-                <p className="text-xs uppercase tracking-[0.08em] text-[#9CA3AF]">Navigation</p>
-                <h2 className="text-sm font-semibold text-[#E5E7EB] mt-1">
-                  {navItems.find((item) => item.id === activeView)?.label || 'Kontext'}
-                </h2>
-              </div>
-              <nav className="p-2 space-y-1 overflow-y-auto">
-                {(secondaryNavMap[activeView] || []).map((item) => {
-                  const isActive = getActiveSecondaryId() === item.id
-                  const badgeCount = activeView === 'apo' ? unreadCounts[item.id] || 0 : 0
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      className={`w-full flex items-center text-left px-3 py-2.5 rounded-[6px] text-sm font-medium border-l-4 transition-colors ${
-                        isActive
-                          ? theme.secondaryActive
-                          : 'border-transparent text-[#E5E7EB] hover:bg-[#3c4255] hover:text-white'
-                      }`}
-                      title={item.label}
-                      onClick={() => {
-                        handleSecondarySelect(item.id)
-                      }}
-                    >
-                      <span>{item.label}</span>
-                      <UnreadBadge count={badgeCount} />
-                    </button>
-                  )
-                })}
-              </nav>
-            </div>
-          </aside>
+          <SidebarNav
+            theme={theme}
+            mobileNavOpen={mobileNavOpen}
+            setMobileNavOpen={setMobileNavOpen}
+            navItems={navItems}
+            activeView={activeView}
+            setActiveView={setActiveView}
+            secondaryNavMap={secondaryNavMap}
+            getActiveSecondaryId={getActiveSecondaryId}
+            handleSecondarySelect={handleSecondarySelect}
+            unreadCounts={unreadCounts}
+            Icons={Icons}
+            UnreadBadge={UnreadBadge}
+          />
 
           {/* Main Content */}
           <main className="flex-1 p-4 lg:p-8 overflow-auto">
             <div className={activeView === 'chat' || activeView === 'post' ? 'w-full' : 'max-w-5xl'}>
               {activeView === 'dashboard' && (
-                <>
-                  <h2 className="text-2xl lg:text-3xl font-semibold mb-6 tracking-tight">Dashboard</h2>
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {/* Wetter-Widget */}
-                    <div className={`${theme.panel} rounded-2xl p-5 border ${theme.border} ${theme.cardShadow}`}>
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className={`text-lg font-medium ${theme.text}`}>Wetter</h3>
-                        <button
-                          type="button"
-                          onClick={openWeatherModal}
-                          className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
-                          title="Ort einstellen"
-                        >
-                          <Icons.Settings />
-                        </button>
-                      </div>
-
-                      {weatherLoading && (
-                        <p className={`text-sm ${theme.textMuted}`}>Wetterdaten werden geladen...</p>
-                      )}
-                      {!weatherLoading && weatherError && (
-                        <p className="text-rose-400 text-sm">{weatherError}</p>
-                      )}
-                      {!weatherLoading && !weatherError && weatherData && (
-                        <div className="space-y-4">
-                          {/* Kopfbereich: Icon links, Daten rechts */}
-                          <div className="flex items-start gap-4">
-                            {/* Großes Wetter-Icon */}
-                            <div className={`${theme.textSecondary} flex-shrink-0`}>
-                              <WeatherIcon code={weatherData.weatherCode} className="w-16 h-16" />
-                            </div>
-                            {/* Textblock rechts */}
-                            <div className="flex-1 min-w-0">
-                              <p className="text-4xl font-semibold tracking-tight">
-                                {Math.round(weatherData.temperature)}°C
-                              </p>
-                              <p className={`text-sm font-medium ${theme.primary}`}>
-                                {weatherData.name || weatherLocation}
-                              </p>
-                              <p className={`text-sm ${theme.text}`}>
-                                {weatherDescription(weatherData.weatherCode)}
-                              </p>
-                              <p className={`text-xs ${theme.textMuted}`}>
-                                Gefühlt {Math.round(weatherData.feelsLike ?? weatherData.temperature)}°C
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Min/Max und Niederschlag */}
-                          <div className="flex items-center justify-between text-sm">
-                            <p className={theme.textSecondary}>
-                              Min {Math.round(weatherData.daily?.[0]?.min ?? 0)}°C · Max {Math.round(weatherData.daily?.[0]?.max ?? 0)}°C
-                            </p>
-                            <div className={`flex items-center gap-1 ${theme.textSecondary}`}>
-                              <Icons.Droplet className="w-4 h-4" />
-                              <span>{weatherData.daily?.[0]?.precipitationProbability ?? 0}%</span>
-                            </div>
-                          </div>
-
-                          {/* 3-Tage-Vorschau */}
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                            {weatherData.daily?.slice(0, 3).map((day, index) => {
-                              const dayLabel = index === 0 ? 'Heute' : index === 1 ? 'Morgen' : new Date(day.date).toLocaleDateString('de-DE', { weekday: 'short' })
-                              return (
-                                <div key={day.date} className={`bg-[#F0F2F5] rounded-xl p-3 text-center`}>
-                                  <p className={`text-xs font-medium ${theme.textSecondary} mb-2`}>{dayLabel}</p>
-                                  <div className={`flex justify-center mb-2 ${theme.textSecondary}`}>
-                                    <WeatherIcon code={day.weatherCode ?? weatherData.weatherCode} className="w-8 h-8" />
-                                  </div>
-                                  <p className={`text-base font-semibold ${theme.text}`}>
-                                    {Math.round(day.max ?? 0)}°
-                                  </p>
-                                  <p className={`text-sm ${theme.textMuted}`}>
-                                    {Math.round(day.min ?? 0)}°
-                                  </p>
-                                  <div className={`flex items-center justify-center gap-1 mt-1 text-xs ${theme.textMuted}`}>
-                                    <Icons.Droplet className="w-3 h-3" />
-                                    <span>{day.precipitationProbability ?? 0}%</span>
-                                  </div>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      )}
-                      {!weatherLoading && !weatherError && !weatherData && (
-                        <p className={theme.textMuted}>
-                          Kein Wetter verfügbar.
-                        </p>
-                      )}
-                    </div>
-                    {/* Kalender Widget */}
-                    <div className={`${theme.panel} rounded-2xl p-4 border ${theme.border} ${theme.cardShadow} flex flex-col gap-3`}>
-                      <div className="flex items-center justify-between">
-                        <h3 className={`text-lg font-medium ${theme.text}`}>Termine</h3>
-                        <button
-                          type="button"
-                          onClick={() => setActiveView('calendar')}
-                          className={`text-xs ${theme.accentText} hover:underline`}
-                        >
-                          Kalender öffnen
-                        </button>
-                      </div>
-                      {dashboardEventsLoading && (
-                        <p className={`text-xs ${theme.textMuted}`}>Termine werden geladen...</p>
-                      )}
-                      {!dashboardEventsLoading && dashboardEvents.length === 0 && (
-                        <p className={theme.textMuted}>Keine kommenden Termine.</p>
-                      )}
-                      {!dashboardEventsLoading && dashboardEvents.length > 0 && (() => {
-                        const today = new Date()
-                        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-
-                        // Wochenende berechnen (Sonntag dieser Woche)
-                        const endOfWeek = new Date(today)
-                        const daysUntilSunday = 7 - today.getDay()
-                        endOfWeek.setDate(today.getDate() + (today.getDay() === 0 ? 0 : daysUntilSunday))
-                        const endOfWeekStr = `${endOfWeek.getFullYear()}-${String(endOfWeek.getMonth() + 1).padStart(2, '0')}-${String(endOfWeek.getDate()).padStart(2, '0')}`
-
-                        // Termine filtern
-                        const todayEvents = dashboardEvents.filter((e) => e.start_time.substring(0, 10) === todayStr)
-                        const weekEvents = dashboardEvents.filter((e) => {
-                          const eventDate = e.start_time.substring(0, 10)
-                          return eventDate > todayStr && eventDate <= endOfWeekStr && !e.calendarName.toLowerCase().includes('notdienst')
-                        })
-                        const futureEvents = dashboardEvents.filter((e) => {
-                          const eventDate = e.start_time.substring(0, 10)
-                          return eventDate > endOfWeekStr && !e.calendarName.toLowerCase().includes('notdienst')
-                        }).slice(0, 5)
-
-                        const formatTime = (dateStr) => {
-                          return new Date(dateStr).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
-                        }
-
-                        const formatDate = (dateStr) => {
-                          return new Date(dateStr).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' })
-                        }
-
-                        return (
-                          <div className="space-y-4 text-sm">
-                            {/* Heute */}
-                            <div>
-                              <p className={`text-xs font-medium mb-2 ${theme.textSecondary}`}>Heute</p>
-                              {todayEvents.length === 0 ? (
-                                <p className={`text-xs ${theme.textMuted}`}>Keine Termine</p>
-                              ) : (
-                                <div className="space-y-1.5">
-                                  {todayEvents.map((event) => (
-                                    <div key={event.id} className="flex items-center gap-2">
-                                      <div className="w-1 h-4 rounded" style={{ backgroundColor: event.calendarColor }} />
-                                      <span className={`text-xs ${theme.textMuted} w-10`}>
-                                        {event.all_day ? 'Ganz.' : formatTime(event.start_time)}
-                                      </span>
-                                      <span className={`text-xs ${theme.text} truncate`}>{event.title}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Diese Woche */}
-                            {weekEvents.length > 0 && (
-                              <div>
-                                <p className={`text-xs font-medium mb-2 ${theme.textSecondary}`}>Diese Woche</p>
-                                <div className="space-y-1.5">
-                                  {weekEvents.map((event) => (
-                                    <div key={event.id} className="flex items-center gap-2">
-                                      <div className="w-1 h-4 rounded" style={{ backgroundColor: event.calendarColor }} />
-                                      <span className={`text-xs ${theme.textMuted} w-16`}>{formatDate(event.start_time)}</span>
-                                      <span className={`text-xs ${theme.text} truncate`}>{event.title}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Weitere Termine */}
-                            {futureEvents.length > 0 && (
-                              <div>
-                                <p className={`text-xs font-medium mb-2 ${theme.textSecondary}`}>Demnächst</p>
-                                <div className="space-y-1.5">
-                                  {futureEvents.map((event) => (
-                                    <div key={event.id} className="flex items-center gap-2">
-                                      <div className="w-1 h-4 rounded" style={{ backgroundColor: event.calendarColor }} />
-                                      <span className={`text-xs ${theme.textMuted} w-16`}>{formatDate(event.start_time)}</span>
-                                      <span className={`text-xs ${theme.text} truncate`}>{event.title}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )
-                      })()}
-                    </div>
-
-                    <div className={`${theme.panel} rounded-2xl p-4 border ${theme.border} ${theme.cardShadow} flex flex-col gap-3`}>
-                      <h3 className={`text-lg font-medium ${theme.text}`}>Letztes Foto</h3>
-                      {photoUploading && (
-                        <p className={`text-xs ${theme.textMuted}`}>Foto wird hochgeladen...</p>
-                      )}
-                      {!photoUploading && latestPhoto && (
-                        <div className="space-y-2">
-                          <img
-                            src={latestPhoto.url}
-                            alt="Letztes Foto"
-                            className="w-full h-40 object-cover rounded-xl"
-                          />
-                          <p className={`text-xs ${theme.textMuted}`}>
-                            {latestPhoto.createdAt
-                              ? new Date(latestPhoto.createdAt).toLocaleString('de-DE')
-                              : latestPhoto.name}
-                          </p>
-                        </div>
-                      )}
-                      {!photoUploading && !latestPhoto && (
-                        <p className={theme.textMuted}>
-                          Noch kein Foto vorhanden. Nutze das Kamera-Symbol oben.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </>
+                <DashboardHome
+                  theme={theme}
+                  openWeatherModal={openWeatherModal}
+                  weatherLoading={weatherLoading}
+                  weatherError={weatherError}
+                  weatherData={weatherData}
+                  weatherLocation={weatherLocation}
+                  weatherDescription={weatherDescription}
+                  WeatherIcon={WeatherIcon}
+                  Icons={Icons}
+                  dashboardEventsLoading={dashboardEventsLoading}
+                  dashboardEvents={dashboardEvents}
+                  setActiveView={setActiveView}
+                  photoUploading={photoUploading}
+                  latestPhoto={latestPhoto}
+                />
               )}
 
               {activeView === 'photos' && (
-                <>
-                  <h2 className="text-2xl lg:text-3xl font-semibold mb-6 tracking-tight">
-                    {secondaryTab === 'visitenkarten' ? 'Visitenkarten' : 'Fotos'}
-                  </h2>
-
-                  {/* Uploads Tab */}
-                  {(secondaryTab === 'uploads' || secondaryTab === 'library' || secondaryTab === 'ocr') && (
-                    <>
-                      {photosLoading ? (
-                        <p className={theme.textMuted}>Fotos werden geladen...</p>
-                      ) : allPhotos.length === 0 ? (
-                        <p className={theme.textMuted}>Keine Fotos vorhanden. Nutze das Kamera-Symbol oben.</p>
-                      ) : (
-                        <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
-                          {allPhotos.map((photo) => (
-                            <div
-                              key={photo.name}
-                              className={`${theme.panel} rounded-xl border ${theme.border} ${theme.cardShadow} overflow-hidden hover:ring-2 hover:ring-[#6AA9F0] transition-all relative group`}
-                            >
-                              <button
-                                type="button"
-                                onClick={(e) => deletePhoto(photo.name, e)}
-                                className={`absolute top-2 right-2 p-1.5 rounded-lg ${theme.panel} border ${theme.border} opacity-0 group-hover:opacity-100 transition-opacity ${theme.danger} z-10`}
-                                title="Foto löschen"
-                              >
-                                <Icons.X />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => openPhotoEditor(photo)}
-                                className="w-full text-left"
-                              >
-                                <img
-                                  src={photo.url}
-                                  alt={photo.name}
-                                  className="w-full h-32 object-cover"
-                                />
-                                <div className="p-2 space-y-1">
-                                  <p className={`text-xs ${theme.textMuted} truncate`}>
-                                    {photo.createdAt
-                                      ? new Date(photo.createdAt).toLocaleDateString('de-DE')
-                                      : photo.name}
-                                  </p>
-                                  <p className={`text-xs ${theme.textMuted}`}>
-                                    {photo.format}{photo.sizeKB ? ` · ${photo.sizeKB} KB` : ''}
-                                  </p>
-                                  {ocrProcessing[photo.name] && (
-                                    <p className={`text-xs ${theme.accentText}`}>OCR läuft...</p>
-                                  )}
-                                  {!ocrProcessing[photo.name] && photoOcrData[photo.name]?.status === 'completed' && (
-                                    <p className={`text-xs ${theme.textMuted} line-clamp-2`}>
-                                      {photoOcrData[photo.name].text}
-                                    </p>
-                                  )}
-                                  {!ocrProcessing[photo.name] && photoOcrData[photo.name]?.status === 'error' && (
-                                    <p className="text-xs text-rose-400">OCR fehlgeschlagen</p>
-                                  )}
-                                  {!ocrProcessing[photo.name] && !photoOcrData[photo.name] && (
-                                    <button
-                                      type="button"
-                                      onClick={(e) => { e.stopPropagation(); runOcrForPhoto(photo.name, photo.url); }}
-                                      className={`text-xs ${theme.accentText} hover:underline`}
-                                    >
-                                      OCR starten
-                                    </button>
-                                  )}
-                                </div>
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  )}
-
-                  {/* Visitenkarten Tab */}
-                  {secondaryTab === 'visitenkarten' && (
-                    <>
-                      {businessCardsLoading ? (
-                        <p className={theme.textMuted}>Visitenkarten werden geladen...</p>
-                      ) : businessCards.length === 0 ? (
-                        <p className={theme.textMuted}>Keine Visitenkarten vorhanden. Importiere Kontakte mit Visitenkarten-Scan.</p>
-                      ) : (
-                        <>
-                          <p className={`text-sm ${theme.textMuted} mb-4`}>{businessCards.length} Visitenkarten</p>
-                          <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
-                            {businessCards.map((card) => (
-                              <div
-                                key={card.id}
-                                className={`${theme.panel} rounded-xl border ${theme.border} ${theme.cardShadow} overflow-hidden hover:ring-2 hover:ring-[#6AA9F0] transition-all relative group`}
-                              >
-                                <button
-                                  type="button"
-                                  onClick={(e) => deleteBusinessCard(card, e)}
-                                  className={`absolute top-2 right-2 p-1.5 rounded-lg ${theme.panel} border ${theme.border} opacity-0 group-hover:opacity-100 transition-opacity ${theme.danger} z-10`}
-                                  title="Visitenkarte löschen"
-                                >
-                                  <Icons.X />
-                                </button>
-                                <a
-                                  href={card.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="block"
-                                >
-                                  <img
-                                    src={card.url}
-                                    alt={card.contactName}
-                                    className="w-full h-32 object-cover"
-                                  />
-                                  <div className="p-2 space-y-1">
-                                    <p className={`text-sm font-medium ${theme.text} truncate`}>
-                                      {card.contactName}
-                                    </p>
-                                    {card.company && (
-                                      <p className={`text-xs ${theme.textMuted} truncate`}>
-                                        {card.company}
-                                      </p>
-                                    )}
-                                    <p className={`text-xs ${theme.textMuted}`}>
-                                      {card.createdAt
-                                        ? new Date(card.createdAt).toLocaleDateString('de-DE')
-                                        : ''} · {card.format}
-                                    </p>
-                                  </div>
-                                </a>
-                              </div>
-                            ))}
-                          </div>
-                        </>
-                      )}
-                    </>
-                  )}
-                </>
+                <PhotosView
+                  theme={theme}
+                  Icons={Icons}
+                  secondaryTab={secondaryTab}
+                  photosLoading={photosLoading}
+                  allPhotos={allPhotos}
+                  deletePhoto={deletePhoto}
+                  openPhotoEditor={openPhotoEditor}
+                  ocrProcessing={ocrProcessing}
+                  photoOcrData={photoOcrData}
+                  runOcrForPhoto={runOcrForPhoto}
+                  businessCardsLoading={businessCardsLoading}
+                  businessCards={businessCards}
+                  deleteBusinessCard={deleteBusinessCard}
+                />
               )}
 
               {activeView === 'apo' && (
-                <>
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-2xl lg:text-3xl font-semibold tracking-tight">Apo</h2>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => changeApoYear(-1)}
-                        className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
-                        title="Vorheriges Jahr"
-                      >
-                        <Icons.ChevronLeft />
-                      </button>
-                      <span className={`text-sm font-medium ${theme.text} min-w-[80px] text-center`}>
-                        {apoYear}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => changeApoYear(1)}
-                        className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
-                        title="Nächstes Jahr"
-                      >
-                        <Icons.ChevronRight />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="mb-6">
-                    <div className="relative">
-                      <Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <input
-                        type="text"
-                        value={apoSearch}
-                        onChange={(e) => setApoSearch(e.target.value)}
-                        placeholder="Suchen..."
-                        className={`w-full pl-10 pr-4 py-2.5 rounded-xl border ${theme.border} ${theme.input} text-sm`}
-                      />
-                      {apoSearch && (
-                        <button
-                          type="button"
-                          onClick={() => setApoSearch('')}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                          title="Suche löschen"
-                        >
-                          <Icons.X className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {apoTab === 'amk' && (
-                    <div>
-                      {amkLoading ? (
-                        <p className={theme.textMuted}>AMK-Meldungen werden geladen...</p>
-                      ) : amkMessages.length === 0 ? (
-                        <p className={theme.textMuted}>Keine AMK-Meldungen in diesem Jahr.</p>
-                      ) : filterApoItems(amkMessages, apoSearch, 'amk').length === 0 ? (
-                        <p className={theme.textMuted}>Keine Treffer für „{apoSearch}".</p>
-                      ) : (
-                        <div className="space-y-8">
-                          {groupByMonth(filterApoItems(amkMessages, apoSearch, 'amk'), 'date').map((group) => (
-                            <div key={group.month}>
-                              <h3 className={`text-lg font-semibold ${theme.text} mb-4`}>{monthNames[group.month]}</h3>
-                              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                                {group.items.map((msg) => {
-                                  // Nur als ungelesen markieren wenn: nicht gelesen UND nach Nutzer-Erstellung
-                                  const userCreatedAt = currentStaff?.created_at ? new Date(currentStaff.created_at) : new Date(0)
-                                  const msgDate = msg.date ? new Date(msg.date) : new Date(0)
-                                  const isUnread = !readMessageIds.amk.has(String(msg.id)) && msgDate >= userCreatedAt
-                                  return (
-                                    <button
-                                      key={msg.id}
-                                      type="button"
-                                      onClick={() => {
-                                        setSelectedApoMessage({ ...msg, type: 'amk' })
-                                        markAsRead('amk', msg.id)
-                                        loadDokumentationen(msg.id, 'amk')
-                                      }}
-                                      className={`text-left ${theme.panel} rounded-2xl border ${theme.border} p-5 ${theme.cardShadow} ${theme.cardHoverShadow} hover:border-[#6AA9F0] transition-all flex flex-col h-full ${isUnread ? 'ring-2 ring-blue-400' : ''}`}
-                                    >
-                                      <div className="flex items-center gap-2 mb-3">
-                                        <span className="w-2 h-2 rounded-full bg-amber-500" />
-                                        <span className={`text-xs ${theme.textMuted}`}>
-                                          {msg.date ? new Date(msg.date).toLocaleDateString('de-DE') : ''}
-                                        </span>
-                                        {isUnread && <span className="text-xs text-blue-500 font-medium ml-auto">Neu</span>}
-                                      </div>
-                                      <h3 className={`font-semibold ${theme.text} line-clamp-2 mb-2`}>{msg.title}</h3>
-                                      <p className={`text-sm ${theme.textMuted} line-clamp-3 flex-grow`}>
-                                        {msg.description || msg.full_text?.substring(0, 150) || ''}
-                                      </p>
-                                      {msg.category && (
-                                        <span className={`inline-block mt-3 text-xs px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 font-medium`}>
-                                          {msg.category}
-                                        </span>
-                                      )}
-                                      {/* Bearbeitungsstatus anzeigen - ERSTER Bearbeiter wird angezeigt */}
-                                      {msg.dokumentationen && msg.dokumentationen.length > 0 && (() => {
-                                        // Älteste Dokumentation (erster Bearbeiter) - Array ist DESC sortiert, also letztes Element
-                                        const firstDok = msg.dokumentationen[msg.dokumentationen.length - 1]
-                                        const hasSignature = msg.dokumentationen.some(d => d.unterschrift_data)
-                                        return (
-                                          <div className={`mt-3 -mx-5 -mb-5 px-5 py-3 rounded-b-2xl ${hasSignature ? 'bg-green-50' : 'bg-amber-50'}`}>
-                                            <div className="flex items-center gap-2">
-                                              <span className={`w-2 h-2 rounded-full ${hasSignature ? 'bg-green-500' : 'bg-yellow-500'}`} />
-                                              <span className={`text-xs ${hasSignature ? 'text-green-700' : 'text-amber-700'}`}>
-                                                {firstDok.erstellt_von_name || 'Bearbeitet'}
-                                                {firstDok.erstellt_am && ` · ${new Date(firstDok.erstellt_am).toLocaleDateString('de-DE')}`}
-                                              </span>
-                                            </div>
-                                          </div>
-                                        )
-                                      })()}
-                                    </button>
-                                  )
-                                })}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {apoTab === 'recall' && (
-                    <div>
-                      {recallLoading ? (
-                        <p className={theme.textMuted}>Rückrufe werden geladen...</p>
-                      ) : recallMessages.length === 0 ? (
-                        <p className={theme.textMuted}>Keine Rückrufe in diesem Jahr.</p>
-                      ) : filterApoItems(recallMessages, apoSearch, 'recall').length === 0 ? (
-                        <p className={theme.textMuted}>Keine Treffer für „{apoSearch}".</p>
-                      ) : (
-                        <div className="space-y-8">
-                          {groupByMonth(filterApoItems(recallMessages, apoSearch, 'recall'), 'date').map((group) => (
-                            <div key={group.month}>
-                              <h3 className={`text-lg font-semibold ${theme.text} mb-4`}>{monthNames[group.month]}</h3>
-                              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                                {group.items.map((msg) => {
-                                  // Nur als ungelesen markieren wenn: nicht gelesen UND nach Nutzer-Erstellung
-                                  const userCreatedAt = currentStaff?.created_at ? new Date(currentStaff.created_at) : new Date(0)
-                                  const msgDate = msg.date ? new Date(msg.date) : new Date(0)
-                                  const isUnread = !readMessageIds.recall.has(String(msg.id)) && msgDate >= userCreatedAt
-                                  return (
-                                    <button
-                                      key={msg.id}
-                                      type="button"
-                                      onClick={() => {
-                                        setSelectedApoMessage({ ...msg, type: 'recall' })
-                                        markAsRead('recall', msg.id)
-                                        loadDokumentationen(msg.id, 'recall')
-                                      }}
-                                      className={`text-left ${theme.panel} rounded-2xl border ${theme.border} p-5 ${theme.cardShadow} ${theme.cardHoverShadow} hover:border-[#6AA9F0] transition-all flex flex-col h-full ${isUnread ? 'ring-2 ring-blue-400' : ''}`}
-                                    >
-                                      <div className="flex items-center gap-2 mb-3">
-                                        <span className="w-2 h-2 rounded-full bg-red-500" />
-                                        <span className={`text-xs ${theme.textMuted}`}>
-                                          {msg.date ? new Date(msg.date).toLocaleDateString('de-DE') : ''}
-                                        </span>
-                                        {isUnread && <span className="text-xs text-blue-500 font-medium ml-auto">Neu</span>}
-                                      </div>
-                                      <h3 className={`font-semibold ${theme.text} line-clamp-2 mb-2`}>{msg.title}</h3>
-                                      {msg.ai_zusammenfassung ? (
-                                        <div className={`text-sm ${theme.text} line-clamp-4 flex-grow`}>
-                                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.ai_zusammenfassung}</ReactMarkdown>
-                                        </div>
-                                      ) : (
-                                        <p className={`text-sm ${theme.textMuted} line-clamp-3 flex-grow`}>
-                                          {msg.description || msg.full_text?.substring(0, 150) || ''}
-                                        </p>
-                                      )}
-                                      {msg.product_name && (
-                                        <span className={`inline-block mt-3 text-xs px-2.5 py-1 rounded-lg bg-red-50 text-red-700 font-medium`}>
-                                          {msg.product_name}
-                                        </span>
-                                      )}
-                                      {msg.dokumentationen && msg.dokumentationen.length > 0 && (() => {
-                                        // Älteste Dokumentation (erster Bearbeiter) - Array ist DESC sortiert, also letztes Element
-                                        const firstDok = msg.dokumentationen[msg.dokumentationen.length - 1]
-                                        const hasSignature = msg.dokumentationen.some(d => d.unterschrift_data)
-                                        return (
-                                          <div className={`mt-3 -mx-5 -mb-5 px-5 py-3 rounded-b-2xl ${hasSignature ? 'bg-green-50' : 'bg-amber-50'}`}>
-                                            <div className="flex items-center gap-2">
-                                              <span className={`w-2 h-2 rounded-full ${hasSignature ? 'bg-green-500' : 'bg-yellow-500'}`} />
-                                              <span className={`text-xs ${hasSignature ? 'text-green-700' : 'text-amber-700'}`}>
-                                                {firstDok.erstellt_von_name || 'Bearbeitet'}
-                                                {firstDok.erstellt_am && ` · ${new Date(firstDok.erstellt_am).toLocaleDateString('de-DE')}`}
-                                              </span>
-                                            </div>
-                                          </div>
-                                        )
-                                      })()}
-                                    </button>
-                                  )
-                                })}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {apoTab === 'lav' && (
-                    <div>
-                      {lavLoading ? (
-                        <p className={theme.textMuted}>LAK-Infos werden geladen...</p>
-                      ) : lavAusgaben.length === 0 ? (
-                        <p className={theme.textMuted}>Keine LAK-Infos in diesem Jahr.</p>
-                      ) : filterApoItems(lavAusgaben, apoSearch, 'lav').length === 0 ? (
-                        <p className={theme.textMuted}>Keine Treffer für „{apoSearch}".</p>
-                      ) : (
-                        <div className="space-y-8">
-                          {groupByMonth(filterApoItems(lavAusgaben, apoSearch, 'lav'), 'datum').map((group) => (
-                            <div key={group.month}>
-                              <h3 className={`text-lg font-semibold ${theme.text} mb-4`}>{monthNames[group.month]}</h3>
-                              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                                {group.items.map((ausgabe) => {
-                                  // Nur als ungelesen markieren wenn: nicht gelesen UND nach Nutzer-Erstellung
-                                  const userCreatedAt = currentStaff?.created_at ? new Date(currentStaff.created_at) : new Date(0)
-                                  const msgDate = ausgabe.datum ? new Date(ausgabe.datum) : new Date(0)
-                                  const isUnread = !readMessageIds.lav.has(String(ausgabe.id)) && msgDate >= userCreatedAt
-                                  return (
-                                    <button
-                                      key={ausgabe.id}
-                                      type="button"
-                                      onClick={() => {
-                                        setSelectedApoMessage({ ...ausgabe, type: 'lav' })
-                                        markAsRead('lav', ausgabe.id)
-                                      }}
-                                      className={`text-left ${theme.panel} rounded-2xl border ${theme.border} p-5 ${theme.cardShadow} ${theme.cardHoverShadow} hover:border-[#6AA9F0] transition-all flex flex-col h-full ${isUnread ? 'ring-2 ring-blue-400' : ''}`}
-                                    >
-                                      <div className="flex items-center gap-2 mb-3">
-                                        <span className="w-2 h-2 rounded-full bg-blue-500" />
-                                        <span className={`text-xs ${theme.textMuted}`}>
-                                          {ausgabe.datum ? new Date(ausgabe.datum).toLocaleDateString('de-DE') : ''}
-                                        </span>
-                                        {isUnread && <span className="text-xs text-blue-500 font-medium ml-auto">Neu</span>}
-                                      </div>
-                                      <h3 className={`font-semibold ${theme.text} line-clamp-2 mb-2`}>{ausgabe.subject || `LAV-Info ${ausgabe.ausgabe}`}</h3>
-                                      <p className={`text-sm ${theme.textMuted} mb-3`}>
-                                        Ausgabe {ausgabe.ausgabe} - {ausgabe.lav_themes?.length || 0} Themen
-                                      </p>
-                                      {ausgabe.lav_themes && ausgabe.lav_themes.length > 0 && (
-                                        <div className="flex flex-wrap gap-1.5 mt-auto">
-                                          {ausgabe.lav_themes.slice(0, 2).map((t) => (
-                                            <span key={t.id} className={`text-xs px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 font-medium`}>
-                                              {t.titel?.substring(0, 25) || 'Thema'}{t.titel?.length > 25 ? '...' : ''}
-                                            </span>
-                                          ))}
-                                          {ausgabe.lav_themes.length > 2 && (
-                                            <span className={`text-xs px-2.5 py-1 rounded-lg bg-gray-100 text-gray-600 font-medium`}>
-                                              +{ausgabe.lav_themes.length - 2}
-                                            </span>
-                                          )}
-                                        </div>
-                                      )}
-                                    </button>
-                                  )
-                                })}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </>
+                <ApoView
+                  theme={theme}
+                  Icons={Icons}
+                  apoYear={apoYear}
+                  changeApoYear={changeApoYear}
+                  apoSearch={apoSearch}
+                  setApoSearch={setApoSearch}
+                  apoTab={apoTab}
+                  amkLoading={amkLoading}
+                  amkMessages={amkMessages}
+                  recallLoading={recallLoading}
+                  recallMessages={recallMessages}
+                  lavLoading={lavLoading}
+                  lavAusgaben={lavAusgaben}
+                  filterApoItems={filterApoItems}
+                  groupByMonth={groupByMonth}
+                  monthNames={monthNames}
+                  currentStaff={currentStaff}
+                  readMessageIds={readMessageIds}
+                  setSelectedApoMessage={setSelectedApoMessage}
+                  markAsRead={markAsRead}
+                  loadDokumentationen={loadDokumentationen}
+                  ReactMarkdown={ReactMarkdown}
+                  remarkGfm={remarkGfm}
+                />
               )}
 
               {activeView === 'chat' && (
-                <>
-                  <h2 className="text-2xl lg:text-3xl font-semibold mb-6 tracking-tight">Chat</h2>
-                  <div className="flex flex-col h-[70vh]">
-                    <div className={`flex-1 overflow-auto rounded-2xl border ${theme.border} ${theme.bg} p-4 space-y-4`}>
-                      {chatLoading && (
-                        <p className={theme.textMuted}>Nachrichten werden geladen...</p>
-                      )}
-                      {!chatLoading && chatMessages.length === 0 && (
-                        <p className={theme.textMuted}>Noch keine Nachrichten. Starte den Chat.</p>
-                      )}
-                      {chatMessages.map((entry) => {
-                        const sender = staffByAuthId[entry.user_id] || {}
-                        const senderName = sender.first_name || 'Unbekannt'
-                        const timeLabel = entry.created_at
-                          ? new Date(entry.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
-                          : ''
-                        const isOwn = entry.user_id === session.user.id
-                        return (
-                          <div
-                            key={entry.id}
-                            className={`flex items-start gap-3 ${isOwn ? 'flex-row-reverse text-right' : ''}`}
-                          >
-                            {sender.avatar_url ? (
-                              <img
-                                src={sender.avatar_url}
-                                alt={senderName}
-                                className={`h-9 w-9 rounded-full object-cover border ${theme.border}`}
-                              />
-                            ) : (
-                              <div className={`h-9 w-9 rounded-full border ${theme.border} flex items-center justify-center text-xs ${theme.textMuted}`}>
-                                {senderName?.[0]?.toUpperCase() || '?'}
-                              </div>
-                            )}
-                            <div className="max-w-[75%]">
-                              <div className={`text-xs ${theme.textMuted} flex items-center gap-2 ${isOwn ? 'justify-end' : ''}`}>
-                                <span>{senderName}</span>
-                                {timeLabel && <span>{timeLabel}</span>}
-                              </div>
-                              <div
-                                className={`inline-block mt-2 rounded-2xl px-4 py-2 border ${
-                                  isOwn
-                                    ? 'bg-[#4A90E2]/15 border-[#4A90E2]/30 text-[#1F2937]'
-                                    : `${theme.panel} ${theme.border}`
-                                }`}
-                              >
-                                <p className="text-sm leading-relaxed whitespace-pre-wrap">{entry.message}</p>
-                              </div>
-                            </div>
-                          </div>
-                        )
-                      })}
-                      <div ref={chatEndRef} />
-                    </div>
-
-                    {chatError && (
-                      <div className="mt-3 bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3">
-                        <p className="text-rose-400 text-sm">{chatError}</p>
-                      </div>
-                    )}
-
-                    <form onSubmit={sendChatMessage} className="mt-4 flex flex-col sm:flex-row gap-2">
-                      <input
-                        type="text"
-                        value={chatInput}
-                        onChange={(event) => setChatInput(event.target.value)}
-                        placeholder="Nachricht schreiben..."
-                        className={`flex-1 px-4 py-3 rounded-xl border ${theme.input} ${theme.inputPlaceholder}`}
-                      />
-                      <button
-                        type="submit"
-                        disabled={chatSending || !chatInput.trim()}
-                        className={`px-5 py-3 rounded-xl text-sm font-semibold ${theme.accent} text-white disabled:opacity-40 disabled:cursor-not-allowed`}
-                      >
-                        {chatSending ? 'Senden...' : 'Senden'}
-                      </button>
-                    </form>
-                  </div>
-                </>
+                <ChatView
+                  theme={theme}
+                  chatLoading={chatLoading}
+                  chatMessages={chatMessages}
+                  staffByAuthId={staffByAuthId}
+                  session={session}
+                  chatEndRef={chatEndRef}
+                  chatError={chatError}
+                  sendChatMessage={sendChatMessage}
+                  chatInput={chatInput}
+                  setChatInput={setChatInput}
+                  chatSending={chatSending}
+                />
               )}
 
               {activeView === 'plan' && (
-                <>
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl lg:text-3xl font-semibold tracking-tight">Plan</h2>
-                    <button
-                      type="button"
-                      onClick={() => { setPlanData(null); setPlanError(''); fetchPlanData(); }}
-                      className={`text-xs font-medium ${theme.accentText} hover:opacity-80`}
-                      title="Daten neu laden"
-                    >
-                      Aktualisieren
-                    </button>
-                  </div>
-
-                  {planLoading && (
-                    <div className={`${theme.panel} rounded-2xl p-6 border ${theme.border} ${theme.cardShadow}`}>
-                      <p className={theme.textMuted}>Plandaten werden geladen...</p>
-                    </div>
-                  )}
-
-                  {!planLoading && planError && (
-                    <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3">
-                      <p className="text-rose-400 text-sm">{planError}</p>
-                    </div>
-                  )}
-
-                  {!planLoading && !planError && planData && (
-                    <div className="grid gap-4 lg:grid-cols-[auto_1fr]">
-                      {/* Kalender-Matrix links */}
-                      <div className={`${theme.panel} rounded-2xl p-4 border ${theme.border} ${theme.cardShadow} h-fit`}>
-                        <p className={`text-xs font-medium mb-3 ${theme.textMuted}`}>Kalender</p>
-                        {(() => {
-                          const today = new Date()
-                          const todayStr = today.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
-
-                          // Erstelle 4 Wochen Kalender (28 Tage) ab Montag der aktuellen Woche
-                          const currentDay = today.getDay()
-                          const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay
-                          const startDate = new Date(today)
-                          startDate.setDate(today.getDate() + mondayOffset)
-
-                          const weeks = []
-                          for (let w = 0; w < 4; w++) {
-                            const week = []
-                            for (let d = 0; d < 7; d++) {
-                              const date = new Date(startDate)
-                              date.setDate(startDate.getDate() + w * 7 + d)
-                              const dateStr = date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
-                              const dayNum = date.getDate()
-                              const hasData = planData.days[dateStr]
-                              const isSelected = selectedPlanDate === dateStr
-                              const isTodayDate = dateStr === todayStr
-                              const isWeekend = d >= 5
-
-                              week.push({ date, dateStr, dayNum, hasData, isSelected, isTodayDate, isWeekend })
-                            }
-                            weeks.push(week)
-                          }
-
-                          const weekDays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
-
-                          return (
-                            <div className="space-y-1">
-                              {/* Wochentags-Header */}
-                              <div className="grid grid-cols-7 gap-1 mb-2">
-                                {weekDays.map((day, idx) => (
-                                  <div key={day} className={`text-[10px] text-center ${idx >= 5 ? theme.textMuted : theme.textSecondary}`}>
-                                    {day}
-                                  </div>
-                                ))}
-                              </div>
-                              {/* Wochen */}
-                              {weeks.map((week, wIdx) => (
-                                <div key={wIdx} className="grid grid-cols-7 gap-1">
-                                  {week.map((day) => (
-                                    <button
-                                      key={day.dateStr}
-                                      type="button"
-                                      onClick={() => day.hasData && setSelectedPlanDate(day.dateStr)}
-                                      disabled={!day.hasData}
-                                      className={`
-                                        w-8 h-8 rounded-lg text-xs font-medium transition-colors
-                                        ${day.isSelected
-                                          ? 'bg-[#4A90E2] text-white'
-                                          : day.isTodayDate
-                                            ? `border-2 border-[#4A90E2]/50 ${day.hasData ? theme.text : theme.textMuted}`
-                                            : day.hasData
-                                              ? `${theme.bgHover} ${day.isWeekend ? theme.textMuted : theme.text}`
-                                              : `${theme.textMuted} opacity-40 cursor-not-allowed`
-                                        }
-                                      `}
-                                      title={day.dateStr}
-                                    >
-                                      {day.dayNum}
-                                    </button>
-                                  ))}
-                                </div>
-                              ))}
-                            </div>
-                          )
-                        })()}
-                        <p className={`text-[10px] mt-3 ${theme.textMuted}`}>
-                          Quelle: {planData.usedFile}
-                        </p>
-                      </div>
-
-                      {/* Tagesansicht rechts - Timeline */}
-                      <div className="space-y-4 min-w-0">
-                        {(() => {
-                          const dayData = planData.days[selectedPlanDate]
-                          const today = new Date()
-                          const todayStr = today.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
-                          const isToday = selectedPlanDate === todayStr
-
-                          // Zeitachse: 6:00 - 20:00 (14 Stunden)
-                          const START_HOUR = 6
-                          const END_HOUR = 20
-                          const TOTAL_HOURS = END_HOUR - START_HOUR
-                          const hours = Array.from({ length: TOTAL_HOURS + 1 }, (_, i) => START_HOUR + i)
-
-                          const parseTime = (timeStr) => {
-                            if (!timeStr) return null
-                            const [h, m] = timeStr.split(':').map(Number)
-                            return h + m / 60
-                          }
-
-                          const getBarStyle = (start, end) => {
-                            // Behandle Nachtschichten
-                            let displayStart = start
-                            let displayEnd = end
-
-                            // Wenn Ende 0:00 (Mitternacht) oder kleiner als Start -> bis 20:00 anzeigen
-                            if (end <= start && end < START_HOUR) {
-                              displayEnd = END_HOUR
-                            }
-
-                            // Wenn Start vor 6:00 -> ab 6:00 anzeigen
-                            if (displayStart < START_HOUR) {
-                              displayStart = START_HOUR
-                            }
-
-                            // Wenn Ende nach 20:00 -> bis 20:00 anzeigen
-                            if (displayEnd > END_HOUR) {
-                              displayEnd = END_HOUR
-                            }
-
-                            // Clamp to visible range
-                            displayStart = Math.max(START_HOUR, Math.min(END_HOUR, displayStart))
-                            displayEnd = Math.max(START_HOUR, Math.min(END_HOUR, displayEnd))
-
-                            const left = ((displayStart - START_HOUR) / TOTAL_HOURS) * 100
-                            const width = ((displayEnd - displayStart) / TOTAL_HOURS) * 100
-
-                            return { left: `${left}%`, width: `${Math.max(0, width)}%` }
-                          }
-
-                          if (!dayData) {
-                            return (
-                              <div className={`${theme.panel} rounded-2xl p-6 border ${theme.border} ${theme.cardShadow}`}>
-                                <p className={theme.textMuted}>Keine Daten für {selectedPlanDate} verfügbar.</p>
-                              </div>
-                            )
-                          }
-
-                          return (
-                            <div className={`${theme.panel} rounded-2xl p-5 border ${isToday ? 'border-[#4A90E2]/40' : theme.border} ${theme.cardShadow}`}>
-                              <div className="flex items-center gap-2 mb-4">
-                                <h3 className="text-lg font-semibold">{dayData.issueDate}</h3>
-                                {isToday && (
-                                  <span className="text-[10px] uppercase tracking-wide px-2 py-1 rounded-full bg-[#4A90E2]/15 text-[#4A90E2] border border-[#4A90E2]/20">
-                                    Heute
-                                  </span>
-                                )}
-                              </div>
-
-                              {Object.entries(dayData.groups).map(([groupName, employees]) => (
-                                <div key={groupName} className="mb-6 last:mb-0">
-                                  <p className={`text-xs font-medium mb-3 ${theme.textMuted}`}>{groupName}</p>
-
-                                  {/* Zeitachse */}
-                                  <div className="relative mb-2">
-                                    <div className="flex justify-between text-[10px] text-[#9CA3AF]">
-                                      {hours.map((h) => (
-                                        <span key={h} className="w-0 text-center" style={{ marginLeft: h === START_HOUR ? 0 : undefined }}>
-                                          {h}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  </div>
-
-                                  {/* Mitarbeiter-Balken */}
-                                  <div className="space-y-1.5">
-                                    {employees.map((emp, idx) => {
-                                      const startTime = parseTime(emp.workStart)
-                                      const endTime = parseTime(emp.workStop)
-                                      const hasWork = startTime !== null && endTime !== null && emp.workStart !== emp.workStop
-                                      const isAbsent = emp.status === 'Urlaub' || emp.status === 'Krank'
-                                      const isFree = !hasWork && !isAbsent
-
-                                      // Finde Pausen aus timeblocks
-                                      const breakBlock = emp.timeblocks.find((tb) => tb.type === 'break')
-                                      const breakDuration = breakBlock ? breakBlock.duration : 0
-
-                                      // Berechne Pausenposition (nach dem ersten Arbeitsblock)
-                                      let breakStart = null
-                                      let breakEnd = null
-                                      if (breakDuration > 0 && hasWork) {
-                                        let accumulated = 0
-                                        for (const tb of emp.timeblocks) {
-                                          if (tb.type === 'empty') {
-                                            accumulated += tb.duration
-                                          } else if (tb.type === 'work') {
-                                            accumulated += tb.duration
-                                          } else if (tb.type === 'break') {
-                                            breakStart = START_HOUR + accumulated / 60
-                                            breakEnd = breakStart + tb.duration / 60
-                                            break
-                                          }
-                                        }
-                                      }
-
-                                      return (
-                                        <div
-                                          key={`${emp.firstName}-${emp.lastName}-${idx}`}
-                                          className="relative h-7 rounded bg-[#E5E7EB]/70"
-                                        >
-                                          {/* Hintergrund-Raster */}
-                                          <div className="absolute inset-0 flex">
-                                            {hours.slice(0, -1).map((h) => (
-                                              <div key={h} className="flex-1 border-r border-[#E5E7EB]" />
-                                            ))}
-                                          </div>
-
-                                          {/* Arbeitsbalken */}
-                                          {hasWork && !isAbsent && (
-                                            <>
-                                              <div
-                                                className="absolute top-0.5 bottom-0.5 bg-[#4A90E2] rounded"
-                                                style={getBarStyle(startTime, endTime)}
-                                              />
-                                              {/* Pause */}
-                                              {breakStart && breakEnd && (
-                                                <div
-                                                  className="absolute top-0.5 bottom-0.5 bg-rose-500 rounded"
-                                                  style={getBarStyle(breakStart, breakEnd)}
-                                                />
-                                              )}
-                                              {/* Name über allem */}
-                                              <div
-                                                className="absolute top-0.5 bottom-0.5 flex items-center justify-center overflow-hidden pointer-events-none"
-                                                style={getBarStyle(startTime, endTime)}
-                                              >
-                                                <span className="text-[11px] font-semibold text-[#1F2937] truncate px-2 drop-shadow-[0_0_2px_rgba(255,255,255,0.8)]">
-                                                  {emp.firstName} {emp.lastName}
-                                                </span>
-                                              </div>
-                                            </>
-                                          )}
-
-                                          {/* Urlaub */}
-                                          {emp.status === 'Urlaub' && (
-                                            <div
-                                              className="absolute top-0.5 bottom-0.5 rounded flex items-center justify-center overflow-hidden"
-                                              style={{ left: '0%', width: '100%', backgroundColor: '#A481A2' }}
-                                            >
-                                              <span className="text-[11px] font-semibold text-[#1F2937] truncate px-2 drop-shadow-[0_0_2px_rgba(255,255,255,0.8)]">
-                                                {emp.firstName} {emp.lastName} - Urlaub
-                                              </span>
-                                            </div>
-                                          )}
-
-                                          {/* Krank */}
-                                          {emp.status === 'Krank' && (
-                                            <div
-                                              className="absolute top-0.5 bottom-0.5 rounded flex items-center justify-center overflow-hidden"
-                                              style={{ left: '0%', width: '100%', backgroundColor: '#FBBF24' }}
-                                            >
-                                              <span className="text-[11px] font-semibold text-[#1F2937] truncate px-2 drop-shadow-[0_0_2px_rgba(255,255,255,0.8)]">
-                                                {emp.firstName} {emp.lastName} - Krank
-                                              </span>
-                                            </div>
-                                          )}
-
-                                          {/* Frei */}
-                                          {isFree && (
-                                            <div className="absolute inset-0 flex items-center px-2">
-                                              <span className={`text-[11px] ${theme.textMuted} truncate`}>
-                                                {emp.firstName} {emp.lastName}
-                                              </span>
-                                            </div>
-                                          )}
-                                        </div>
-                                      )
-                                    })}
-                                  </div>
-                                </div>
-                              ))}
-
-                              {/* Legende */}
-                              <div className={`flex flex-wrap gap-4 mt-4 pt-4 border-t ${theme.border} text-[10px] ${theme.textMuted}`}>
-                                <div className="flex items-center gap-1.5">
-                                  <div className="w-3 h-3 rounded bg-[#4A90E2]" />
-                                  <span>Arbeit</span>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                  <div className="w-3 h-3 rounded bg-rose-500" />
-                                  <span>Pause</span>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                  <div className="w-3 h-3 rounded" style={{ backgroundColor: '#A481A2' }} />
-                                  <span>Urlaub</span>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                  <div className="w-3 h-3 rounded" style={{ backgroundColor: '#FBBF24' }} />
-                                  <span>Krank</span>
-                                </div>
-                              </div>
-                            </div>
-                          )
-                        })()}
-                      </div>
-                    </div>
-                  )}
-
-                  {!planLoading && !planError && !planData && (
-                    <div className={`${theme.panel} rounded-2xl p-6 border ${theme.border} ${theme.cardShadow}`}>
-                      <p className={theme.textMuted}>Keine Plandaten verfügbar.</p>
-                    </div>
-                  )}
-                </>
+                <PlanView
+                  theme={theme}
+                  planData={planData}
+                  planLoading={planLoading}
+                  planError={planError}
+                  fetchPlanData={fetchPlanData}
+                  setPlanData={setPlanData}
+                  setPlanError={setPlanError}
+                  selectedPlanDate={selectedPlanDate}
+                  setSelectedPlanDate={setSelectedPlanDate}
+                />
               )}
 
               {activeView === 'calendar' && (
-                <>
-                  {/* Header mit Kalender-Auswahl und Controls */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                    <div className="flex items-center gap-3">
-                      <h2 className="text-2xl lg:text-3xl font-semibold tracking-tight">Kalender</h2>
-
-                      {calendars.length > 0 && (
-                        <select
-                          value={selectedCalendarId || ''}
-                          onChange={(e) => setSelectedCalendarId(e.target.value)}
-                          className={`px-3 py-2 rounded-lg border ${theme.input} ${theme.text} text-sm`}
-                        >
-                          <option value="all">Alle Kalender</option>
-                          {calendars.map((cal) => (
-                            <option key={cal.id} value={cal.id}>
-                              {cal.name}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {/* Ansicht-Wechsler */}
-                      <div className={`flex rounded-lg border ${theme.border} overflow-hidden`}>
-                        {['month', 'week', 'day'].map((mode) => (
-                          <button
-                            key={mode}
-                            type="button"
-                            onClick={() => setCalendarViewMode(mode)}
-                            className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                              calendarViewMode === mode
-                                ? 'bg-[#4A90E2] text-white'
-                                : `${theme.panel} ${theme.textMuted} ${theme.bgHover}`
-                            }`}
-                          >
-                            {mode === 'month' ? 'Monat' : mode === 'week' ? 'Woche' : 'Tag'}
-                          </button>
-                        ))}
-                      </div>
-
-                      {/* Navigation */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const d = new Date(calendarViewDate)
-                          if (calendarViewMode === 'month') d.setMonth(d.getMonth() - 1)
-                          else if (calendarViewMode === 'week') d.setDate(d.getDate() - 7)
-                          else d.setDate(d.getDate() - 1)
-                          setCalendarViewDate(d)
-                        }}
-                        className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
-                        title="Zurück"
-                      >
-                        <Icons.ChevronLeft />
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setCalendarViewDate(new Date())}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-lg ${theme.bgHover} ${theme.textMuted}`}
-                      >
-                        Heute
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const d = new Date(calendarViewDate)
-                          if (calendarViewMode === 'month') d.setMonth(d.getMonth() + 1)
-                          else if (calendarViewMode === 'week') d.setDate(d.getDate() + 7)
-                          else d.setDate(d.getDate() + 1)
-                          setCalendarViewDate(d)
-                        }}
-                        className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
-                        title="Vor"
-                      >
-                        <Icons.ChevronRight />
-                      </button>
-
-                      {/* Admin-Aktionen */}
-                      {currentStaff?.is_admin && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => openCalendarModal()}
-                            className={`px-3 py-1.5 text-xs font-medium rounded-lg ${theme.accent} text-white`}
-                          >
-                            + Kalender
-                          </button>
-                          {selectedCalendarId && selectedCalendarId !== 'all' && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setPermissionsModalOpen(true)
-                                fetchCalendarPermissions(selectedCalendarId)
-                              }}
-                              className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
-                              title="Berechtigungen verwalten"
-                            >
-                              <Icons.Settings />
-                            </button>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Aktueller Monat/Woche Anzeige */}
-                  <div className="mb-4">
-                    <h3 className={`text-lg font-medium ${theme.text}`}>
-                      {calendarViewDate.toLocaleDateString('de-DE', {
-                        month: 'long',
-                        year: 'numeric',
-                        ...(calendarViewMode === 'day' && { day: 'numeric', weekday: 'long' }),
-                      })}
-                    </h3>
-                  </div>
-
-                  {calendarsLoading || eventsLoading ? (
-                    <div className={`${theme.panel} rounded-2xl p-6 border ${theme.border} ${theme.cardShadow}`}>
-                      <p className={theme.textMuted}>{calendarsLoading ? 'Kalender werden geladen...' : 'Termine werden geladen...'}</p>
-                    </div>
-                  ) : calendarsError ? (
-                    <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3">
-                      <p className="text-rose-400 text-sm">{calendarsError}</p>
-                    </div>
-                  ) : calendars.length === 0 ? (
-                    <div className={`${theme.panel} rounded-2xl p-6 border ${theme.border} ${theme.cardShadow}`}>
-                      <p className={theme.textMuted}>
-                        Keine Kalender verfügbar.
-                        {currentStaff?.is_admin && ' Erstelle einen neuen Kalender.'}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className={`${theme.panel} rounded-2xl p-4 border ${theme.border} ${theme.cardShadow}`}>
-                      {/* Monatsansicht */}
-                      {calendarViewMode === 'month' && (() => {
-                        const today = new Date()
-                        // Lokales Datum formatieren (ohne Zeitzonenkonvertierung)
-                        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-
-                        const firstDay = new Date(calendarViewDate.getFullYear(), calendarViewDate.getMonth(), 1)
-                        const startOffset = (firstDay.getDay() + 6) % 7
-                        const startDate = new Date(firstDay)
-                        startDate.setDate(startDate.getDate() - startOffset)
-
-                        const weeks = []
-                        const currentDate = new Date(startDate)
-
-                        for (let w = 0; w < 6; w++) {
-                          const week = []
-                          for (let d = 0; d < 7; d++) {
-                            const dayDate = new Date(currentDate)
-                            // Lokales Datum formatieren (ohne Zeitzonenkonvertierung)
-                            const dateStr = `${dayDate.getFullYear()}-${String(dayDate.getMonth() + 1).padStart(2, '0')}-${String(dayDate.getDate()).padStart(2, '0')}`
-                            const isCurrentMonth = dayDate.getMonth() === calendarViewDate.getMonth()
-                            const isToday = dateStr === todayStr
-                            const isWeekend = d >= 5
-
-                            const dayEvents = calendarEvents.filter((e) => {
-                              // Datum direkt aus String extrahieren (vermeidet Zeitzonenprobleme)
-                              const eventDate = e.start_time.substring(0, 10)
-                              return eventDate === dateStr
-                            })
-
-                            week.push({ date: dayDate, dateStr, isCurrentMonth, isToday, events: dayEvents, isWeekend })
-                            currentDate.setDate(currentDate.getDate() + 1)
-                          }
-                          weeks.push(week)
-                        }
-
-                        const weekDays = showWeekends ? ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'] : ['Mo', 'Di', 'Mi', 'Do', 'Fr']
-                        const gridCols = showWeekends ? 'grid-cols-7' : 'grid-cols-5'
-
-                        return (
-                          <div className="space-y-1 relative">
-                            {/* Toggle Button für Wochenende */}
-                            <button
-                              type="button"
-                              onClick={() => setShowWeekends(!showWeekends)}
-                              className={`absolute -right-1 top-0 p-1.5 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
-                              title={showWeekends ? 'Wochenende ausblenden' : 'Wochenende einblenden'}
-                            >
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                {showWeekends ? (
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                                ) : (
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                                )}
-                              </svg>
-                            </button>
-
-                            <div className={`grid ${gridCols} gap-1 mb-2`}>
-                              {weekDays.map((day, idx) => (
-                                <div
-                                  key={day}
-                                  className={`text-xs font-medium text-center py-2 ${showWeekends && idx >= 5 ? theme.textMuted : theme.textSecondary}`}
-                                >
-                                  {day}
-                                </div>
-                              ))}
-                            </div>
-
-                            {weeks.map((week, wIdx) => (
-                              <div key={wIdx} className={`grid ${gridCols} gap-1`}>
-                                {week.filter((day) => showWeekends || !day.isWeekend).map((day) => (
-                                  <div
-                                    key={day.dateStr}
-                                    onClick={() => canWriteCurrentCalendar() && openEventModal(null, day.date)}
-                                    className={`
-                                      min-h-24 p-1 rounded-lg border transition-colors
-                                      ${day.isCurrentMonth ? theme.panel : `${theme.panel} opacity-40`}
-                                      ${day.isToday ? 'border-[#4A90E2]/50' : theme.border}
-                                      ${canWriteCurrentCalendar() ? 'cursor-pointer ' + theme.bgHover : ''}
-                                    `}
-                                  >
-                                    <div
-                                      className={`text-xs font-medium mb-1 ${
-                                        day.isToday ? theme.accentText : day.isCurrentMonth ? theme.text : theme.textMuted
-                                      }`}
-                                    >
-                                      {day.date.getDate()}
-                                    </div>
-
-                                    <div className="space-y-0.5">
-                                      {day.events.slice(0, 3).map((event) => (
-                                        <div
-                                          key={event.id}
-                                          onClick={(e) => {
-                                            e.stopPropagation()
-                                            openEventModal(event)
-                                          }}
-                                          className="text-[10px] px-1.5 py-0.5 rounded truncate text-white cursor-pointer hover:opacity-80"
-                                          style={{ backgroundColor: getEventColor(event) }}
-                                          title={event.title}
-                                        >
-                                          {!event.all_day && (
-                                            <span className="opacity-75 mr-1">
-                                              {new Date(event.start_time).toLocaleTimeString('de-DE', {
-                                                hour: '2-digit',
-                                                minute: '2-digit',
-                                              })}
-                                            </span>
-                                          )}
-                                          {event.title}
-                                        </div>
-                                      ))}
-                                      {day.events.length > 3 && (
-                                        <div className={`text-[10px] ${theme.textMuted}`}>+{day.events.length - 3} weitere</div>
-                                      )}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            ))}
-                          </div>
-                        )
-                      })()}
-
-                      {/* Wochenansicht */}
-                      {calendarViewMode === 'week' && (() => {
-                        const today = new Date()
-                        // Lokales Datum formatieren (ohne Zeitzonenkonvertierung)
-                        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-
-                        const startOfWeek = new Date(calendarViewDate)
-                        startOfWeek.setDate(calendarViewDate.getDate() - ((calendarViewDate.getDay() + 6) % 7))
-
-                        const days = []
-                        for (let i = 0; i < 7; i++) {
-                          const d = new Date(startOfWeek)
-                          d.setDate(startOfWeek.getDate() + i)
-                          // Lokales Datum formatieren (ohne Zeitzonenkonvertierung)
-                          const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-                          const dayEvents = calendarEvents.filter((e) => e.start_time.substring(0, 10) === dateStr)
-                          days.push({ date: d, dateStr, isToday: dateStr === todayStr, events: dayEvents })
-                        }
-
-                        const weekDays = ['Mo', 'Di', 'Mi', 'Do', 'Fr']
-                        const weekendDays = ['Sa', 'So']
-                        const workDays = days.slice(0, 5) // Mo-Fr
-                        const weekend = days.slice(5, 7) // Sa-So
-                        const weekendEvents = [...weekend[0].events, ...weekend[1].events]
-
-                        return (
-                          <div className="space-y-3">
-                            {/* Wochenend-Termine kompakt über dem Kalender */}
-                            {weekendEvents.length > 0 && (
-                              <div className={`p-3 rounded-xl border ${theme.border} ${theme.panel}`}>
-                                <div className={`text-xs font-medium mb-2 ${theme.textSecondary}`}>
-                                  Wochenende ({weekend[0].date.getDate()}.–{weekend[1].date.getDate()}.)
-                                </div>
-                                <div className="flex flex-wrap gap-2">
-                                  {weekend.map((day, idx) => (
-                                    day.events.map((event) => (
-                                      <div
-                                        key={event.id}
-                                        onClick={() => openEventModal(event)}
-                                        className="text-[11px] px-2 py-1 rounded-lg text-white cursor-pointer hover:opacity-80 flex items-center gap-1.5"
-                                        style={{ backgroundColor: getEventColor(event) }}
-                                      >
-                                        <span className="opacity-75 font-medium">{weekendDays[idx]}</span>
-                                        {!event.all_day && (
-                                          <span className="opacity-75">
-                                            {new Date(event.start_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
-                                          </span>
-                                        )}
-                                        <span className="truncate max-w-32">{event.title}</span>
-                                      </div>
-                                    ))
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Mo-Fr Kalender */}
-                            <div className="grid grid-cols-5 gap-2">
-                              {workDays.map((day, idx) => (
-                                <div
-                                  key={day.dateStr}
-                                  className={`min-h-48 p-2 rounded-lg border ${day.isToday ? 'border-[#4A90E2]/50' : theme.border} ${theme.panel}`}
-                                >
-                                  <div className={`text-xs font-medium mb-2 ${day.isToday ? theme.accentText : theme.textSecondary}`}>
-                                    {weekDays[idx]} {day.date.getDate()}
-                                  </div>
-                                  <div className="space-y-1">
-                                    {day.events.map((event) => (
-                                      <div
-                                        key={event.id}
-                                        onClick={() => openEventModal(event)}
-                                        className="text-[10px] px-1.5 py-1 rounded text-white cursor-pointer hover:opacity-80"
-                                        style={{ backgroundColor: getEventColor(event) }}
-                                      >
-                                        {!event.all_day && (
-                                          <div className="opacity-75">
-                                            {new Date(event.start_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
-                                          </div>
-                                        )}
-                                        <div className="truncate">{event.title}</div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                  {canWriteCurrentCalendar() && (
-                                    <button
-                                      type="button"
-                                      onClick={() => openEventModal(null, day.date)}
-                                      className={`mt-2 w-full text-[10px] py-1 rounded ${theme.bgHover} ${theme.textMuted}`}
-                                    >
-                                      + Termin
-                                    </button>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )
-                      })()}
-
-                      {/* Tagesansicht */}
-                      {calendarViewMode === 'day' && (() => {
-                        // Lokales Datum formatieren (ohne Zeitzonenkonvertierung)
-                        const dateStr = `${calendarViewDate.getFullYear()}-${String(calendarViewDate.getMonth() + 1).padStart(2, '0')}-${String(calendarViewDate.getDate()).padStart(2, '0')}`
-                        const dayEvents = calendarEvents.filter((e) => e.start_time.substring(0, 10) === dateStr)
-
-                        return (
-                          <div className="space-y-2">
-                            {dayEvents.length === 0 ? (
-                              <p className={theme.textMuted}>Keine Termine an diesem Tag.</p>
-                            ) : (
-                              dayEvents.map((event) => (
-                                <div
-                                  key={event.id}
-                                  onClick={() => openEventModal(event)}
-                                  className={`p-3 rounded-xl border ${theme.border} cursor-pointer ${theme.bgHover}`}
-                                >
-                                  <div className="flex items-start gap-3">
-                                    <div className="w-1 h-12 rounded" style={{ backgroundColor: getEventColor(event) }} />
-                                    <div>
-                                      <p className={`font-medium ${theme.text}`}>{event.title}</p>
-                                      <p className={`text-xs ${theme.textMuted}`}>
-                                        {event.all_day
-                                          ? 'Ganztägig'
-                                          : `${new Date(event.start_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} - ${new Date(event.end_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`}
-                                      </p>
-                                      {event.location && <p className={`text-xs ${theme.textMuted}`}>{event.location}</p>}
-                                    </div>
-                                  </div>
-                                </div>
-                              ))
-                            )}
-                            {canWriteCurrentCalendar() && (
-                              <button
-                                type="button"
-                                onClick={() => openEventModal(null, calendarViewDate)}
-                                className={`w-full py-2 rounded-xl border ${theme.border} ${theme.bgHover} ${theme.textMuted} text-sm`}
-                              >
-                                + Neuer Termin
-                              </button>
-                            )}
-                          </div>
-                        )
-                      })()}
-                    </div>
-                  )}
-
-                  {/* Floating Add Button */}
-                  {canWriteCurrentCalendar() && calendars.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => openEventModal()}
-                      className={`fixed bottom-6 right-6 p-4 rounded-full ${theme.accent} text-white shadow-lg hover:scale-105 transition-transform z-30`}
-                      title="Neuer Termin"
-                    >
-                      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                      </svg>
-                    </button>
-                  )}
-                </>
+                <CalendarView
+                  theme={theme}
+                  calendars={calendars}
+                  selectedCalendarId={selectedCalendarId}
+                  setSelectedCalendarId={setSelectedCalendarId}
+                  calendarViewMode={calendarViewMode}
+                  setCalendarViewMode={setCalendarViewMode}
+                  calendarViewDate={calendarViewDate}
+                  setCalendarViewDate={setCalendarViewDate}
+                  Icons={Icons}
+                  currentStaff={currentStaff}
+                  openCalendarModal={openCalendarModal}
+                  setPermissionsModalOpen={setPermissionsModalOpen}
+                  fetchCalendarPermissions={fetchCalendarPermissions}
+                  calendarsLoading={calendarsLoading}
+                  eventsLoading={eventsLoading}
+                  calendarsError={calendarsError}
+                  calendarEvents={calendarEvents}
+                  showWeekends={showWeekends}
+                  setShowWeekends={setShowWeekends}
+                  canWriteCurrentCalendar={canWriteCurrentCalendar}
+                  openEventModal={openEventModal}
+                  getEventColor={getEventColor}
+                />
               )}
 
               {activeView === 'rechnungen' && (
@@ -6268,702 +3775,59 @@ Fülle nur Felder aus, die im Text eindeutig erkennbar sind. Lasse unbekannte Fe
               )}
 
               {activeView === 'settings' && (
-                <>
-                  <h2 className="text-2xl lg:text-3xl font-semibold mb-6 tracking-tight">Einstellungen</h2>
-
-                  <div className="space-y-4">
-                    {settingsTab === 'pharmacies' && (
-                      <div className={`${theme.panel} rounded-2xl p-5 border ${theme.border} ${theme.cardShadow}`}>
-                        <div className="flex items-center justify-between mb-3">
-                          <div>
-                            <h3 className="text-base font-semibold">Apothekendaten</h3>
-                            <p className={`text-xs ${theme.textMuted}`}>Maximal 4 Einträge.</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={fetchPharmacies}
-                              className={`text-xs font-medium ${theme.accentText} hover:opacity-80`}
-                              title="Liste aktualisieren"
-                            >
-                              Aktualisieren
-                            </button>
-                            <button
-                              type="button"
-                              onClick={openCreateModal}
-                              disabled={pharmacies.length >= 4}
-                              className={`h-8 w-8 rounded-full flex items-center justify-center border ${theme.border} ${theme.bgHover} ${theme.text} disabled:opacity-40 disabled:cursor-not-allowed`}
-                              title="Apotheke hinzufügen"
-                            >
-                              +
-                            </button>
-                          </div>
-                        </div>
-
-                        {pharmaciesMessage && (
-                          <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3 mb-3">
-                            <p className="text-rose-400 text-sm">{pharmaciesMessage}</p>
-                          </div>
-                        )}
-
-                        {pharmaciesLoading && (
-                          <p className={theme.textMuted}>Lade Daten...</p>
-                        )}
-
-                        {!pharmaciesLoading && pharmacies.length === 0 && (
-                          <p className={theme.textMuted}>
-                            Noch keine Apotheke gespeichert. Nutze das + oben rechts.
-                          </p>
-                        )}
-
-                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                          {pharmacies.map((pharmacy) => (
-                            <button
-                              type="button"
-                              key={pharmacy.id}
-                              className={`rounded-xl border ${theme.border} p-4 ${theme.bgHover} text-left`}
-                              title="Apotheke bearbeiten"
-                              onClick={() => openEditModal(pharmacy)}
-                            >
-                              <div className="flex items-start justify-between gap-2">
-                                <div>
-                                  <p className="font-medium text-sm">{pharmacy.name}</p>
-                                  <p className={`text-xs ${theme.textMuted}`}>
-                                    {[pharmacy.street, [pharmacy.postal_code, pharmacy.city].filter(Boolean).join(' ')].filter(Boolean).join(', ')}
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="mt-3 grid gap-1.5 text-xs">
-                                  <p className={theme.textMuted}>
-                                    Telefon: <span className={theme.text}>{pharmacy.phone || '-'}</span>
-                                  </p>
-                                  <p className={theme.textMuted}>
-                                    {pharmacy.owner_role === 'manager' ? 'Filialleiter' : 'Inhaber'}:{' '}
-                                    <span className={theme.text}>{pharmacy.owner || '-'}</span>
-                                  </p>
-                                  <p className={theme.textMuted}>
-                                    Webseite: <span className={theme.text}>{pharmacy.website || '-'}</span>
-                                  </p>
-                                  <p className={theme.textMuted}>
-                                    E-Mail: <span className={theme.text}>{pharmacy.email || '-'}</span>
-                                  </p>
-                                  <p className={theme.textMuted}>
-                                    Fax: <span className={theme.text}>{pharmacy.fax || '-'}</span>
-                                  </p>
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                    {settingsTab === 'staff' && (
-                      <div className={`${theme.panel} rounded-2xl p-5 border ${theme.border} ${theme.cardShadow}`}>
-                          <div className="flex items-center justify-between mb-3">
-                            <div>
-                              <h3 className="text-base font-semibold">Kollegium</h3>
-                              <p className={`text-xs ${theme.textMuted}`}>Global über alle Apotheken.</p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <button
-                                type="button"
-                                onClick={fetchStaff}
-                                className={`text-xs font-medium ${theme.accentText} hover:opacity-80`}
-                                title="Liste aktualisieren"
-                              >
-                                Aktualisieren
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => openStaffModal()}
-                                disabled={pharmacies.length === 0}
-                                className={`h-8 w-8 rounded-full flex items-center justify-center border ${theme.border} ${theme.bgHover} ${theme.text} disabled:opacity-40 disabled:cursor-not-allowed`}
-                                title="Person hinzufügen"
-                              >
-                                +
-                              </button>
-                            </div>
-                          </div>
-
-                          {staffMessage && (
-                            <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3 mb-3">
-                              <p className="text-rose-400 text-sm">{staffMessage}</p>
-                            </div>
-                          )}
-
-                          {staffLoading && (
-                            <p className={theme.textMuted}>Lade Daten...</p>
-                          )}
-
-                          {!staffLoading && pharmacies.length === 0 && (
-                            <p className={theme.textMuted}>
-                              Bitte zuerst eine Apotheke anlegen, um Kollegium zuzuordnen.
-                            </p>
-                          )}
-
-                          {!staffLoading && pharmacies.length > 0 && staff.length === 0 && (
-                            <p className={theme.textMuted}>
-                              Noch keine Personen erfasst. Nutze das + oben rechts.
-                            </p>
-                          )}
-
-                          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                            {staff.map((member) => (
-                              <button
-                                type="button"
-                                key={member.id}
-                                className={`rounded-xl border ${theme.border} p-4 ${theme.bgHover} text-left`}
-                                title="Person bearbeiten"
-                                onClick={() => openStaffModal(member)}
-                              >
-                                <div className="flex items-start justify-between gap-2">
-                                  <div>
-                                    <div className="flex items-center gap-2">
-                                      {member.avatar_url ? (
-                                        <img
-                                          src={member.avatar_url}
-                                          alt={`${member.first_name} ${member.last_name}`}
-                                          className={`h-8 w-8 rounded-full object-cover border ${theme.border}`}
-                                        />
-                                      ) : (
-                                        <div className={`h-8 w-8 rounded-full border ${theme.border} flex items-center justify-center text-[10px] ${theme.textMuted}`}>
-                                          {(member.first_name?.[0] || '') + (member.last_name?.[0] || '')}
-                                        </div>
-                                      )}
-                                      <div>
-                                        <p className="font-medium text-sm">
-                                          {member.first_name} {member.last_name}
-                                        </p>
-                                        <p className={`text-xs ${theme.textMuted}`}>
-                                          {member.role || '-'}
-                                        </p>
-                                      </div>
-                                    </div>
-                                  </div>
-                                  {member.is_admin && (
-                                    <span className={`text-[10px] uppercase tracking-wide px-2 py-1 rounded-full border ${theme.border} ${theme.textMuted}`}>
-                                      Admin
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="mt-3 grid gap-1.5 text-xs">
-                                  <p className={theme.textMuted}>
-                                    Apotheke: <span className={theme.text}>{pharmacyLookup[member.pharmacy_id] || '-'}</span>
-                                  </p>
-                                  <p className={theme.textMuted}>
-                                    Adresse: <span className={theme.text}>
-                                      {[member.street, [member.postal_code, member.city].filter(Boolean).join(' ')].filter(Boolean).join(', ') || '-'}
-                                    </span>
-                                  </p>
-                                  <p className={theme.textMuted}>
-                                    Mobil: <span className={theme.text}>{member.mobile || '-'}</span>
-                                  </p>
-                                  <p className={theme.textMuted}>
-                                    E-Mail: <span className={theme.text}>{member.email || '-'}</span>
-                                  </p>
-                                  {member.auth_user_id && (
-                                    <p className={theme.textMuted}>
-                                      Login verknüpft
-                                    </p>
-                                  )}
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                    )}
-
-                    {settingsTab === 'email' && (
-                      <div className="space-y-4">
-                        {/* E-Mail-Konten (nur Admins können bearbeiten) */}
-                        <div className={`${theme.panel} rounded-2xl p-5 border ${theme.border} ${theme.cardShadow}`}>
-                          <div className="flex items-center justify-between mb-3">
-                            <div>
-                              <h3 className="text-base font-semibold">E-Mail-Konten</h3>
-                              <p className={`text-xs ${theme.textMuted}`}>JMAP-Verbindung zu Stalwart Mail Server.</p>
-                            </div>
-                            {currentStaff?.is_admin && (
-                              <button
-                                type="button"
-                                onClick={() => openEmailAccountModal()}
-                                className={`h-8 w-8 rounded-full flex items-center justify-center border ${theme.border} ${theme.bgHover} ${theme.text}`}
-                                title="E-Mail-Konto hinzufügen"
-                              >
-                                +
-                              </button>
-                            )}
-                          </div>
-
-                          {emailAccounts.length === 0 ? (
-                            <div className={`text-center py-8 ${theme.textMuted}`}>
-                              <EnvelopeSimple size={48} className="mx-auto mb-3 opacity-50" />
-                              <p className="text-sm">Noch kein E-Mail-Konto eingerichtet.</p>
-                              {currentStaff?.is_admin && (
-                                <p className="text-xs mt-1">Klicke auf + um ein Konto hinzuzufügen.</p>
-                              )}
-                            </div>
-                          ) : (
-                            <div className="space-y-2">
-                              {emailAccounts.map((account) => (
-                                <div
-                                  key={account.id}
-                                  className={`flex items-center gap-3 p-3 rounded-xl border ${theme.border} ${
-                                    selectedEmailAccount === account.id ? theme.navActive : ''
-                                  }`}
-                                >
-                                  <button
-                                    type="button"
-                                    onClick={() => handleSelectEmailAccount(account.id)}
-                                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                                      selectedEmailAccount === account.id
-                                        ? 'border-[#4A90E2] bg-[#4A90E2]'
-                                        : `${theme.border}`
-                                    }`}
-                                    title="Als Standard auswählen"
-                                  >
-                                    {selectedEmailAccount === account.id && (
-                                      <span className="w-2 h-2 rounded-full bg-white" />
-                                    )}
-                                  </button>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="font-medium text-sm truncate">{account.name}</p>
-                                    <p className={`text-xs ${theme.textMuted} truncate`}>{account.email}</p>
-                                  </div>
-                                  {currentStaff?.is_admin && (
-                                    <div className="flex items-center gap-1">
-                                      <button
-                                        type="button"
-                                        onClick={() => openEmailAccountModal(account)}
-                                        className={`p-1.5 rounded-lg ${theme.bgHover}`}
-                                        title="Bearbeiten"
-                                      >
-                                        <GearSix size={16} />
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleDeleteEmailAccount(account.id)}
-                                        className={`p-1.5 rounded-lg ${theme.danger}`}
-                                        title="Löschen"
-                                      >
-                                        <Icons.X />
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* E-Mail-Berechtigungen (nur für Admins sichtbar) */}
-                        {currentStaff?.is_admin && (
-                          <div className={`${theme.panel} rounded-2xl p-5 border ${theme.border} ${theme.cardShadow}`}>
-                            <div className="mb-3">
-                              <h3 className="text-base font-semibold">E-Mail-Berechtigungen</h3>
-                              <p className={`text-xs ${theme.textMuted}`}>Lege fest, welche Mitarbeiter E-Mails sehen dürfen.</p>
-                            </div>
-
-                            {staff.filter(s => s.auth_user_id).length === 0 ? (
-                              <div className={`text-center py-6 ${theme.textMuted}`}>
-                                <p className="text-sm">Keine Mitarbeiter mit Benutzerkonten gefunden.</p>
-                              </div>
-                            ) : (
-                              <div className="space-y-2">
-                                {staff.filter(s => s.auth_user_id).map((member) => {
-                                  const permission = emailPermissions.find(p => p.user_id === member.auth_user_id)
-                                  const hasAccess = permission?.has_access || false
-                                  return (
-                                    <div
-                                      key={member.id}
-                                      className={`flex items-center gap-3 p-3 rounded-xl border ${theme.border}`}
-                                    >
-                                      <button
-                                        type="button"
-                                        onClick={() => toggleEmailPermission(member.auth_user_id, hasAccess)}
-                                        className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-                                          hasAccess
-                                            ? 'border-[#4A90E2] bg-[#4A90E2]'
-                                            : `${theme.border} hover:border-[#4A90E2]`
-                                        }`}
-                                        title={hasAccess ? 'Zugriff entziehen' : 'Zugriff gewähren'}
-                                      >
-                                        {hasAccess && (
-                                          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                          </svg>
-                                        )}
-                                      </button>
-                                      <div className="flex-1 min-w-0">
-                                        <p className="font-medium text-sm truncate">
-                                          {member.first_name} {member.last_name}
-                                          {member.is_admin && (
-                                            <span className={`ml-2 text-xs ${theme.textMuted}`}>(Admin)</span>
-                                          )}
-                                        </p>
-                                        <p className={`text-xs ${theme.textMuted} truncate`}>{member.email}</p>
-                                      </div>
-                                    </div>
-                                  )
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {settingsTab === 'card-enhance' && (
-                      <div className={`${theme.panel} rounded-2xl p-5 border ${theme.border} ${theme.cardShadow}`}>
-                        <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-                          <div>
-                            <h3 className="text-base font-semibold">Visitenkarten-Enhance (Test)</h3>
-                            <p className={`text-xs ${theme.textMuted}`}>Google Nano Banana Pro: zuschneiden + Lesbarkeit verbessern.</p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={fetchGoogleApiKey}
-                            className={`text-xs font-medium ${theme.accentText} hover:opacity-80`}
-                            title="Google API Key aus DB laden"
-                          >
-                            Key laden
-                          </button>
-                        </div>
-
-                        {enhanceMessage && (
-                          <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3 mb-3">
-                            <p className="text-rose-400 text-sm">{enhanceMessage}</p>
-                          </div>
-                        )}
-
-                        <div className="flex flex-col sm:flex-row gap-3 mb-4">
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleEnhanceFileChange}
-                            className={`flex-1 text-sm ${theme.input} ${theme.inputPlaceholder} border rounded-xl px-3 py-2`}
-                          />
-                          <button
-                            type="button"
-                            onClick={runBusinessCardEnhance}
-                            disabled={!enhanceFile || enhanceLoading}
-                            className={`h-10 px-4 rounded-xl text-sm font-medium ${theme.accent} text-white disabled:opacity-50 disabled:cursor-not-allowed`}
-                          >
-                            {enhanceLoading ? 'Verbessere...' : 'Verbessern'}
-                          </button>
-                        </div>
-
-                        {enhanceLoading && (
-                          <div className={`mb-4 flex items-center gap-2 text-xs ${theme.textMuted}`}>
-                            <span className="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-transparent border-t-current" />
-                            Nano Banana Pro arbeitet im Hintergrund...
-                          </div>
-                        )}
-
-                        <div className="grid gap-4 md:grid-cols-2">
-                          <div className={`rounded-xl border ${theme.border} p-3`}>
-                            <p className={`text-xs ${theme.textMuted} mb-2`}>Vorher</p>
-                            {enhancePreview ? (
-                              <img
-                                src={enhancePreview}
-                                alt="Original"
-                                className="w-full max-h-[360px] object-contain rounded-lg bg-white"
-                              />
-                            ) : (
-                              <div className={`h-48 rounded-lg ${theme.bgHover} flex items-center justify-center text-xs ${theme.textMuted}`}>
-                                Kein Bild ausgewahlt
-                              </div>
-                            )}
-                          </div>
-                          <div className={`rounded-xl border ${theme.border} p-3`}>
-                            <p className={`text-xs ${theme.textMuted} mb-2`}>Nachher</p>
-                            {enhanceResultPreview ? (
-                              <img
-                                src={enhanceResultPreview}
-                                alt="Verbessert"
-                                className="w-full max-h-[360px] object-contain rounded-lg bg-white"
-                              />
-                            ) : (
-                              <div className={`h-48 rounded-lg ${theme.bgHover} flex items-center justify-center text-xs ${theme.textMuted}`}>
-                                Noch kein Ergebnis
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {settingsTab === 'contacts' && (
-                      <div className={`${theme.panel} rounded-2xl p-5 border ${theme.border} ${theme.cardShadow}`}>
-                        <div className="flex items-center justify-between mb-3">
-                          <div>
-                            <h3 className="text-base font-semibold">Kontakte</h3>
-                            <p className={`text-xs ${theme.textMuted}`}>Business-Kontakte und Visitenkarten.</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={fetchContacts}
-                              className={`text-xs font-medium ${theme.accentText} hover:opacity-80`}
-                              title="Liste aktualisieren"
-                            >
-                              Aktualisieren
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => openContactModal()}
-                              disabled={!currentStaff}
-                              className={`h-8 w-8 rounded-full flex items-center justify-center border ${theme.border} ${theme.bgHover} ${theme.text} disabled:opacity-40 disabled:cursor-not-allowed`}
-                              title="Kontakt hinzufügen"
-                            >
-                              +
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Suchfeld und Ansicht-Umschalter */}
-                        <div className="mb-4 flex flex-col sm:flex-row gap-3">
-                          <div className="relative flex-1">
-                            <svg className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${theme.textMuted}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                            <input
-                              type="text"
-                              value={contactSearch}
-                              onChange={(e) => setContactSearch(e.target.value)}
-                              placeholder="Suchen nach Name, Firma, Adresse, E-Mail..."
-                              className={`w-full pl-10 pr-10 py-2.5 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
-                            />
-                            {contactSearch && (
-                              <button
-                                type="button"
-                                onClick={() => setContactSearch('')}
-                                className={`absolute right-3 top-1/2 -translate-y-1/2 ${theme.textMuted} hover:${theme.text}`}
-                                title="Suche löschen"
-                              >
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                              </button>
-                            )}
-                          </div>
-                          {/* Ansicht-Umschalter */}
-                          <div className={`flex rounded-xl border ${theme.border} overflow-hidden`}>
-                            <button
-                              type="button"
-                              onClick={() => setContactViewMode('cards')}
-                              className={`px-3 py-2 ${contactViewMode === 'cards' ? theme.accent + ' text-white' : theme.bgHover + ' ' + theme.textMuted}`}
-                              title="Kartenansicht"
-                            >
-                              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                              </svg>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setContactViewMode('list')}
-                              className={`px-3 py-2 ${contactViewMode === 'list' ? theme.accent + ' text-white' : theme.bgHover + ' ' + theme.textMuted}`}
-                              title="Listenansicht"
-                            >
-                              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-                              </svg>
-                            </button>
-                          </div>
-                        </div>
-                        {contactSearch && (
-                          <p className={`text-xs ${theme.textMuted} mb-3`}>
-                            {filteredContacts.length} von {contacts.length} Kontakten
-                          </p>
-                        )}
-
-                        {contactsMessage && (
-                          <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3 mb-3">
-                            <p className="text-rose-400 text-sm">{contactsMessage}</p>
-                          </div>
-                        )}
-
-                        {contactsLoading && (
-                          <p className={theme.textMuted}>Lade Daten...</p>
-                        )}
-
-                        {!contactsLoading && !currentStaff && (
-                          <p className={theme.textMuted}>
-                            Bitte zuerst ein Mitarbeiter-Profil anlegen.
-                          </p>
-                        )}
-
-                        {!contactsLoading && currentStaff && contacts.length === 0 && (
-                          <p className={theme.textMuted}>
-                            Noch keine Kontakte erfasst. Nutze das + oben rechts.
-                          </p>
-                        )}
-
-                        {!contactsLoading && currentStaff && contacts.length > 0 && filteredContacts.length === 0 && (
-                          <p className={theme.textMuted}>
-                            Keine Kontakte gefunden für "{contactSearch}".
-                          </p>
-                        )}
-
-                        {/* Kartenansicht */}
-                        {contactViewMode === 'cards' && (
-                          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                            {filteredContacts.map((contact) => (
-                              <button
-                                type="button"
-                                key={contact.id}
-                                className={`rounded-xl border ${theme.border} p-4 ${theme.bgHover} text-left ${contact.staff_id ? 'border-l-4 border-l-[#4A90E2]' : ''}`}
-                                title={contact.staff_id ? 'Mitarbeiter - wird über Kollegium gepflegt' : 'Kontakt anzeigen'}
-                                onClick={() => openContactDetail(contact)}
-                              >
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="flex items-center gap-2">
-                                    {(contact.business_card_url_enhanced || contact.business_card_url) ? (
-                                      <img
-                                        src={contact.business_card_url_enhanced || contact.business_card_url}
-                                        alt="Visitenkarte"
-                                        className={`h-10 w-14 rounded object-cover border ${theme.border}`}
-                                      />
-                                    ) : (
-                                      <div className={`h-10 w-14 rounded border ${theme.border} flex items-center justify-center text-[10px] ${theme.textMuted}`}>
-                                        {(contact.first_name?.[0] || '') + (contact.last_name?.[0] || contact.company?.[0] || '')}
-                                      </div>
-                                    )}
-                                    <div>
-                                      <p className="font-medium text-sm">
-                                        {[contact.first_name, contact.last_name].filter(Boolean).join(' ') || contact.company || '-'}
-                                      </p>
-                                      {contact.company && (contact.first_name || contact.last_name) && (
-                                        <p className={`text-xs ${theme.textMuted}`}>{contact.company}</p>
-                                      )}
-                                      {contact.position && (
-                                        <p className={`text-xs ${theme.textMuted}`}>{contact.position}</p>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <span className={`text-[10px] uppercase tracking-wide px-2 py-1 rounded-full border ${theme.border} ${theme.textMuted}`}>
-                                    {contactTypeLabels[contact.contact_type] || contact.contact_type}
-                                  </span>
-                                </div>
-                                <div className="mt-3 grid gap-1.5 text-xs">
-                                  <p className={theme.textMuted}>
-                                    Adresse: <span className={theme.text}>
-                                      {[contact.street, [contact.postal_code, contact.city].filter(Boolean).join(' ')].filter(Boolean).join(', ') || '-'}
-                                    </span>
-                                  </p>
-                                  {contact.phone && (
-                                    <p className={theme.textMuted}>
-                                      Tel: <span className={theme.text}>{contact.phone}</span>
-                                    </p>
-                                  )}
-                                  {contact.mobile && (
-                                    <p className={theme.textMuted}>
-                                      Mobil: <span className={theme.text}>{contact.mobile}</span>
-                                    </p>
-                                  )}
-                                  {contact.fax && (
-                                    <p className={theme.textMuted}>
-                                      Fax: <span className={theme.text}>{contact.fax}</span>
-                                    </p>
-                                  )}
-                                  {contact.email && (
-                                    <p className={theme.textMuted}>
-                                      E-Mail: <span className={theme.text}>{contact.email}</span>
-                                    </p>
-                                  )}
-                                  {!contact.shared && (
-                                    <p className={`${theme.textMuted} italic`}>Privat</p>
-                                  )}
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Listenansicht */}
-                        {contactViewMode === 'list' && (
-                          <div className={`rounded-xl border ${theme.border} overflow-hidden`}>
-                            <table className="w-full text-sm">
-                              <thead className={`${theme.bg} border-b ${theme.border}`}>
-                                <tr>
-                                  <th className={`text-left px-4 py-3 font-medium ${theme.textSecondary}`}>Name</th>
-                                  <th className={`text-left px-4 py-3 font-medium ${theme.textSecondary} hidden sm:table-cell`}>Firma</th>
-                                  <th className={`text-left px-4 py-3 font-medium ${theme.textSecondary} hidden md:table-cell`}>Adresse</th>
-                                  <th className={`text-left px-4 py-3 font-medium ${theme.textSecondary} hidden lg:table-cell`}>Kontakt</th>
-                                  <th className={`text-left px-4 py-3 font-medium ${theme.textSecondary} w-24`}>Typ</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {filteredContacts.map((contact) => (
-                                  <tr
-                                    key={contact.id}
-                                    className={`border-b ${theme.border} ${theme.bgHover} cursor-pointer ${contact.staff_id ? 'border-l-4 border-l-[#4A90E2]' : ''}`}
-                                    title={contact.staff_id ? 'Mitarbeiter - wird über Kollegium gepflegt' : 'Kontakt anzeigen'}
-                                    onClick={() => openContactDetail(contact)}
-                                  >
-                                    <td className={`px-4 py-3 ${theme.text}`}>
-                                      <div className="flex items-center gap-2">
-                                        <div className={`h-8 w-8 rounded-full border ${theme.border} flex items-center justify-center text-[10px] ${theme.textMuted} flex-shrink-0`}>
-                                          {(contact.first_name?.[0] || '') + (contact.last_name?.[0] || contact.company?.[0] || '')}
-                                        </div>
-                                        <div>
-                                          <p className="font-medium">
-                                            {[contact.first_name, contact.last_name].filter(Boolean).join(' ') || '-'}
-                                          </p>
-                                          {contact.position && (
-                                            <p className={`text-xs ${theme.textMuted}`}>{contact.position}</p>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </td>
-                                    <td className={`px-4 py-3 ${theme.textMuted} hidden sm:table-cell`}>
-                                      {contact.company || '-'}
-                                    </td>
-                                    <td className={`px-4 py-3 ${theme.textMuted} hidden md:table-cell`}>
-                                      {[contact.street, [contact.postal_code, contact.city].filter(Boolean).join(' ')].filter(Boolean).join(', ') || '-'}
-                                    </td>
-                                    <td className={`px-4 py-3 hidden lg:table-cell`}>
-                                      <div className={`text-xs ${theme.textMuted}`}>
-                                        {contact.email && <p>{contact.email}</p>}
-                                        {contact.phone && <p>{contact.phone}</p>}
-                                        {contact.mobile && <p>{contact.mobile}</p>}
-                                        {!contact.email && !contact.phone && !contact.mobile && '-'}
-                                      </div>
-                                    </td>
-                                    <td className="px-4 py-3">
-                                      <span className={`text-[10px] uppercase tracking-wide px-2 py-1 rounded-full border ${theme.border} ${theme.textMuted}`}>
-                                        {contactTypeLabels[contact.contact_type] || contact.contact_type}
-                                      </span>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </>
+                <SettingsView
+                  theme={theme}
+                  settingsTab={settingsTab}
+                  pharmacies={pharmacies}
+                  pharmaciesMessage={pharmaciesMessage}
+                  pharmaciesLoading={pharmaciesLoading}
+                  fetchPharmacies={fetchPharmacies}
+                  openCreateModal={openCreateModal}
+                  openEditModal={openEditModal}
+                  staff={staff}
+                  staffMessage={staffMessage}
+                  staffLoading={staffLoading}
+                  fetchStaff={fetchStaff}
+                  openStaffModal={openStaffModal}
+                  pharmacyLookup={pharmacyLookup}
+                  EmailSettingsSection={EmailSettingsSection}
+                  currentStaff={currentStaff}
+                  emailAccounts={emailAccounts}
+                  selectedEmailAccount={selectedEmailAccount}
+                  handleSelectEmailAccount={handleSelectEmailAccount}
+                  openEmailAccountModal={openEmailAccountModal}
+                  handleDeleteEmailAccount={handleDeleteEmailAccount}
+                  emailPermissions={emailPermissions}
+                  toggleEmailPermission={toggleEmailPermission}
+                  Icons={Icons}
+                  enhanceMessage={enhanceMessage}
+                  fetchGoogleApiKey={fetchGoogleApiKey}
+                  handleEnhanceFileChange={handleEnhanceFileChange}
+                  runBusinessCardEnhance={runBusinessCardEnhance}
+                  enhanceFile={enhanceFile}
+                  enhanceLoading={enhanceLoading}
+                  enhancePreview={enhancePreview}
+                  enhanceResultPreview={enhanceResultPreview}
+                  ContactsSettingsSection={ContactsSettingsSection}
+                  contacts={contacts}
+                  filteredContacts={filteredContacts}
+                  contactSearch={contactSearch}
+                  setContactSearch={setContactSearch}
+                  contactViewMode={contactViewMode}
+                  setContactViewMode={setContactViewMode}
+                  contactsLoading={contactsLoading}
+                  contactsMessage={contactsMessage}
+                  contactTypeLabels={contactTypeLabels}
+                  fetchContacts={fetchContacts}
+                  openContactModal={openContactModal}
+                  openContactDetail={openContactDetail}
+                />
               )}
             </div>
           </main>
         </div>
 
-        {/* Visitenkarten-Scan Verarbeitungs-Modal */}
-        {businessCardScanning && (
-          <div className={`fixed inset-0 z-50 ${theme.overlay} flex items-center justify-center p-4`}>
-            <div className={`${theme.panel} rounded-2xl border ${theme.border} ${theme.cardShadow} px-8 py-6 flex flex-col items-center gap-4`}>
-              <svg className="w-10 h-10 animate-spin text-[#4A90E2]" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-              <div className="text-center">
-                <p className={`text-sm font-medium ${theme.textPrimary}`}>Visitenkarte wird verarbeitet</p>
-                <p className={`text-xs ${theme.textMuted} mt-1`}>OCR und Texterkennung läuft...</p>
-              </div>
-            </div>
-          </div>
-        )}
+        <contactScan.BusinessCardScanOverlay theme={theme} show={businessCardScanning} />
 
         {editingPharmacy && (
           <div
@@ -7136,100 +4000,17 @@ Fülle nur Felder aus, die im Text eindeutig erkennbar sind. Lasse unbekannte Fe
           </div>
         )}
 
-        {editingEmailAccount && (
-          <div
-            className={`fixed inset-0 z-50 ${theme.overlay} flex items-center justify-center p-4`}
-            onClick={closeEmailAccountModal}
-          >
-            <div
-              className={`${theme.panel} rounded-2xl border ${theme.border} ${theme.cardShadow} w-full max-w-md`}
-              onClick={(event) => event.stopPropagation()}
-            >
-              <div className={`flex items-center justify-between px-5 py-4 border-b ${theme.border}`}>
-                <div>
-                  <h3 className="text-base font-semibold">
-                    {editingEmailAccount === 'new' ? 'E-Mail-Konto hinzufügen' : 'E-Mail-Konto bearbeiten'}
-                  </h3>
-                  <p className={`text-xs ${theme.textMuted}`}>JMAP-Zugangsdaten eingeben.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={closeEmailAccountModal}
-                  className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
-                  title="Popup schließen"
-                >
-                  <Icons.X />
-                </button>
-              </div>
-
-              <div className="p-5 space-y-4">
-                {emailAccountMessage && (
-                  <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3">
-                    <p className="text-rose-500 text-sm">{emailAccountMessage}</p>
-                  </div>
-                )}
-
-                <div>
-                  <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
-                    Anzeigename (optional)
-                  </label>
-                  <input
-                    value={emailAccountForm.name}
-                    onChange={(e) => setEmailAccountForm(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="z.B. Arbeit, Privat"
-                    className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
-                  />
-                </div>
-
-                <div>
-                  <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
-                    E-Mail-Adresse *
-                  </label>
-                  <input
-                    type="email"
-                    value={emailAccountForm.email}
-                    onChange={(e) => setEmailAccountForm(prev => ({ ...prev, email: e.target.value }))}
-                    placeholder="user@example.com"
-                    className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
-                    Passwort *
-                  </label>
-                  <input
-                    type="password"
-                    value={emailAccountForm.password}
-                    onChange={(e) => setEmailAccountForm(prev => ({ ...prev, password: e.target.value }))}
-                    placeholder="Passwort"
-                    className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
-                    required
-                  />
-                </div>
-
-                <div className="flex justify-end gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={closeEmailAccountModal}
-                    className={`px-4 py-2 rounded-xl border ${theme.border} ${theme.text} font-medium text-sm ${theme.bgHover}`}
-                  >
-                    Abbrechen
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSaveEmailAccount}
-                    disabled={emailAccountSaving || !emailAccountForm.email || !emailAccountForm.password}
-                    className={`px-4 py-2 rounded-xl ${theme.accent} text-white font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed`}
-                  >
-                    {emailAccountSaving ? 'Prüfe...' : 'Speichern'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        <EmailAccountModal
+          theme={theme}
+          editingEmailAccount={editingEmailAccount}
+          emailAccountForm={emailAccountForm}
+          emailAccountMessage={emailAccountMessage}
+          emailAccountSaving={emailAccountSaving}
+          onClose={closeEmailAccountModal}
+          onSave={handleSaveEmailAccount}
+          setEmailAccountForm={setEmailAccountForm}
+          CloseIcon={Icons.X}
+        />
 
         {editingStaff && (
           <div
@@ -7481,647 +4262,91 @@ Fülle nur Felder aus, die im Text eindeutig erkennbar sind. Lasse unbekannte Fe
           </div>
         )}
 
-        {/* Kontakt Detail-Ansicht */}
-        {selectedContact && (
-          <div
-            className={`fixed inset-0 z-50 ${theme.overlay} flex items-center justify-center p-4`}
-            onClick={() => setSelectedContact(null)}
-          >
-            <div
-              className={`${theme.panel} rounded-2xl border ${theme.border} ${theme.cardShadow} w-full max-w-4xl max-h-[90vh] overflow-y-auto`}
-              onClick={(event) => event.stopPropagation()}
-            >
-              <div className={`flex items-center justify-between px-5 py-4 border-b ${theme.border}`}>
-                <div>
-                  <h3 className="text-base font-semibold">
-                    {[selectedContact.first_name, selectedContact.last_name].filter(Boolean).join(' ') || selectedContact.company || 'Kontakt'}
-                  </h3>
-                  <p className={`text-xs ${theme.textMuted}`}>
-                    {selectedContact.company && (selectedContact.first_name || selectedContact.last_name) ? selectedContact.company : ''}
-                    {selectedContact.position ? (selectedContact.company ? ' · ' : '') + selectedContact.position : ''}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {!selectedContact.staff_id && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        openContactModal(selectedContact)
-                        setSelectedContact(null)
-                      }}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${theme.border} ${theme.bgHover}`}
-                      title="Kontakt bearbeiten"
-                    >
-                      Bearbeiten
-                    </button>
-                  )}
-                  {selectedContact.staff_id && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSettingsTab('staff')
-                        setSelectedContact(null)
-                      }}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${theme.border} ${theme.bgHover}`}
-                      title="Im Kollegium bearbeiten"
-                    >
-                      Im Kollegium bearbeiten
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setSelectedContact(null)}
-                    className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
-                    title="Schließen"
-                  >
-                    <Icons.X />
-                  </button>
-                </div>
-              </div>
+        <ContactDetailModal
+          theme={theme}
+          selectedContact={selectedContact}
+          selectedCardUrl={selectedCardUrl}
+          selectedCardHasEnhanced={selectedCardHasEnhanced}
+          selectedCardHasOriginal={selectedCardHasOriginal}
+          selectedContactCardView={selectedContactCardView}
+          contactTypeLabels={contactTypeLabels}
+          onClose={() => setSelectedContact(null)}
+          onEdit={() => {
+            openContactModal(selectedContact)
+            setSelectedContact(null)
+          }}
+          onEditInStaff={() => {
+            setSettingsTab('staff')
+            setSelectedContact(null)
+          }}
+          onSelectCardView={setSelectedContactCardView}
+          CloseIcon={Icons.X}
+        />
 
-              <div className="p-5">
-                <div className="grid gap-6 lg:grid-cols-2">
-                  {/* Visitenkarte / Bild */}
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className={`text-xs font-medium ${theme.textSecondary}`}>Visitenkarte</h4>
-                      {selectedCardHasEnhanced && selectedCardHasOriginal && (
-                        <div className={`flex items-center rounded-lg border ${theme.border} overflow-hidden`}>
-                          <button
-                            type="button"
-                            onClick={() => setSelectedContactCardView('enhanced')}
-                            className={`px-2.5 py-1 text-[11px] ${selectedContactCardView === 'enhanced' ? theme.accent + ' text-white' : theme.bgHover + ' ' + theme.textMuted}`}
-                            title="KI-optimiert anzeigen"
-                          >
-                            KI
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setSelectedContactCardView('original')}
-                            className={`px-2.5 py-1 text-[11px] ${selectedContactCardView === 'original' ? theme.accent + ' text-white' : theme.bgHover + ' ' + theme.textMuted}`}
-                            title="Original anzeigen"
-                          >
-                            Original
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                    {selectedCardUrl ? (
-                      <a
-                        href={selectedCardUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block"
-                      >
-                        {selectedCardUrl.toLowerCase().endsWith('.pdf') ? (
-                          <div className={`rounded-xl border ${theme.border} overflow-hidden`}>
-                            <iframe
-                              src={selectedCardUrl}
-                              className="w-full h-80"
-                              title="Visitenkarte PDF"
-                            />
-                            <p className={`text-xs ${theme.textMuted} text-center py-2 border-t ${theme.border}`}>
-                              Klicken zum Öffnen in neuem Tab
-                            </p>
-                          </div>
-                        ) : (
-                          <img
-                            src={selectedCardUrl}
-                            alt="Visitenkarte"
-                            className={`w-full rounded-xl border ${theme.border} object-contain max-h-80`}
-                          />
-                        )}
-                      </a>
-                    ) : (
-                      <div className={`h-40 rounded-xl border-2 border-dashed ${theme.border} flex items-center justify-center ${theme.textMuted}`}>
-                        Keine Visitenkarte hinterlegt
-                      </div>
-                    )}
-                  </div>
+        <contactScan.ContactDuplicateDialog
+          theme={theme}
+          duplicateDialogOpen={duplicateDialogOpen}
+          duplicateCheckResult={duplicateCheckResult}
+          onClose={() => contactScanApi.setDuplicateDialogOpen(false)}
+          onDuplicateUpdate={handleDuplicateUpdate}
+          onNewRepresentative={handleNewRepresentative}
+          onCreateNewContact={handleCreateNewContact}
+        />
 
-                  {/* Kontaktdaten */}
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className={`text-xs font-medium mb-2 ${theme.textSecondary}`}>Kontaktdaten</h4>
-                      <div className={`rounded-xl border ${theme.border} divide-y ${theme.border}`}>
-                        {selectedContact.email && (
-                          <a href={`mailto:${selectedContact.email}`} className={`flex items-center gap-3 px-4 py-3 ${theme.bgHover}`}>
-                            <svg className={`w-4 h-4 ${theme.textMuted}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                            </svg>
-                            <span className={`text-sm ${theme.text}`}>{selectedContact.email}</span>
-                          </a>
-                        )}
-                        {selectedContact.phone && (
-                          <a href={`tel:${selectedContact.phone}`} className={`flex items-center gap-3 px-4 py-3 ${theme.bgHover}`}>
-                            <svg className={`w-4 h-4 ${theme.textMuted}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                            </svg>
-                            <span className={`text-sm ${theme.text}`}>{selectedContact.phone}</span>
-                          </a>
-                        )}
-                        {selectedContact.mobile && (
-                          <a href={`tel:${selectedContact.mobile}`} className={`flex items-center gap-3 px-4 py-3 ${theme.bgHover}`}>
-                            <svg className={`w-4 h-4 ${theme.textMuted}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                            </svg>
-                            <span className={`text-sm ${theme.text}`}>{selectedContact.mobile}</span>
-                          </a>
-                        )}
-                        {selectedContact.fax && (
-                          <div className={`flex items-center gap-3 px-4 py-3`}>
-                            <svg className={`w-4 h-4 ${theme.textMuted}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                            </svg>
-                            <span className={`text-sm ${theme.text}`}>{selectedContact.fax}</span>
-                          </div>
-                        )}
-                        {selectedContact.website && (
-                          <a href={selectedContact.website.startsWith('http') ? selectedContact.website : `https://${selectedContact.website}`} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-3 px-4 py-3 ${theme.bgHover}`}>
-                            <svg className={`w-4 h-4 ${theme.textMuted}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-                            </svg>
-                            <span className={`text-sm ${theme.text}`}>{selectedContact.website}</span>
-                          </a>
-                        )}
-                        {!selectedContact.email && !selectedContact.phone && !selectedContact.mobile && !selectedContact.fax && !selectedContact.website && (
-                          <p className={`px-4 py-3 text-sm ${theme.textMuted}`}>Keine Kontaktdaten</p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div>
-                      <h4 className={`text-xs font-medium mb-2 ${theme.textSecondary}`}>Adresse</h4>
-                      <div className={`rounded-xl border ${theme.border} px-4 py-3`}>
-                        {selectedContact.street || selectedContact.postal_code || selectedContact.city ? (
-                          <div className={`text-sm ${theme.text}`}>
-                            {selectedContact.street && <p>{selectedContact.street}</p>}
-                            {(selectedContact.postal_code || selectedContact.city) && (
-                              <p>{[selectedContact.postal_code, selectedContact.city].filter(Boolean).join(' ')}</p>
-                            )}
-                            {selectedContact.country && selectedContact.country !== 'DE' && (
-                              <p>{selectedContact.country}</p>
-                            )}
-                          </div>
-                        ) : (
-                          <p className={`text-sm ${theme.textMuted}`}>Keine Adresse</p>
-                        )}
-                      </div>
-                    </div>
-
-                    {selectedContact.notes && (
-                      <div>
-                        <h4 className={`text-xs font-medium mb-2 ${theme.textSecondary}`}>Notizen</h4>
-                        <div className={`rounded-xl border ${theme.border} px-4 py-3`}>
-                          <p className={`text-sm ${theme.text} whitespace-pre-wrap`}>{selectedContact.notes}</p>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="flex items-center gap-2">
-                      <span className={`text-[10px] uppercase tracking-wide px-2 py-1 rounded-full border ${theme.border} ${theme.textMuted}`}>
-                        {contactTypeLabels[selectedContact.contact_type] || selectedContact.contact_type}
-                      </span>
-                      {!selectedContact.shared && (
-                        <span className={`text-[10px] uppercase tracking-wide px-2 py-1 rounded-full border ${theme.border} ${theme.textMuted}`}>
-                          Privat
-                        </span>
-                      )}
-                      {selectedContact.staff_id && (
-                        <span className={`text-[10px] uppercase tracking-wide px-2 py-1 rounded-full bg-[#4A90E2]/10 text-[#4A90E2] border border-[#4A90E2]/20`}>
-                          Mitarbeiter
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Duplikat-Dialog */}
-        {duplicateDialogOpen && duplicateCheckResult && (
-          <div
-            className={`fixed inset-0 z-50 ${theme.overlay} flex items-center justify-center p-4`}
-            onClick={() => setDuplicateDialogOpen(false)}
-          >
-            <div
-              className={`${theme.panel} rounded-2xl border ${theme.border} ${theme.cardShadow} w-full max-w-lg max-h-[90vh] overflow-y-auto`}
-              onClick={(event) => event.stopPropagation()}
-            >
-              <div className={`px-5 py-4 border-b ${theme.border}`}>
-                <h3 className="text-base font-semibold">Mögliche Duplikate gefunden</h3>
-                <p className={`text-xs ${theme.textMuted} mt-1`}>
-                  Erkannt: {duplicateCheckResult.ocrData.firstName} {duplicateCheckResult.ocrData.lastName}
-                  {duplicateCheckResult.ocrData.company && ` bei ${duplicateCheckResult.ocrData.company}`}
-                </p>
-              </div>
-
-              <div className="p-5 space-y-4">
-                {duplicateCheckResult.checks.map((check, idx) => (
-                  <div key={idx} className={`p-4 rounded-xl border ${theme.border} space-y-3`}>
-                    <div className={`text-xs font-medium ${theme.textSecondary}`}>
-                      {check.type === 'email' && `Gleiche E-Mail: ${check.field}`}
-                      {check.type === 'phone' && `Gleiche Telefonnummer: ${check.field}`}
-                      {check.type === 'company' && `Bereits Kontakt bei: ${check.field}`}
-                    </div>
-
-                    {check.matches.map((match) => (
-                      <div key={match.id} className={`p-3 rounded-lg ${theme.bg} space-y-2`}>
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className={`font-medium ${theme.text}`}>
-                              {match.first_name} {match.last_name}
-                            </p>
-                            <p className={`text-xs ${theme.textMuted}`}>
-                              {match.position}{match.position && match.company && ' bei '}{match.company}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap gap-2">
-                          {check.type !== 'company' && (
-                            <button
-                              type="button"
-                              onClick={() => handleDuplicateUpdate(match)}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-medium ${theme.accent} text-white`}
-                            >
-                              Aktualisieren
-                            </button>
-                          )}
-                          {check.type === 'company' && (
-                            <button
-                              type="button"
-                              onClick={() => handleNewRepresentative(match)}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-500 hover:bg-amber-400 text-white`}
-                            >
-                              Neuer Vertreter (ersetzt {match.first_name})
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ))}
-
-                <div className={`pt-4 border-t ${theme.border} flex flex-wrap gap-2 justify-end`}>
-                  <button
-                    type="button"
-                    onClick={() => setDuplicateDialogOpen(false)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium border ${theme.border} ${theme.bgHover}`}
-                  >
-                    Abbrechen
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleCreateNewContact}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium ${theme.accent} text-white`}
-                  >
-                    Trotzdem neu anlegen
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {editingContact && (
-          <div
-            className={`fixed inset-0 z-50 ${theme.overlay} flex items-center justify-center p-4`}
-            onClick={closeContactModal}
-          >
-            <div
-              className={`${theme.panel} rounded-2xl border ${theme.border} ${theme.cardShadow} w-full max-w-2xl max-h-[90vh] overflow-y-auto`}
-              onClick={(event) => event.stopPropagation()}
-            >
-              <div className={`flex items-center justify-between px-5 py-4 border-b ${theme.border}`}>
-                <div>
-                  <h3 className="text-base font-semibold">
-                    {editingContact.id ? 'Kontakt bearbeiten' : 'Kontakt hinzufügen'}
-                  </h3>
-                  <p className={`text-xs ${theme.textMuted}`}>
-                    {editingContact.id ? 'Änderungen werden sofort gespeichert.' : 'Neuen Kontakt anlegen.'}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {editingContact.id && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        deleteContact(editingContact.id)
-                        closeContactModal()
-                      }}
-                      className={`p-2 rounded-lg ${theme.danger}`}
-                      title="Kontakt löschen"
-                    >
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={closeContactModal}
-                    className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
-                    title="Popup schließen"
-                  >
-                    <Icons.X />
-                  </button>
-                </div>
-              </div>
-
-              <form onSubmit={handleContactSubmit} className="p-5 space-y-4">
-                {/* Visitenkarte Upload */}
-                <div>
-                  <label className={`block text-xs font-medium mb-2 ${theme.textSecondary}`}>
-                    Visitenkarte
-                  </label>
-                  <div className="flex items-center gap-4">
-                    {contactCardPreview ? (
-                      <div className="relative">
-                        <img
-                          src={contactCardPreview}
-                          alt="Visitenkarte Vorschau"
-                          className={`h-20 w-32 rounded-lg object-cover border ${theme.border}`}
-                          style={{ transform: `rotate(${contactCardRotation}deg)` }}
-                        />
-                        {!contactCardEnhancedPreview && (
-                          <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 flex gap-1">
-                            <button
-                              type="button"
-                              onClick={() => setContactCardRotation((r) => (r - 90 + 360) % 360)}
-                              className={`p-1 rounded ${theme.surface} border ${theme.border} ${theme.bgHover}`}
-                              title="90° nach links drehen"
-                            >
-                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                              </svg>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setContactCardRotation((r) => (r + 90) % 360)}
-                              className={`p-1 rounded ${theme.surface} border ${theme.border} ${theme.bgHover}`}
-                              title="90° nach rechts drehen"
-                            >
-                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 10H11a8 8 0 00-8 8v2m18-10l-6 6m6-6l-6-6" />
-                              </svg>
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className={`h-20 w-32 rounded-lg border-2 border-dashed ${theme.border} flex items-center justify-center ${theme.textMuted}`}>
-                        <Icons.Photo />
-                      </div>
-                    )}
-                    <div className="flex flex-col gap-2">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        ref={contactCardInputRef}
-                        onChange={handleContactCardChange}
-                        className="hidden"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => contactCardInputRef.current?.click()}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${theme.border} ${theme.bgHover}`}
-                      >
-                        {contactCardPreview ? 'Ändern' : 'Hochladen'}
-                      </button>
-                      {contactCardPreview && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setContactCardFile(null)
-                            setContactCardPreview('')
-                            setContactCardEnhancedFile(null)
-                            setContactCardEnhancedPreview('')
-                            setContactCardEnhancing(false)
-                            setContactCardRotation(0)
-                            handleContactInput('businessCardUrl', '')
-                            handleContactInput('businessCardUrlEnhanced', '')
-                          }}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-medium ${theme.danger}`}
-                        >
-                          Entfernen
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  {contactCardEnhancing && (
-                    <div className={`mt-3 flex items-center gap-2 text-xs ${theme.textMuted}`}>
-                      <span className="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-transparent border-t-current" />
-                      KI-Optimierung läuft...
-                    </div>
-                  )}
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div>
-                    <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
-                      Vorname
-                    </label>
-                    <input
-                      value={contactForm.firstName}
-                      onChange={(e) => handleContactInput('firstName', e.target.value)}
-                      className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
-                    />
-                  </div>
-                  <div>
-                    <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
-                      Nachname
-                    </label>
-                    <input
-                      value={contactForm.lastName}
-                      onChange={(e) => handleContactInput('lastName', e.target.value)}
-                      className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
-                    />
-                  </div>
-
-                  <div>
-                    <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
-                      Firma
-                    </label>
-                    <input
-                      value={contactForm.company}
-                      onChange={(e) => handleContactInput('company', e.target.value)}
-                      className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
-                    />
-                  </div>
-                  <div>
-                    <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
-                      Position
-                    </label>
-                    <input
-                      value={contactForm.position}
-                      onChange={(e) => handleContactInput('position', e.target.value)}
-                      className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
-                    />
-                  </div>
-
-                  <div>
-                    <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
-                      E-Mail
-                    </label>
-                    <input
-                      type="email"
-                      value={contactForm.email}
-                      onChange={(e) => handleContactInput('email', e.target.value)}
-                      className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
-                    />
-                  </div>
-                  <div>
-                    <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
-                      Webseite
-                    </label>
-                    <input
-                      value={contactForm.website}
-                      onChange={(e) => handleContactInput('website', e.target.value)}
-                      className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
-                    />
-                  </div>
-
-                  <div>
-                    <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
-                      Telefon
-                    </label>
-                    <input
-                      value={contactForm.phone}
-                      onChange={(e) => handleContactInput('phone', e.target.value)}
-                      className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
-                    />
-                  </div>
-                  <div>
-                    <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
-                      Mobil
-                    </label>
-                    <input
-                      value={contactForm.mobile}
-                      onChange={(e) => handleContactInput('mobile', e.target.value)}
-                      className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
-                    />
-                  </div>
-                  <div>
-                    <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
-                      Fax
-                    </label>
-                    <input
-                      value={contactForm.fax}
-                      onChange={(e) => handleContactInput('fax', e.target.value)}
-                      className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
-                    />
-                  </div>
-
-                  <div className="sm:col-span-2">
-                    <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
-                      Straße
-                    </label>
-                    <input
-                      value={contactForm.street}
-                      onChange={(e) => handleContactInput('street', e.target.value)}
-                      className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
-                    />
-                  </div>
-
-                  <div>
-                    <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
-                      PLZ
-                    </label>
-                    <input
-                      value={contactForm.postalCode}
-                      onChange={(e) => handleContactInput('postalCode', e.target.value)}
-                      className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
-                    />
-                  </div>
-                  <div>
-                    <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
-                      Ort
-                    </label>
-                    <input
-                      value={contactForm.city}
-                      onChange={(e) => handleContactInput('city', e.target.value)}
-                      className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
-                    />
-                  </div>
-
-                  <div>
-                    <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
-                      Land
-                    </label>
-                    <input
-                      value={contactForm.country}
-                      onChange={(e) => handleContactInput('country', e.target.value)}
-                      className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
-                    />
-                  </div>
-                  <div>
-                    <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
-                      Kategorie
-                    </label>
-                    <select
-                      value={contactForm.contactType}
-                      onChange={(e) => handleContactInput('contactType', e.target.value)}
-                      className={`w-full px-3 py-2 ${theme.input} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
-                    >
-                      <option value="business">Geschäftlich</option>
-                      <option value="supplier">Lieferant</option>
-                      <option value="customer">Kunde</option>
-                      <option value="other">Sonstige</option>
-                    </select>
-                  </div>
-
-                  <div className="sm:col-span-2">
-                    <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
-                      Notizen
-                    </label>
-                    <textarea
-                      value={contactForm.notes}
-                      onChange={(e) => handleContactInput('notes', e.target.value)}
-                      rows={3}
-                      className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm resize-none`}
-                    />
-                  </div>
-                </div>
-
-                <label className={`flex items-center gap-2 text-xs ${theme.textMuted}`}>
-                  <input
-                    type="checkbox"
-                    checked={contactForm.shared}
-                    onChange={(e) => handleContactInput('shared', e.target.checked)}
-                    className="accent-[#4A90E2]"
-                  />
-                  Für alle Mitarbeiter sichtbar
-                </label>
-
-                {contactSaveMessage && (
-                  <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3">
-                    <p className="text-rose-400 text-sm">{contactSaveMessage}</p>
-                  </div>
-                )}
-
-                <div className="flex flex-wrap gap-2 justify-end">
-                  <button
-                    type="button"
-                    onClick={closeContactModal}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium border ${theme.border} ${theme.bgHover}`}
-                  >
-                    Abbrechen
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={contactSaveLoading}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium ${theme.accent} text-white disabled:opacity-50 disabled:cursor-not-allowed`}
-                  >
-                    {contactSaveLoading ? 'Speichert...' : 'Speichern'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
+        <ContactFormModal
+          theme={theme}
+          editingContact={editingContact}
+          contactForm={contactForm}
+          contactSaveLoading={contactSaveLoading}
+          contactSaveMessage={contactSaveMessage}
+          contactCardPreview={contactCardPreview}
+          contactCardEnhancedPreview={contactCardEnhancedPreview}
+          contactCardRotation={contactCardRotation}
+          contactCardEnhancing={contactCardEnhancing}
+          contactScanStatus={
+            <contactScan.BusinessCardScanStatusBanner
+              businessCardScanning={businessCardScanning}
+              ocrError={ocrError}
+              theme={theme}
+            />
+          }
+          onClose={closeContactModal}
+          onDelete={() => {
+            deleteContact(editingContact.id)
+            closeContactModal()
+          }}
+          onSubmit={(event) => {
+            event.preventDefault()
+            saveContact({
+              currentStaffId: currentStaff?.id,
+              rotateImage,
+              contactCardRotation,
+              contactCardFile,
+              contactCardEnhancedFile,
+            })
+          }}
+          onContactInput={handleContactInput}
+          onCardFileChange={handleContactCardChange}
+          onResetCard={() => {
+            contactScanApi.setContactCardFile(null)
+            contactScanApi.setContactCardPreview('')
+            contactScanApi.setContactCardEnhancedFile(null)
+            contactScanApi.setContactCardEnhancedPreview('')
+            contactScanApi.setContactCardEnhancing(false)
+            contactScanApi.setContactCardRotation(0)
+            handleContactInput('businessCardUrl', '')
+            handleContactInput('businessCardUrlEnhanced', '')
+          }}
+          onRotateLeft={() => contactScanApi.setContactCardRotation((r) => (r - 90 + 360) % 360)}
+          onRotateRight={() => contactScanApi.setContactCardRotation((r) => (r + 90) % 360)}
+          PhotoIcon={Icons.Photo}
+          CloseIcon={Icons.X}
+          deleteIcon={(
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          )}
+        />
 
         {/* PDF-Modal für GH-Rechnungen */}
         {pdfModalOpen && selectedPdf && (
@@ -9235,175 +5460,26 @@ Fülle nur Felder aus, die im Text eindeutig erkennbar sind. Lasse unbekannte Fe
     )
   }
 
-  // Login / Forgot Password / Reset Password views
   return (
-    <div className={`min-h-screen ${theme.bg} ${theme.text} flex items-center justify-center p-4 relative overflow-hidden`}>
-      <div className={`${theme.panel} p-6 sm:p-8 rounded-2xl border ${theme.border} ${theme.cardShadow} max-w-sm w-full`}>
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <img src="/logo.png" alt="Kaeee" className="h-10" />
-            <p className={`text-sm ${theme.textMuted}`}>
-              {authView === 'login' && 'Willkommen zurück'}
-              {authView === 'forgot' && 'Passwort zurücksetzen'}
-              {authView === 'resetPassword' && 'Neues Passwort setzen'}
-            </p>
-          </div>
-        </div>
-
-        {/* Login Form */}
-        {authView === 'login' && (
-          <form onSubmit={handleSignIn} className="space-y-5">
-            <div>
-              <label className={`block text-sm font-medium mb-2 ${theme.textSecondary}`}>
-                Email
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className={`w-full px-4 py-2.5 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text}`}
-                placeholder="email@example.com"
-              />
-            </div>
-
-            <div>
-              <label className={`block text-sm font-medium mb-2 ${theme.textSecondary}`}>
-                Passwort
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className={`w-full px-4 py-2.5 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text}`}
-                placeholder="••••••••"
-              />
-            </div>
-
-            {message && (
-              <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3">
-                <p className="text-rose-400 text-sm">{message}</p>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              title="Einloggen"
-              className={`w-full ${theme.accent} text-white font-medium py-2.5 px-4 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
-            >
-              {loading ? 'Wird geladen...' : 'Einloggen'}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => { setAuthView('forgot'); setMessage(''); setSuccessMessage(''); }}
-              className={`w-full text-sm ${theme.accentText} hover:opacity-80`}
-            >
-              Passwort vergessen?
-            </button>
-          </form>
-        )}
-
-        {/* Forgot Password Form */}
-        {authView === 'forgot' && (
-          <form onSubmit={handleForgotPassword} className="space-y-5">
-            <div>
-              <label className={`block text-sm font-medium mb-2 ${theme.textSecondary}`}>
-                Email
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className={`w-full px-4 py-2.5 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text}`}
-                placeholder="email@example.com"
-              />
-            </div>
-
-            {message && (
-              <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3">
-                <p className="text-rose-400 text-sm">{message}</p>
-              </div>
-            )}
-
-            {successMessage && (
-              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3">
-                <p className="text-emerald-600 text-sm">{successMessage}</p>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              title="Link senden"
-              className={`w-full ${theme.accent} text-white font-medium py-2.5 px-4 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
-            >
-              {loading ? 'Wird gesendet...' : 'Link senden'}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => { setAuthView('login'); setMessage(''); setSuccessMessage(''); }}
-              className={`w-full text-sm ${theme.accentText} hover:opacity-80`}
-            >
-              Zurück zum Login
-            </button>
-          </form>
-        )}
-
-        {/* Reset Password Form */}
-        {authView === 'resetPassword' && (
-          <form onSubmit={handleResetPassword} className="space-y-5">
-            <div>
-              <label className={`block text-sm font-medium mb-2 ${theme.textSecondary}`}>
-                Neues Passwort
-              </label>
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className={`w-full px-4 py-2.5 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text}`}
-                placeholder="••••••••"
-              />
-            </div>
-
-            <div>
-              <label className={`block text-sm font-medium mb-2 ${theme.textSecondary}`}>
-                Passwort bestätigen
-              </label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className={`w-full px-4 py-2.5 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text}`}
-                placeholder="••••••••"
-              />
-            </div>
-
-            {message && (
-              <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3">
-                <p className="text-rose-400 text-sm">{message}</p>
-              </div>
-            )}
-
-            {successMessage && (
-              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3">
-                <p className="text-emerald-600 text-sm">{successMessage}</p>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              title="Passwort speichern"
-              className={`w-full ${theme.accent} text-white font-medium py-2.5 px-4 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
-            >
-              {loading ? 'Wird gespeichert...' : 'Passwort speichern'}
-            </button>
-          </form>
-        )}
-      </div>
-    </div>
+    <AuthView
+      authView={authView}
+      onAuthViewChange={handleAuthViewChange}
+      email={email}
+      setEmail={setEmail}
+      password={password}
+      setPassword={setPassword}
+      newPassword={newPassword}
+      setNewPassword={setNewPassword}
+      confirmPassword={confirmPassword}
+      setConfirmPassword={setConfirmPassword}
+      loading={loading}
+      message={message}
+      successMessage={successMessage}
+      handleSignIn={handleSignIn}
+      handleForgotPassword={handleForgotPassword}
+      handleResetPassword={handleResetPassword}
+      theme={theme}
+    />
   )
 }
 
