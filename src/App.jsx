@@ -7,8 +7,8 @@ import { contactScan } from './features/contacts'
 import { AuthView } from './features/auth'
 import { DashboardHeader, SidebarNav, DashboardHome, useWeather } from './features/dashboard'
 import { ApoView } from './features/apo'
-import { PhotosView } from './features/photos'
-import { ChatView } from './features/chat'
+import { PhotosView, usePhotos } from './features/photos'
+import { ChatView, useChat } from './features/chat'
 import { SettingsView, usePharmacies, useStaff } from './features/settings'
 import { PlanView } from './features/plan'
 import { CalendarView } from './features/calendar'
@@ -369,38 +369,60 @@ function App() {
     openWeatherModal,
     closeWeatherModal,
   } = useWeather({ pharmacies })
-  const [chatMessages, setChatMessages] = useState([])
-  const [chatLoading, setChatLoading] = useState(false)
-  const [chatError, setChatError] = useState('')
-  const [chatInput, setChatInput] = useState('')
-  const [chatSending, setChatSending] = useState(false)
-  const chatEndRef = useRef(null)
-  const cameraInputRef = useRef(null)
-  const [latestPhoto, setLatestPhoto] = useState(null)
-  const [photoUploading, setPhotoUploading] = useState(false)
-  const [allPhotos, setAllPhotos] = useState([])
-  const [photosLoading, setPhotosLoading] = useState(false)
-  const [businessCards, setBusinessCards] = useState([])
-  const [businessCardsLoading, setBusinessCardsLoading] = useState(false)
-  const [selectedPhoto, setSelectedPhoto] = useState(null)
-  const [photoEditorOpen, setPhotoEditorOpen] = useState(false)
-  const [crop, setCrop] = useState()
-  const [completedCrop, setCompletedCrop] = useState()
-  const [brightness, setBrightness] = useState(100)
-  const [contrast, setContrast] = useState(100)
-  const [photoSaving, setPhotoSaving] = useState(false)
-  const photoImgRef = useRef(null)
+  const {
+    chatMessages,
+    chatLoading,
+    chatError,
+    chatInput,
+    chatSending,
+    chatEndRef,
+    setChatInput,
+    sendChatMessage,
+  } = useChat({ session, activeView })
+  const {
+    latestPhoto,
+    photoUploading,
+    allPhotos,
+    photosLoading,
+    businessCards,
+    businessCardsLoading,
+    selectedPhoto,
+    photoEditorOpen,
+    crop,
+    completedCrop,
+    brightness,
+    contrast,
+    photoSaving,
+    photoOcrData,
+    ocrProcessing,
+    cameraInputRef,
+    photoImgRef,
+    setCrop,
+    setCompletedCrop,
+    setBrightness,
+    setContrast,
+    setPhotoSaving,
+    setAllPhotos,
+    fetchLatestPhoto,
+    handleCameraCapture,
+    fetchAllPhotos,
+    deletePhoto,
+    fetchBusinessCards,
+    deleteBusinessCard,
+    fetchPhotoOcrData,
+    runOcrForPhoto,
+    openPhotoEditor,
+    closePhotoEditor,
+  } = usePhotos({ mistralApiKey, fetchMistralApiKey })
   const signatureCanvasRef = useRef(null)
   const signatureCtxRef = useRef(null)
   const pznCameraInputRef = useRef(null)
   const [isDrawing, setIsDrawing] = useState(false)
-  const [photoOcrData, setPhotoOcrData] = useState({})
   const [enhanceFile, setEnhanceFile] = useState(null)
   const [enhancePreview, setEnhancePreview] = useState('')
   const [enhanceResultPreview, setEnhanceResultPreview] = useState('')
   const [enhanceLoading, setEnhanceLoading] = useState(false)
   const [enhanceMessage, setEnhanceMessage] = useState('')
-  const [ocrProcessing, setOcrProcessing] = useState({})
   const [apoTab, setApoTab] = useState(() => localStorage.getItem('nav_apoTab') || 'amk')
   const [apoYear, setApoYear] = useState(() => new Date().getFullYear())
   const [apoSearch, setApoSearch] = useState('')
@@ -1332,41 +1354,6 @@ function App() {
     }
   }
 
-  const fetchChatMessages = async () => {
-    setChatLoading(true)
-    const { data, error } = await supabase
-      .from('chat_messages')
-      .select('id, user_id, message, created_at')
-      .order('created_at', { ascending: true })
-      .limit(200)
-
-    if (error) {
-      setChatError(error.message)
-      setChatMessages([])
-    } else {
-      setChatError('')
-      setChatMessages(data || [])
-    }
-    setChatLoading(false)
-  }
-
-  const sendChatMessage = async (event) => {
-    event.preventDefault()
-    if (!chatInput.trim() || !session?.user?.id) return
-    setChatSending(true)
-    setChatError('')
-    const { error } = await supabase
-      .from('chat_messages')
-      .insert({ user_id: session.user.id, message: chatInput.trim() })
-
-    if (error) {
-      setChatError(error.message)
-    } else {
-      setChatInput('')
-    }
-    setChatSending(false)
-  }
-
   // Dokumentationen laden (AMK oder Recall)
   const loadDokumentationen = async (messageId, messageType = 'amk') => {
     setDokumentationLoading(true)
@@ -2128,273 +2115,6 @@ function App() {
     setWeatherModalOpen(false)
   }
 
-  const fetchLatestPhoto = async () => {
-    const { data, error } = await supabase
-      .storage
-      .from('documents')
-      .list('photos', { limit: 1, sortBy: { column: 'created_at', order: 'desc' } })
-    if (error || !data || data.length === 0) {
-      setLatestPhoto(null)
-      return
-    }
-    const { data: urlData } = supabase
-      .storage
-      .from('documents')
-      .getPublicUrl(`photos/${data[0].name}`)
-    setLatestPhoto({ name: data[0].name, url: urlData.publicUrl, createdAt: data[0].created_at })
-  }
-
-  const handleCameraCapture = async (event) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-    setPhotoUploading(true)
-    const fileExt = file.name.split('.').pop() || 'jpg'
-    const fileName = `${Date.now()}.${fileExt}`
-    const filePath = `photos/${fileName}`
-    const { error } = await supabase
-      .storage
-      .from('documents')
-      .upload(filePath, file)
-    if (error) {
-      console.error('Foto-Upload fehlgeschlagen:', error.message)
-      setPhotoUploading(false)
-      return
-    }
-    await fetchLatestPhoto()
-    await fetchAllPhotos()
-    setPhotoUploading(false)
-
-    // OCR im Hintergrund starten
-    const { data: urlData } = supabase
-      .storage
-      .from('documents')
-      .getPublicUrl(filePath)
-    if (urlData?.publicUrl) {
-      runOcrForPhoto(fileName, urlData.publicUrl)
-    }
-  }
-
-  const fetchAllPhotos = async () => {
-    setPhotosLoading(true)
-    const { data, error } = await supabase
-      .storage
-      .from('documents')
-      .list('photos', { sortBy: { column: 'created_at', order: 'desc' } })
-    if (error || !data) {
-      setAllPhotos([])
-      setPhotosLoading(false)
-      return
-    }
-    const photosWithUrls = data.map((file) => {
-      const { data: urlData } = supabase
-        .storage
-        .from('documents')
-        .getPublicUrl(`photos/${file.name}`)
-      const ext = file.name.split('.').pop()?.toUpperCase() || 'JPG'
-      const sizeKB = file.metadata?.size ? Math.round(file.metadata.size / 1024) : null
-      return {
-        name: file.name,
-        url: urlData.publicUrl,
-        createdAt: file.created_at,
-        format: ext,
-        sizeKB,
-      }
-    })
-    setAllPhotos(photosWithUrls)
-    setPhotosLoading(false)
-  }
-
-  const deletePhoto = async (photoName, event) => {
-    event.stopPropagation()
-    if (!confirm('Foto unwiderruflich löschen?')) return
-    const { data, error } = await supabase
-      .storage
-      .from('documents')
-      .remove([`photos/${photoName}`])
-    console.log('Delete response:', { data, error, photoName })
-    if (error) {
-      alert('Löschen fehlgeschlagen: ' + error.message)
-      return
-    }
-    if (!data || data.length === 0) {
-      alert('Foto konnte nicht gelöscht werden. Prüfe die Storage-Berechtigungen.')
-      return
-    }
-    setAllPhotos((prev) => prev.filter((p) => p.name !== photoName))
-    await fetchLatestPhoto()
-  }
-
-  const fetchBusinessCards = async () => {
-    setBusinessCardsLoading(true)
-    try {
-      // Hole alle Kontakte mit Visitenkarten-URL
-      const { data: contactsWithCards, error } = await supabase
-        .from('contacts')
-        .select('id, first_name, last_name, company, business_card_url, business_card_url_enhanced, created_at')
-        .or('business_card_url.not.is.null,business_card_url_enhanced.not.is.null')
-        .order('created_at', { ascending: false })
-
-      if (error || !contactsWithCards) {
-        console.error('Fehler beim Laden der Visitenkarten:', error)
-        setBusinessCards([])
-        setBusinessCardsLoading(false)
-        return
-      }
-
-      const cards = contactsWithCards
-        .filter((contact) => contact.business_card_url_enhanced || contact.business_card_url)
-        .map((contact) => {
-          const url = contact.business_card_url_enhanced || contact.business_card_url
-          const ext = url.split('.').pop()?.toUpperCase() || 'JPG'
-          return {
-            id: contact.id,
-            contactName: [contact.first_name, contact.last_name].filter(Boolean).join(' ') || 'Unbekannt',
-            company: contact.company || '',
-            url: url,
-            originalUrl: contact.business_card_url || '',
-            enhancedUrl: contact.business_card_url_enhanced || '',
-            createdAt: contact.created_at,
-            format: ext,
-          }
-        })
-      setBusinessCards(cards)
-    } catch (err) {
-      console.error('Fehler beim Laden der Visitenkarten:', err)
-      setBusinessCards([])
-    }
-    setBusinessCardsLoading(false)
-  }
-
-  const deleteBusinessCard = async (card, event) => {
-    event.stopPropagation()
-    if (!confirm(`Visitenkarte von "${card.contactName}" unwiderruflich löschen?`)) return
-
-    // Lösche die URL aus dem Kontakt
-    const { error } = await supabase
-      .from('contacts')
-      .update({ business_card_url: null, business_card_url_enhanced: null })
-      .eq('id', card.id)
-
-    if (error) {
-      alert('Löschen fehlgeschlagen: ' + error.message)
-      return
-    }
-
-    // Optional: Versuche auch die Datei aus dem Storage zu löschen (falls im eigenen Bucket)
-    const urlsToDelete = [card.originalUrl, card.enhancedUrl, card.url].filter(Boolean)
-    const paths = urlsToDelete
-      .map((url) => url.match(/business-cards\/(.+)$/))
-      .filter(Boolean)
-      .map((match) => match[1])
-    if (paths.length > 0) {
-      await supabase.storage.from('business-cards').remove(paths)
-    }
-
-    setBusinessCards((prev) => prev.filter((c) => c.id !== card.id))
-  }
-
-  const fetchPhotoOcrData = async () => {
-    const { data, error } = await supabase
-      .from('photo_ocr')
-      .select('photo_name, ocr_text, ocr_status')
-    if (!error && data) {
-      const ocrMap = {}
-      data.forEach((item) => {
-        ocrMap[item.photo_name] = { text: item.ocr_text, status: item.ocr_status }
-      })
-      setPhotoOcrData(ocrMap)
-    }
-  }
-
-  const runOcrForPhoto = async (photoName, photoUrl) => {
-    let apiKey = mistralApiKey
-    if (!apiKey) {
-      apiKey = await fetchMistralApiKey()
-    }
-    if (!apiKey) {
-      console.error('Mistral API Key nicht gefunden')
-      return
-    }
-
-    setOcrProcessing((prev) => ({ ...prev, [photoName]: true }))
-
-    try {
-      const response = await fetch('https://api.mistral.ai/v1/ocr', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: 'mistral-ocr-latest',
-          document: {
-            type: 'image_url',
-            image_url: photoUrl,
-          },
-        }),
-      })
-
-      const result = await response.json()
-      let ocrText = ''
-
-      if (result.pages && result.pages.length > 0) {
-        ocrText = result.pages.map((p) => p.markdown || p.text || '').join('\n')
-      } else if (result.text) {
-        ocrText = result.text
-      } else if (result.content) {
-        ocrText = result.content
-      }
-
-      const { error } = await supabase
-        .from('photo_ocr')
-        .upsert({
-          photo_name: photoName,
-          ocr_text: ocrText || '(kein Text erkannt)',
-          ocr_status: 'completed',
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'photo_name' })
-
-      if (!error) {
-        setPhotoOcrData((prev) => ({
-          ...prev,
-          [photoName]: { text: ocrText || '(kein Text erkannt)', status: 'completed' },
-        }))
-      }
-    } catch (err) {
-      console.error('OCR fehlgeschlagen:', err)
-      await supabase
-        .from('photo_ocr')
-        .upsert({
-          photo_name: photoName,
-          ocr_text: '',
-          ocr_status: 'error',
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'photo_name' })
-      setPhotoOcrData((prev) => ({
-        ...prev,
-        [photoName]: { text: '', status: 'error' },
-      }))
-    } finally {
-      setOcrProcessing((prev) => ({ ...prev, [photoName]: false }))
-    }
-  }
-
-  const openPhotoEditor = (photo) => {
-    setSelectedPhoto(photo)
-    setCrop(undefined)
-    setCompletedCrop(undefined)
-    setBrightness(100)
-    setContrast(100)
-    setPhotoEditorOpen(true)
-  }
-
-  const closePhotoEditor = () => {
-    setPhotoEditorOpen(false)
-    setSelectedPhoto(null)
-    setCrop(undefined)
-    setCompletedCrop(undefined)
-  }
-
   const fetchAmkMessages = async (year) => {
     setAmkLoading(true)
     const startDate = `${year}-01-01`
@@ -2773,32 +2493,6 @@ function App() {
       setSavedPznFotos({})
     }
   }, [selectedApoMessage?.id, selectedApoMessage?.type])
-
-  useEffect(() => {
-    if (!session || activeView !== 'chat') return
-    fetchChatMessages()
-    const channel = supabase
-      .channel('chat_messages')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, (payload) => {
-        setChatMessages((prev) => {
-          if (prev.some((message) => message.id === payload.new.id)) {
-            return prev
-          }
-          return [...prev, payload.new]
-        })
-      })
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [activeView, session])
-
-  useEffect(() => {
-    if (activeView === 'chat') {
-      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-    }
-  }, [activeView, chatMessages])
 
   useEffect(() => {
     if (session && activeView === 'plan' && !planData && !planLoading && !planError) {
