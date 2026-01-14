@@ -212,7 +212,7 @@ export default function ContactDetailModal({
                   </span>
                 )}
                 {selectedContact.staff_id && (
-                  <span className={`text-[10px] uppercase tracking-wide px-2 py-1 rounded-full bg-[#4A90E2]/10 text-[#4A90E2] border border-[#4A90E2]/20`}>
+                  <span className={`text-[10px] uppercase tracking-wide px-2 py-1 rounded-full bg-[#FD8916]/10 text-[#FD8916] border border-[#FD8916]/20`}>
                     Mitarbeiter
                   </span>
                 )}

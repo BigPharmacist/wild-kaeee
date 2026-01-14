@@ -28,12 +28,12 @@ html {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #7697A0;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #17616E;
 }
 
 /* Markdown Content Styling */
@@ -92,24 +92,24 @@ html {
 }
 
 .markdown-content a {
-  color: #4A90E2;
+  color: #FD8916;
   text-decoration: underline;
 }
 
 .markdown-content a:hover {
-  color: #6AA9F0;
+  color: #E57A14;
 }
 
 .markdown-content blockquote {
-  border-left: 3px solid #E5E7EB;
+  border-left: 3px solid #7697A0;
   padding-left: 1rem;
   margin: 0.75rem 0;
-  color: #6B7280;
+  color: #7697A0;
   font-style: italic;
 }
 
 .markdown-content code {
-  background: #F3F4F6;
+  background: #FFEBB0;
   padding: 0.125rem 0.375rem;
   border-radius: 0.25rem;
   font-size: 0.875em;
@@ -117,7 +117,7 @@ html {
 }
 
 .markdown-content pre {
-  background: #F3F4F6;
+  background: #FFEBB0;
   padding: 0.75rem;
   border-radius: 0.5rem;
   overflow-x: auto;
@@ -131,7 +131,7 @@ html {
 
 .markdown-content hr {
   border: none;
-  border-top: 1px solid #E5E7EB;
+  border-top: 1px solid #7697A0;
   margin: 1rem 0;
 }
 
@@ -144,34 +144,34 @@ html {
 }
 
 .markdown-content thead {
-  background: #F3F4F6;
+  background: #FFEBB0;
 }
 
 .markdown-content th {
   font-weight: 600;
   text-align: left;
   padding: 0.5rem 0.75rem;
-  border: 1px solid #E5E7EB;
+  border: 1px solid #7697A0;
 }
 
 .markdown-content td {
   padding: 0.5rem 0.75rem;
-  border: 1px solid #E5E7EB;
+  border: 1px solid #7697A0;
   vertical-align: top;
 }
 
 .markdown-content tr:nth-child(even) {
-  background: #F9FAFB;
+  background: #FFFDF8;
 }
 
 .markdown-content tbody tr:hover {
-  background: #F3F4F6;
+  background: #FFEBB0;
 }
 
 /* Strikethrough */
 .markdown-content del {
   text-decoration: line-through;
-  color: #9CA3AF;
+  color: #7697A0;
 }
 
 /* Task Lists */
@@ -182,6 +182,6 @@ html {
 /* Contenteditable Placeholder */
 [contenteditable]:empty:before {
   content: attr(data-placeholder);
-  color: #9CA3AF;
+  color: #7697A0;
   pointer-events: none;
 }

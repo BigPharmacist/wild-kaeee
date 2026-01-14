@@ -199,11 +199,34 @@ id (uuid), owner_id (uuid), first_name, last_name, company, position, email, pho
 
 ### Farbpalette
 
-**Primär:** Blau (#4A90E2) - Buttons, Links, Akzente
-**Sekundär:** Violett (#7B6CF6) - Sekundäre Elemente
-**Hintergrund:** Light Gray (#F5F7FA) - App-Hintergrund
-**Sidebar:** Dark Slate (#3c4255) - Primäre Navigation
-**Danger:** Rot (#EF4444) - Fehler, Löschen
+#### Sidebar (fest)
+- **Primary Sidebar:** Dark Slate `#3C4255`
+- **Secondary Sidebar:** Muted Slate `#4F5469`
+
+#### Actions
+- **Action Blue:** `#4C8BF5` - Primary Buttons, Links
+- **Action Blue Hover:** `#3A74D8`
+
+#### Status-Farben
+- **Success Green:** `#27AE60` (Hover: `#1F8F4F`)
+- **Warning Yellow:** `#F2C94C` (Hover: `#D6AE3C`)
+- **Error Red:** `#E5533D` (Hover: `#C94431`)
+
+#### Akzent
+- **Accent Teal:** `#2EC4B6` - Highlights, Badges, sekundäre Aktionen
+
+#### Hintergründe
+- **App Background:** `#F4F6FA`
+- **Cards/Panels:** `#FFFFFF`
+
+#### Text
+- **Text Primary:** `#1F2937`
+- **Text Secondary:** `#6B7280`
+- **Text Muted:** `#B5B9C8`
+
+#### Borders
+- **Border (hell):** `#E5E7EB`
+- **Divider (dunkel):** `#5E647A`
 
 ### Theme-Objekt (Light Mode)
 
@@ -212,51 +235,53 @@ Das Theme wird in `App.jsx` als Objekt definiert und via Template Literals angew
 ```javascript
 const theme = {
   // Backgrounds
-  bgApp: 'bg-[#F5F7FA]',           // App-Hintergrund
-  bg: 'bg-[#F5F7FA]',              // Allgemeiner Hintergrund
+  bgApp: 'bg-[#F4F6FA]',           // App-Hintergrund
+  bg: 'bg-[#F4F6FA]',              // Allgemeiner Hintergrund
   surface: 'bg-white',              // Karten, Panels
   panel: 'bg-white',                // Formulare
-  bgHover: 'hover:bg-[#F5F7FA]',   // Hover-Zustand
+  bgHover: 'hover:bg-[#F4F6FA]',   // Hover-Zustand
   bgCard: 'bg-white',               // Karten
 
   // Text
   textPrimary: 'text-[#1F2937]',   // Haupttext (Dark Gray)
   text: 'text-[#1F2937]',          // Alias
   textSecondary: 'text-[#6B7280]', // Labels, Untertitel
-  textMuted: 'text-[#9CA3AF]',     // Placeholders, deaktiviert
+  textMuted: 'text-[#B5B9C8]',     // Placeholders, deaktiviert
 
   // Borders
   border: 'border-[#E5E7EB]',      // Standard-Rahmen
+  divider: 'border-[#5E647A]',     // Für dunkle Bereiche
 
   // Navigation (Content Area)
-  navActive: 'bg-[#EEF4FD] text-[#1F2937] border border-[#D6E6FB]',
-  navHover: 'hover:bg-[#F5F7FA] hover:text-[#1F2937]',
+  navActive: 'bg-[#E8F0FE] text-[#1F2937] border border-[#C2D9FC]',
+  navHover: 'hover:bg-[#F4F6FA] hover:text-[#1F2937]',
 
-  // Accent (Blau)
-  accent: 'bg-[#4A90E2] hover:bg-[#6AA9F0]',
-  accentText: 'text-[#4A90E2]',
-  primary: 'text-[#4A90E2]',
-  primaryBg: 'bg-[#4A90E2]',
-  primaryHover: 'hover:bg-[#6AA9F0]',
+  // Accent (Action Blue)
+  accent: 'bg-[#4C8BF5] hover:bg-[#3A74D8]',
+  accentText: 'text-[#4C8BF5]',
+  primary: 'text-[#4C8BF5]',
+  primaryBg: 'bg-[#4C8BF5]',
+  primaryHover: 'hover:bg-[#3A74D8]',
 
-  // Secondary (Violett)
-  secondary: 'text-[#7B6CF6]',
+  // Secondary (Teal)
+  secondary: 'text-[#2EC4B6]',
+  secondaryBg: 'bg-[#2EC4B6]',
+  secondaryHover: 'hover:bg-[#25A89C]',
 
   // Sidebar (Schmal, nur Icons)
-  sidebarBg: 'bg-[#3c4255]',
-  sidebarHover: 'hover:bg-[#4a5066]',
-  sidebarActive: 'border-l-[3px] border-white bg-transparent',  // Heller Rand links
-  sidebarText: 'text-[#E5E7EB]',       // Helle Icons
+  sidebarBg: 'bg-[#3C4255]',
+  sidebarHover: 'hover:bg-[#4F5469]',
+  sidebarActive: 'border-l-[3px] border-white bg-transparent',
+  sidebarText: 'text-[#E5E7EB]',
   sidebarTextActive: 'text-[#E5E7EB]',
 
   // Secondary Sidebar (Dunkel)
-  secondarySidebarBg: 'bg-[#4f5469]',
-  secondaryActive: 'border-l-4 border-[#4A90E2] bg-[#3c4255] text-[#E5E7EB]',
-  // Secondary Nav Items: text-[#E5E7EB], hover:bg-[#3c4255] hover:text-white
+  secondarySidebarBg: 'bg-[#4F5469]',
+  secondaryActive: 'border-l-4 border-[#4C8BF5] bg-[#3C4255] text-[#E5E7EB]',
 
   // Inputs
-  input: 'bg-white border-[#E5E7EB] focus:border-[#4A90E2] focus:ring-1 focus:ring-[#4A90E2]',
-  inputPlaceholder: 'placeholder-[#9CA3AF]',
+  input: 'bg-white border-[#E5E7EB] focus:border-[#4C8BF5] focus:ring-1 focus:ring-[#4C8BF5]',
+  inputPlaceholder: 'placeholder-[#B5B9C8]',
 
   // Shadows
   cardShadow: 'shadow-[0_4px_12px_rgba(0,0,0,0.05)]',
@@ -265,8 +290,13 @@ const theme = {
   // Overlay
   overlay: 'bg-[#1F2937]/30',
 
-  // Danger
-  danger: 'text-[#EF4444] hover:text-[#DC2626] hover:bg-[#FEE2E2]',
+  // Status Colors
+  success: 'text-[#27AE60]',
+  successBg: 'bg-[#27AE60] hover:bg-[#1F8F4F]',
+  warning: 'text-[#F2C94C]',
+  warningBg: 'bg-[#F2C94C] hover:bg-[#D6AE3C]',
+  danger: 'text-[#E5533D] hover:text-[#C94431] hover:bg-[#FDE8E5]',
+  dangerBg: 'bg-[#E5533D] hover:bg-[#C94431]',
 }
 ```
 

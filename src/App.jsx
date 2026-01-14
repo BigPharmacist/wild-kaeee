@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase, supabaseUrl } from './lib/supabase'
-import { House, Camera, Pill, CalendarDots, CalendarBlank, ChatCircle, GearSix, EnvelopeSimple, Printer } from '@phosphor-icons/react'
+import { House, Camera, Pill, CalendarDots, CalendarBlank, ChatCircle, GearSix, EnvelopeSimple, Printer, Palette } from '@phosphor-icons/react'
 import { EmailAccountModal, EmailSettingsSection, EmailView, useEmailSettings } from './features/email'
 import { FaxView, useFaxCounts } from './features/fax'
 import { ContactDetailModal, ContactFormModal, ContactsSettingsSection, useContacts } from './features/contacts'
@@ -13,6 +13,7 @@ import { ChatView, useChat } from './features/chat'
 import { SettingsView, usePharmacies, useStaff } from './features/settings'
 import { PlanView } from './features/plan'
 import { CalendarView, useCalendar } from './features/calendar'
+import { ColorsView } from './features/colors'
 import { useRechnungen } from './features/rechnungen'
 import ReactCrop from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
@@ -523,38 +524,55 @@ function App() {
   } = useCalendar({ session, activeView })
 
   const theme = {
-    bgApp: 'bg-[#F5F7FA]',
-    bg: 'bg-[#F5F7FA]',
+    // Backgrounds - Creme-Gelb Basis
+    bgApp: 'bg-[#FFFDF8]',
+    bg: 'bg-[#FFFDF8]',
     surface: 'bg-white',
     panel: 'bg-white',
-    bgHover: 'hover:bg-[#F5F7FA]',
+    bgHover: 'hover:bg-[#FFEBB0]/30',
     bgCard: 'bg-white',
-    textPrimary: 'text-[#1F2937]',
-    text: 'text-[#1F2937]',
-    textSecondary: 'text-[#6B7280]',
-    textMuted: 'text-[#9CA3AF]',
-    border: 'border-[#E5E7EB]',
-    navActive: 'bg-[#EEF4FD] text-[#1F2937] border border-[#D6E6FB]',
-    navHover: 'hover:bg-[#F5F7FA] hover:text-[#1F2937]',
-    accent: 'bg-[#4A90E2] hover:bg-[#6AA9F0]',
-    accentText: 'text-[#4A90E2]',
-    primary: 'text-[#4A90E2]',
-    primaryBg: 'bg-[#4A90E2]',
-    primaryHover: 'hover:bg-[#6AA9F0]',
-    secondary: 'text-[#7B6CF6]',
-    sidebarBg: 'bg-[#3c4255]',
-    sidebarHover: 'hover:bg-[#4a5066]',
-    sidebarActive: 'border-white bg-transparent',
-    sidebarText: 'text-[#E5E7EB]',
-    sidebarTextActive: 'text-[#E5E7EB]',
-    secondarySidebarBg: 'bg-[#4f5469]',
-    secondaryActive: 'border-l-4 border-[#4A90E2] bg-[#3c4255] text-[#E5E7EB]',
-    input: 'bg-white border-[#E5E7EB] focus:border-[#4A90E2] focus:ring-1 focus:ring-[#4A90E2]',
-    inputPlaceholder: 'placeholder-[#9CA3AF]',
-    cardShadow: 'shadow-[0_4px_12px_rgba(0,0,0,0.05)]',
-    cardHoverShadow: 'hover:shadow-[0_8px_20px_rgba(0,0,0,0.08)]',
-    overlay: 'bg-[#1F2937]/30',
-    danger: 'text-[#EF4444] hover:text-[#DC2626] hover:bg-[#FEE2E2]',
+    // Text - Navy & Blau-Grau
+    textPrimary: 'text-[#173B61]',
+    text: 'text-[#173B61]',
+    textSecondary: 'text-[#7697A0]',
+    textMuted: 'text-[#7697A0]/70',
+    // Borders
+    border: 'border-[#7697A0]/30',
+    divider: 'border-[#173B61]/20',
+    // Navigation - Creme-Gelb aktiv
+    navActive: 'bg-[#FFEBB0] text-[#173B61] border border-[#FD8916]/30',
+    navHover: 'hover:bg-[#FFEBB0]/50 hover:text-[#173B61]',
+    // Orange (Primary) - CTA, wichtige Buttons
+    accent: 'bg-[#FD8916] hover:bg-[#E57A14]',
+    accentText: 'text-[#FD8916]',
+    primary: 'text-[#FD8916]',
+    primaryBg: 'bg-[#FD8916]',
+    primaryHover: 'hover:bg-[#E57A14]',
+    // Teal (Secondary)
+    secondary: 'text-[#17616E]',
+    secondaryAccent: 'bg-[#17616E] hover:bg-[#145560]',
+    // Sidebar - Original Dark Slate
+    sidebarBg: 'bg-[#3C4255]',
+    sidebarHover: 'hover:bg-[#4F5469]',
+    sidebarActive: 'border-[#FD8916] bg-transparent',
+    sidebarText: 'text-[#FFEBB0]',
+    sidebarTextActive: 'text-[#FFEBB0]',
+    secondarySidebarBg: 'bg-[#4F5469]',
+    secondaryActive: 'border-l-4 border-[#FD8916] bg-[#3C4255] text-[#FFEBB0]',
+    // Inputs
+    input: 'bg-white border-[#7697A0]/40 focus:border-[#17616E] focus:ring-1 focus:ring-[#17616E]',
+    inputPlaceholder: 'placeholder-[#7697A0]',
+    // Shadows
+    cardShadow: 'shadow-[0_4px_12px_rgba(23,59,97,0.08)]',
+    cardHoverShadow: 'hover:shadow-[0_8px_20px_rgba(23,59,97,0.12)]',
+    overlay: 'bg-[#173B61]/40',
+    // Status Colors
+    success: 'text-[#17616E]',
+    successBg: 'bg-[#17616E] hover:bg-[#145560]',
+    warning: 'text-[#FD8916]',
+    warningBg: 'bg-[#FD8916] hover:bg-[#E57A14]',
+    danger: 'text-[#C94431] hover:text-[#A83828] hover:bg-[#FDE8E5]',
+    dangerBg: 'bg-[#C94431] hover:bg-[#A83828]',
   }
 
   const navItems = [
@@ -565,6 +583,7 @@ function App() {
     { id: 'calendar', icon: () => <CalendarBlank size={20} weight="regular" />, label: 'Kalender' },
     { id: 'chat', icon: () => <ChatCircle size={20} weight="regular" />, label: 'Chat' },
     { id: 'post', icon: () => <Icons.PostHorn />, label: 'Post' },
+    { id: 'colors', icon: () => <Palette size={20} weight="regular" />, label: 'Farben' },
     { id: 'settings', icon: () => <GearSix size={20} weight="regular" />, label: 'Einstellungen' },
   ]
 
@@ -599,6 +618,9 @@ function App() {
     post: [
       { id: 'email', label: 'Email' },
       { id: 'fax', label: 'Fax' },
+    ],
+    colors: [
+      { id: 'overview', label: 'Übersicht' },
     ],
     settings: [
       { id: 'pharmacies', label: 'Apotheken' },
@@ -1400,7 +1422,7 @@ function App() {
     const canvas = signatureCanvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
-    ctx.strokeStyle = '#1F2937'
+    ctx.strokeStyle = '#173B61'
     ctx.lineWidth = 2
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
@@ -2383,20 +2405,24 @@ function App() {
                 />
               )}
 
+              {activeView === 'colors' && (
+                <ColorsView theme={theme} />
+              )}
+
               {activeView === 'rechnungen' && (
                 <>
                   <h2 className="text-2xl lg:text-3xl font-semibold mb-6 tracking-tight">Großhandelsrechnungen</h2>
 
                   {rechnungenLoading ? (
                     <div className="flex items-center justify-center py-12">
-                      <svg className="w-8 h-8 animate-spin text-[#4A90E2]" fill="none" viewBox="0 0 24 24">
+                      <svg className="w-8 h-8 animate-spin text-[#FD8916]" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                       </svg>
                     </div>
                   ) : rechnungen.length === 0 ? (
                     <div className={`${theme.panel} rounded-2xl p-8 border ${theme.border} ${theme.cardShadow} text-center`}>
-                      <Icons.FileText className="w-12 h-12 mx-auto mb-4 text-[#9CA3AF]" />
+                      <Icons.FileText className="w-12 h-12 mx-auto mb-4 text-[#7697A0]" />
                       <p className={theme.textMuted}>Keine Rechnungen vorhanden.</p>
                     </div>
                   ) : (
@@ -2466,11 +2492,11 @@ function App() {
                                     <button
                                       key={r.id}
                                       onClick={() => openPdfModal(r)}
-                                      className="w-full text-left px-3 py-2 rounded-lg bg-[#E8F5E9] hover:bg-[#C8E6C9] transition-colors border-l-4 border-[#2E7D32]"
+                                      className="w-full text-left px-3 py-2 rounded-lg bg-[#17616E]/10 hover:bg-[#17616E]/20 transition-colors border-l-4 border-[#17616E]"
                                     >
                                       <div className="flex justify-between items-start">
-                                        <p className="text-sm font-medium text-[#1B5E20]">{r.rechnungsnummer}</p>
-                                        <span className="text-xs text-[#2E7D32]">{new Date(r.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr</span>
+                                        <p className="text-sm font-medium text-[#17616E]">{r.rechnungsnummer}</p>
+                                        <span className="text-xs text-[#17616E]/70">{new Date(r.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr</span>
                                       </div>
                                       <p className={`text-xs ${theme.textMuted}`}>{r.dateiname}</p>
                                     </button>
@@ -2487,11 +2513,11 @@ function App() {
                                     <button
                                       key={r.id}
                                       onClick={() => openPdfModal(r)}
-                                      className="w-full text-left px-3 py-2 rounded-lg bg-[#FFF8E1] hover:bg-[#FFECB3] transition-colors border-l-4 border-[#F9A825]"
+                                      className="w-full text-left px-3 py-2 rounded-lg bg-[#FFEBB0]/50 hover:bg-[#FFEBB0] transition-colors border-l-4 border-[#FD8916]"
                                     >
                                       <div className="flex justify-between items-start">
-                                        <p className="text-sm font-medium text-[#F57F17]">{r.rechnungsnummer}</p>
-                                        <span className="text-xs text-[#F9A825]">{new Date(r.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr</span>
+                                        <p className="text-sm font-medium text-[#E57A14]">{r.rechnungsnummer}</p>
+                                        <span className="text-xs text-[#FD8916]">{new Date(r.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr</span>
                                       </div>
                                       <p className={`text-xs ${theme.textMuted}`}>{r.dateiname}</p>
                                     </button>
@@ -2508,11 +2534,11 @@ function App() {
                                     <button
                                       key={r.id}
                                       onClick={() => openPdfModal(r)}
-                                      className="w-full text-left px-3 py-2 rounded-lg bg-[#E3F2FD] hover:bg-[#BBDEFB] transition-colors border-l-4 border-[#1565C0]"
+                                      className="w-full text-left px-3 py-2 rounded-lg bg-[#173B61]/10 hover:bg-[#173B61]/20 transition-colors border-l-4 border-[#173B61]"
                                     >
                                       <div className="flex justify-between items-start">
-                                        <p className="text-sm font-medium text-[#0D47A1]">{r.rechnungsnummer}</p>
-                                        <span className="text-xs text-[#1565C0]">{new Date(r.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr</span>
+                                        <p className="text-sm font-medium text-[#173B61]">{r.rechnungsnummer}</p>
+                                        <span className="text-xs text-[#173B61]/70">{new Date(r.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr</span>
                                       </div>
                                       <p className={`text-xs ${theme.textMuted}`}>{r.dateiname}</p>
                                     </button>
@@ -3018,7 +3044,7 @@ function App() {
                       type="checkbox"
                       checked={staffForm.isAdmin}
                       onChange={(e) => handleStaffInput('isAdmin', e.target.checked)}
-                      className="accent-[#4A90E2]"
+                      className="accent-[#FD8916]"
                     />
                     Admin
                   </label>
@@ -3296,7 +3322,7 @@ function App() {
                       max="150"
                       value={brightness}
                       onChange={(e) => setBrightness(Number(e.target.value))}
-                      className="w-full accent-[#4A90E2]"
+                      className="w-full accent-[#FD8916]"
                     />
                   </div>
                   <div>
@@ -3309,7 +3335,7 @@ function App() {
                       max="150"
                       value={contrast}
                       onChange={(e) => setContrast(Number(e.target.value))}
-                      className="w-full accent-[#4A90E2]"
+                      className="w-full accent-[#FD8916]"
                     />
                   </div>
 
@@ -3856,7 +3882,7 @@ function App() {
                         setShowSignatureCanvas(true)
                         setTimeout(initSignatureCanvas, 50)
                       }}
-                      className={`w-full px-4 py-3 rounded-xl border-2 border-dashed ${theme.border} ${theme.textMuted} hover:border-[#4A90E2] hover:text-[#4A90E2] transition-colors`}
+                      className={`w-full px-4 py-3 rounded-xl border-2 border-dashed ${theme.border} ${theme.textMuted} hover:border-[#FD8916] hover:text-[#FD8916] transition-colors`}
                     >
                       Unterschreiben
                     </button>
@@ -4123,7 +4149,7 @@ function App() {
                       className="w-10 h-10 rounded-lg cursor-pointer border-0"
                     />
                     <div className="flex gap-2">
-                      {['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'].map((color) => (
+                      {['#17616E', '#FD8916', '#FFEBB0', '#C94431', '#173B61', '#7697A0'].map((color) => (
                         <button
                           key={color}
                           type="button"

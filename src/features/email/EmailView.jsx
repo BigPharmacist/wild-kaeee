@@ -187,7 +187,7 @@ export default function EmailView({ theme, account, hasAccess, onConfigureClick,
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="E-Mails durchsuchen..."
-            className={`w-full pl-10 pr-10 py-2 rounded-lg border ${theme.border} ${theme.surface} ${theme.text} text-sm outline-none focus:border-[#4A90E2] focus:ring-1 focus:ring-[#4A90E2]`}
+            className={`w-full pl-10 pr-10 py-2 rounded-lg border ${theme.border} ${theme.surface} ${theme.text} text-sm outline-none focus:border-[#FD8916] focus:ring-1 focus:ring-[#FD8916]`}
           />
           {searchQuery && (
             <button

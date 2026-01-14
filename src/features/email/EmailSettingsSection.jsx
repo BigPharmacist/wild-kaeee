@@ -63,7 +63,7 @@ export default function EmailSettingsSection({
                   onClick={() => onSelectEmailAccount(account.id)}
                   className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
                     selectedEmailAccount === account.id
-                      ? 'border-[#4A90E2] bg-[#4A90E2]'
+                      ? 'border-[#FD8916] bg-[#FD8916]'
                       : `${theme.border}`
                   }`}
                   title="Als Standard auswählen"
@@ -129,8 +129,8 @@ export default function EmailSettingsSection({
                       onClick={() => onToggleEmailPermission(member.auth_user_id, hasAccess)}
                       className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
                         hasAccess
-                          ? 'border-[#4A90E2] bg-[#4A90E2]'
-                          : `${theme.border} hover:border-[#4A90E2]`
+                          ? 'border-[#FD8916] bg-[#FD8916]'
+                          : `${theme.border} hover:border-[#FD8916]`
                       }`}
                       title={hasAccess ? 'Zugriff entziehen' : 'Zugriff gewähren'}
                     >

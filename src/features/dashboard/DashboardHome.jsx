@@ -72,7 +72,7 @@ const DashboardHome = ({
               {weatherData.daily?.slice(0, 3).map((day, index) => {
                 const dayLabel = index === 0 ? 'Heute' : index === 1 ? 'Morgen' : new Date(day.date).toLocaleDateString('de-DE', { weekday: 'short' })
                 return (
-                  <div key={day.date} className={`bg-[#F0F2F5] rounded-xl p-3 text-center`}>
+                  <div key={day.date} className={`bg-[#FFEBB0] rounded-xl p-3 text-center`}>
                     <p className={`text-xs font-medium ${theme.textSecondary} mb-2`}>{dayLabel}</p>
                     <div className={`flex justify-center mb-2 ${theme.textSecondary}`}>
                       <WeatherIcon code={day.weatherCode ?? weatherData.weatherCode} className="w-8 h-8" />

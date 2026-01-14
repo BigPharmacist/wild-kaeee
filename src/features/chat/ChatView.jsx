@@ -52,7 +52,7 @@ const ChatView = ({
                 <div
                   className={`inline-block mt-2 rounded-2xl px-4 py-2 border ${
                     isOwn
-                      ? 'bg-[#4A90E2]/15 border-[#4A90E2]/30 text-[#1F2937]'
+                      ? 'bg-[#FD8916]/15 border-[#FD8916]/30 text-[#173B61]'
                       : `${theme.panel} ${theme.border}`
                   }`}
                 >

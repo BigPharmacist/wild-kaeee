@@ -132,7 +132,7 @@ export default function ContactsSettingsSection({
             <button
               type="button"
               key={contact.id}
-              className={`rounded-xl border ${theme.border} p-4 ${theme.bgHover} text-left ${contact.staff_id ? 'border-l-4 border-l-[#4A90E2]' : ''}`}
+              className={`rounded-xl border ${theme.border} p-4 ${theme.bgHover} text-left ${contact.staff_id ? 'border-l-4 border-l-[#FD8916]' : ''}`}
               title={contact.staff_id ? 'Mitarbeiter - wird über Kollegium gepflegt' : 'Kontakt anzeigen'}
               onClick={() => onOpenContactDetail(contact)}
             >
@@ -216,7 +216,7 @@ export default function ContactsSettingsSection({
               {filteredContacts.map((contact) => (
                 <tr
                   key={contact.id}
-                  className={`border-b ${theme.border} ${theme.bgHover} cursor-pointer ${contact.staff_id ? 'border-l-4 border-l-[#4A90E2]' : ''}`}
+                  className={`border-b ${theme.border} ${theme.bgHover} cursor-pointer ${contact.staff_id ? 'border-l-4 border-l-[#FD8916]' : ''}`}
                   title={contact.staff_id ? 'Mitarbeiter - wird über Kollegium gepflegt' : 'Kontakt anzeigen'}
                   onClick={() => onOpenContactDetail(contact)}
                 >
