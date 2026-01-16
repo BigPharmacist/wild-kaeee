@@ -1,9 +1,10 @@
+import { useEffect } from 'react'
 import { ArrowClockwise, Tray, Trash } from '@phosphor-icons/react'
 import FaxDetailPane from './FaxDetailPane'
 import FaxListPane from './FaxListPane'
 import useFax from './useFax'
 
-export default function FaxView({ theme }) {
+export default function FaxView({ theme, pendingFaxId, onClearPendingFax }) {
   const {
     faxe,
     faxeLoading,
@@ -18,6 +19,23 @@ export default function FaxView({ theme }) {
     restoreFax,
     refresh,
   } = useFax()
+
+  // Automatisch Fax auswählen wenn pendingFaxId gesetzt ist
+  useEffect(() => {
+    if (pendingFaxId && faxe.length > 0) {
+      // Sicherstellen dass wir im Eingang sind (dringende Faxe sind immer dort)
+      if (selectedFolder !== 'eingang') {
+        selectFolder('eingang')
+        return // Nach Ordnerwechsel wird faxe neu geladen
+      }
+
+      const fax = faxe.find(f => f.id === pendingFaxId)
+      if (fax) {
+        selectFax(fax)
+        onClearPendingFax?.()
+      }
+    }
+  }, [pendingFaxId, faxe, selectedFolder, selectFolder, selectFax, onClearPendingFax])
 
   // Zurück zur Liste (Mobile)
   const handleBackToList = () => {

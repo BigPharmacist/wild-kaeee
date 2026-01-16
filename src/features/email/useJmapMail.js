@@ -58,6 +58,8 @@ export default function useJmapMail({ account }) {
         setEmails(prev => prev.map(e =>
           e.id === emailId ? { ...e, keywords: { ...e.keywords, '$seen': true } } : e
         ))
+        // Optimistic Update Event für Badge
+        window.dispatchEvent(new CustomEvent('email-read'))
       }
     } catch (e) {
       console.error('Fehler beim Laden der E-Mail:', e)

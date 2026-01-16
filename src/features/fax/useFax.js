@@ -86,6 +86,8 @@ export default function useFax() {
     if (selectedFax?.id === id) {
       setSelectedFax(null)
     }
+    // Optimistic Update Event für Badge
+    window.dispatchEvent(new CustomEvent('fax-archived'))
     fetchCounts()
     return true
   }, [selectedFax, fetchCounts])
@@ -105,6 +107,8 @@ export default function useFax() {
     if (selectedFax?.id === id) {
       setSelectedFax(null)
     }
+    // Optimistic Update Event für Badge
+    window.dispatchEvent(new CustomEvent('fax-restored'))
     fetchCounts()
     return true
   }, [selectedFax, fetchCounts])

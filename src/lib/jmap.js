@@ -95,10 +95,18 @@ class JMAPClient {
 
   /**
    * Alle Mailboxen abrufen (Inbox, Sent, Drafts, etc.)
+   * Inkl. unreadEmails für Badge-Counts
    */
   async getMailboxes() {
     const responses = await this.request([
-      ['Mailbox/get', { accountId: this.accountId }, 'a']
+      ['Mailbox/get', {
+        accountId: this.accountId,
+        properties: [
+          'id', 'name', 'role', 'sortOrder',
+          'totalEmails', 'unreadEmails',
+          'parentId', 'myRights'
+        ]
+      }, 'a']
     ])
 
     const [name, result] = responses[0]

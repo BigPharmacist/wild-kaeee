@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { supabase, supabaseUrl } from './lib/supabase'
 import { House, Camera, Pill, CalendarDots, CalendarBlank, ChatCircle, GearSix, EnvelopeSimple, Printer, Palette } from '@phosphor-icons/react'
-import { EmailAccountModal, EmailSettingsSection, EmailView, useEmailSettings } from './features/email'
-import { FaxView, useFaxCounts } from './features/fax'
+import { EmailAccountModal, EmailSettingsSection, EmailView, useEmailSettings, useEmailUnreadCount } from './features/email'
+import { FaxView, useFaxCounts, useUrgentFax } from './features/fax'
 import { ContactDetailModal, ContactFormModal, ContactsSettingsSection, useContacts } from './features/contacts'
 import { contactScan } from './features/contacts'
 import { AuthView } from './features/auth'
@@ -102,6 +102,15 @@ function App() {
     fetchAiSettings,
     saveAiSettings,
   } = useEmailSettings({ sessionUserId: session?.user?.id })
+  const selectedEmailAccountObj = useMemo(
+    () => emailAccounts.find(a => a.id === selectedEmailAccount),
+    [emailAccounts, selectedEmailAccount]
+  )
+  const {
+    unreadCount: emailUnreadCount,
+    markAsRead: markEmailAsRead,
+    refresh: refreshEmailCount,
+  } = useEmailUnreadCount({ account: selectedEmailAccountObj })
   const {
     contacts,
     contactsLoading,
@@ -452,7 +461,13 @@ function App() {
   const [pznFotoUploading, setPznFotoUploading] = useState(false)
   const [activePzn, setActivePzn] = useState(null)
   const [unreadCounts, setUnreadCounts] = useState({ amk: 0, recall: 0, lav: 0 })
-  const faxCount = useFaxCounts()
+  const {
+    count: faxCount,
+    decrementCount: decrementFaxCount,
+    refresh: refreshFaxCount,
+  } = useFaxCounts()
+  const { urgentFaxe } = useUrgentFax()
+  const [pendingFaxId, setPendingFaxId] = useState(null)
   const [readMessageIds, setReadMessageIds] = useState({ amk: new Set(), recall: new Set(), lav: new Set() })
   const [planData, setPlanData] = useState(null)
   const [planLoading, setPlanLoading] = useState(false)
@@ -587,7 +602,7 @@ function App() {
     { id: 'settings', icon: () => <GearSix size={20} weight="regular" />, label: 'Einstellungen' },
   ]
 
-  const secondaryNavMap = {
+  const secondaryNavMap = useMemo(() => ({
     dashboard: [
       { id: 'overview', label: 'Übersicht' },
       { id: 'insights', label: 'Insights' },
@@ -628,8 +643,9 @@ function App() {
       { id: 'contacts', label: 'Kontakte' },
       { id: 'email', label: 'E-Mail' },
       { id: 'card-enhance', label: 'Karten-Test' },
+      ...(currentStaff?.is_admin ? [{ id: 'admin', label: 'Admin' }] : []),
     ],
-  }
+  }), [currentStaff?.is_admin])
 
   useEffect(() => {
     // Beim ersten Mount den gespeicherten Wert behalten
@@ -702,6 +718,13 @@ function App() {
     } else {
       setSecondaryTab(itemId)
     }
+  }
+
+  // Klick auf dringendes Fax im Header
+  const handleUrgentFaxClick = (faxId) => {
+    setActiveView('post')
+    setSecondaryTab('fax')
+    setPendingFaxId(faxId)
   }
 
   // PDF-Download für AMK-Meldungen
@@ -2262,6 +2285,8 @@ function App() {
           session={session}
           handleSignOut={handleSignOut}
           Icons={Icons}
+          urgentFaxe={urgentFaxe}
+          onUrgentFaxClick={handleUrgentFaxClick}
         />
 
         <div className="flex flex-1 overflow-hidden relative">
@@ -2275,7 +2300,7 @@ function App() {
             secondaryNavMap={secondaryNavMap}
             getActiveSecondaryId={getActiveSecondaryId}
             handleSecondarySelect={handleSecondarySelect}
-            unreadCounts={{ ...unreadCounts, fax: faxCount }}
+            unreadCounts={{ ...unreadCounts, fax: faxCount, email: emailUnreadCount }}
             Icons={Icons}
             UnreadBadge={UnreadBadge}
           />
@@ -2579,7 +2604,11 @@ function App() {
                   )}
 
                   {secondaryTab === 'fax' && (
-                    <FaxView theme={theme} />
+                    <FaxView
+                      theme={theme}
+                      pendingFaxId={pendingFaxId}
+                      onClearPendingFax={() => setPendingFaxId(null)}
+                    />
                   )}
                 </>
               )}
@@ -2783,6 +2812,50 @@ function App() {
                     <input
                       value={editForm.fax}
                       onChange={(e) => handleEditInput('fax', e.target.value)}
+                      className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
+                      Umsatzsteuer-ID
+                    </label>
+                    <input
+                      value={editForm.vatId}
+                      onChange={(e) => handleEditInput('vatId', e.target.value)}
+                      className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
+                      Handelsregistereintrag
+                    </label>
+                    <input
+                      value={editForm.tradeRegister}
+                      onChange={(e) => handleEditInput('tradeRegister', e.target.value)}
+                      className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
+                      Amtsgericht
+                    </label>
+                    <input
+                      value={editForm.registryCourt}
+                      onChange={(e) => handleEditInput('registryCourt', e.target.value)}
+                      className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
+                      BGA/IDF-Nummer
+                    </label>
+                    <input
+                      value={editForm.bgaIdfNumber}
+                      onChange={(e) => handleEditInput('bgaIdfNumber', e.target.value)}
                       className={`w-full px-3 py-2 ${theme.input} ${theme.inputPlaceholder} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
                     />
                   </div>

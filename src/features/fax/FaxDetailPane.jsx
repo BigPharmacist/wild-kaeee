@@ -1,6 +1,12 @@
+import { useState, useRef, useCallback, useEffect } from 'react'
 import {
   ArrowCounterClockwise,
+  ArrowsOutSimple,
+  ArrowUUpLeft,
+  ArrowUUpRight,
   CaretLeft,
+  MagnifyingGlassMinus,
+  MagnifyingGlassPlus,
   Printer,
   Trash,
 } from '@phosphor-icons/react'
@@ -48,6 +54,56 @@ export default function FaxDetailPane({
   onDelete,
   onRestore,
 }) {
+  const [zoom, setZoom] = useState(1)
+  const [rotation, setRotation] = useState(0)
+  const [position, setPosition] = useState({ x: 0, y: 0 })
+  const [isDragging, setIsDragging] = useState(false)
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
+  const containerRef = useRef(null)
+
+  const handleZoomIn = () => setZoom(z => Math.min(z + 0.25, 3))
+  const handleZoomOut = () => setZoom(z => Math.max(z - 0.25, 0.5))
+  const handleRotateLeft = () => setRotation(r => (r - 90) % 360)
+  const handleRotateRight = () => setRotation(r => (r + 90) % 360)
+  const handleReset = () => {
+    setZoom(1)
+    setRotation(0)
+    setPosition({ x: 0, y: 0 })
+  }
+
+  const handleMouseDown = useCallback((e) => {
+    if (e.button !== 0) return // Nur linke Maustaste
+    setIsDragging(true)
+    setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y })
+  }, [position])
+
+  const handleMouseMove = useCallback((e) => {
+    if (!isDragging) return
+    setPosition({
+      x: e.clientX - dragStart.x,
+      y: e.clientY - dragStart.y,
+    })
+  }, [isDragging, dragStart])
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false)
+  }, [])
+
+  const handleWheel = useCallback((e) => {
+    if (e.ctrlKey) {
+      e.preventDefault()
+      const delta = e.deltaY > 0 ? -0.1 : 0.1
+      setZoom(z => Math.min(Math.max(z + delta, 0.5), 3))
+    }
+  }, [])
+
+  // Zoom/Rotation/Position zurücksetzen bei Fax-Wechsel
+  useEffect(() => {
+    setZoom(1)
+    setRotation(0)
+    setPosition({ x: 0, y: 0 })
+  }, [selectedFax?.id])
+
   return (
     <div className={`flex-1 flex flex-col ${!selectedFax ? 'hidden lg:flex' : 'flex'}`}>
       {!selectedFax ? (
@@ -117,16 +173,97 @@ export default function FaxDetailPane({
 
           {/* Content */}
           <div className="flex-1 flex flex-col overflow-hidden">
-            {/* PDF Viewer */}
-            <div className="flex-1 min-h-0">
+            {/* Zoom & Rotate Controls */}
+            <div className={`flex items-center gap-2 px-4 py-2 border-b ${theme.border} ${theme.surface}`}>
+              <button
+                type="button"
+                onClick={handleZoomOut}
+                className={`p-1.5 rounded-lg ${theme.bgHover}`}
+                title="Verkleinern"
+              >
+                <MagnifyingGlassMinus size={18} />
+              </button>
+              <span className={`text-sm ${theme.textSecondary} min-w-[50px] text-center`}>
+                {Math.round(zoom * 100)}%
+              </span>
+              <button
+                type="button"
+                onClick={handleZoomIn}
+                className={`p-1.5 rounded-lg ${theme.bgHover}`}
+                title="Vergrößern"
+              >
+                <MagnifyingGlassPlus size={18} />
+              </button>
+
+              <div className={`w-px h-5 ${theme.border} mx-1`} />
+
+              <button
+                type="button"
+                onClick={handleRotateLeft}
+                className={`p-1.5 rounded-lg ${theme.bgHover}`}
+                title="90° nach links drehen"
+              >
+                <ArrowUUpLeft size={18} />
+              </button>
+              <button
+                type="button"
+                onClick={handleRotateRight}
+                className={`p-1.5 rounded-lg ${theme.bgHover}`}
+                title="90° nach rechts drehen"
+              >
+                <ArrowUUpRight size={18} />
+              </button>
+
+              <div className={`w-px h-5 ${theme.border} mx-1`} />
+
+              <button
+                type="button"
+                onClick={handleReset}
+                className={`p-1.5 rounded-lg ${theme.bgHover}`}
+                title="Zurücksetzen"
+              >
+                <ArrowsOutSimple size={18} />
+              </button>
+              <span className={`text-xs ${theme.textMuted} ml-auto hidden sm:inline`}>
+                Ziehen zum Verschieben
+              </span>
+            </div>
+
+            {/* PDF Viewer mit Pan/Zoom */}
+            <div
+              ref={containerRef}
+              className="flex-1 min-h-0 overflow-hidden bg-gray-100 relative"
+              style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              onWheel={handleWheel}
+            >
               {getLocalPdfUrl(selectedFax) ? (
-                <iframe
-                  src={getLocalPdfUrl(selectedFax)}
-                  className="w-full h-full border-0"
-                  title={`Fax von ${selectedFax.absender || 'Unbekannt'}`}
-                />
+                <div
+                  className="absolute inset-0 flex items-center justify-center"
+                  style={{
+                    transform: `translate(${position.x}px, ${position.y}px) scale(${zoom}) rotate(${rotation}deg)`,
+                    transformOrigin: 'center center',
+                    pointerEvents: 'none',
+                    transition: isDragging ? 'none' : 'transform 0.2s ease-out',
+                  }}
+                >
+                  <iframe
+                    src={getLocalPdfUrl(selectedFax)}
+                    className="w-full h-full border-0 shadow-lg"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      minWidth: '800px',
+                      minHeight: '1000px',
+                    }}
+                    title={`Fax von ${selectedFax.absender || 'Unbekannt'}`}
+                  />
+                </div>
               ) : (
-                <div className={`flex-1 flex items-center justify-center ${theme.textMuted}`}>
+                <div className={`flex-1 flex items-center justify-center h-full ${theme.textMuted}`}>
                   <div className="text-center">
                     <Printer size={48} className="mx-auto mb-2 opacity-30" />
                     <p className="text-sm">Kein Dokument verfügbar</p>
