@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { supabase, supabaseUrl } from './lib/supabase'
-import { House, Camera, Pill, CalendarDots, CalendarBlank, ChatCircle, GearSix, EnvelopeSimple, Printer, Palette } from '@phosphor-icons/react'
+import { House, Camera, Pill, CalendarDots, CalendarBlank, ChatCircle, GearSix, EnvelopeSimple, Printer, Palette, Sparkle } from '@phosphor-icons/react'
 import { EmailAccountModal, EmailSettingsSection, EmailView, useEmailSettings, useEmailUnreadCount } from './features/email'
 import { FaxView, useFaxCounts, useUrgentFax } from './features/fax'
 import { ContactDetailModal, ContactFormModal, ContactsSettingsSection, useContacts } from './features/contacts'
 import { contactScan } from './features/contacts'
 import { AuthView } from './features/auth'
-import { DashboardHeader, SidebarNav, DashboardHome, useWeather } from './features/dashboard'
+import { DashboardHeader, SidebarNav, DashboardHome, useWeather, usePollen, useBiowetter } from './features/dashboard'
 import { ApoView } from './features/apo'
 import { PhotosView, usePhotos } from './features/photos'
 import { ChatView, useChat } from './features/chat'
@@ -136,12 +136,14 @@ function App() {
     selectedCardUrl,
     selectedCardHasEnhanced,
     selectedCardHasOriginal,
+    contactFormCardView,
     contactTypeLabels,
     filteredContacts,
     setContactSearch,
     setContactViewMode,
     setSelectedContact,
     setSelectedContactCardView,
+    setContactFormCardView,
     fetchContacts,
     openContactModal,
     closeContactModal,
@@ -388,6 +390,24 @@ function App() {
     closeWeatherModal,
   } = useWeather({ pharmacies })
   const {
+    pollenData,
+    pollenLoading,
+    pollenError,
+    pollenRegion,
+    pollenNames,
+    severityLabels,
+    severityColors,
+  } = usePollen({ pharmacies })
+  const {
+    biowetterLoading,
+    biowetterError,
+    biowetterZone,
+    getForecasts: getBiowetterForecasts,
+    lastUpdate: biowetterLastUpdate,
+    aiRecommendation: biowetterAiRecommendation,
+    aiRecommendationLoading: biowetterAiLoading,
+  } = useBiowetter({ pharmacies, aiSettings })
+  const {
     chatMessages,
     chatLoading,
     chatError,
@@ -452,6 +472,7 @@ function App() {
   const [lavLoading, setLavLoading] = useState(false)
   const [selectedApoMessage, setSelectedApoMessage] = useState(null)
   const [showDokumentationModal, setShowDokumentationModal] = useState(false)
+  const [showBiowetterModal, setShowBiowetterModal] = useState(false)
   const [dokumentationBemerkung, setDokumentationBemerkung] = useState('')
   const [dokumentationSignature, setDokumentationSignature] = useState(null)
   const [showSignatureCanvas, setShowSignatureCanvas] = useState(false)
@@ -603,11 +624,6 @@ function App() {
   ]
 
   const secondaryNavMap = useMemo(() => ({
-    dashboard: [
-      { id: 'overview', label: 'Übersicht' },
-      { id: 'insights', label: 'Insights' },
-      { id: 'reports', label: 'Reports' },
-    ],
     photos: [
       { id: 'uploads', label: 'Uploads' },
       { id: 'library', label: 'Archiv' },
@@ -676,6 +692,15 @@ function App() {
   useEffect(() => {
     localStorage.setItem('nav_apoTab', apoTab)
   }, [apoTab])
+
+  // Browser-Tab-Titel mit Fax-Count aktualisieren
+  useEffect(() => {
+    if (faxCount > 0) {
+      document.title = `(${faxCount}) Kaeee`
+    } else {
+      document.title = 'Kaeee'
+    }
+  }, [faxCount])
 
   // Mobile Nav: Nach 3 Sekunden automatisch schließen wenn primärer Punkt gewählt
   useEffect(() => {
@@ -2281,9 +2306,6 @@ function App() {
           pznCameraInputRef={pznCameraInputRef}
           handlePznCameraCapture={handlePznCameraCapture}
           setActiveView={setActiveView}
-          currentStaff={currentStaff}
-          session={session}
-          handleSignOut={handleSignOut}
           Icons={Icons}
           urgentFaxe={urgentFaxe}
           onUrgentFaxClick={handleUrgentFaxClick}
@@ -2303,6 +2325,9 @@ function App() {
             unreadCounts={{ ...unreadCounts, fax: faxCount, email: emailUnreadCount }}
             Icons={Icons}
             UnreadBadge={UnreadBadge}
+            currentStaff={currentStaff}
+            session={session}
+            handleSignOut={handleSignOut}
           />
 
           {/* Main Content */}
@@ -2324,6 +2349,21 @@ function App() {
                   setActiveView={setActiveView}
                   photoUploading={photoUploading}
                   latestPhoto={latestPhoto}
+                  pollenData={pollenData}
+                  pollenLoading={pollenLoading}
+                  pollenError={pollenError}
+                  pollenRegion={pollenRegion}
+                  pollenNames={pollenNames}
+                  severityLabels={severityLabels}
+                  severityColors={severityColors}
+                  biowetterLoading={biowetterLoading}
+                  biowetterError={biowetterError}
+                  biowetterZone={biowetterZone}
+                  getBiowetterForecasts={getBiowetterForecasts}
+                  biowetterLastUpdate={biowetterLastUpdate}
+                  biowetterAiRecommendation={biowetterAiRecommendation}
+                  biowetterAiLoading={biowetterAiLoading}
+                  openBiowetterModal={() => setShowBiowetterModal(true)}
                 />
               )}
 
@@ -3157,6 +3197,7 @@ function App() {
           selectedCardHasEnhanced={selectedCardHasEnhanced}
           selectedCardHasOriginal={selectedCardHasOriginal}
           selectedContactCardView={selectedContactCardView}
+          selectedCardNeedsConfirmation={selectedCardHasEnhanced && !selectedContact?.business_card_enhanced_confirmed}
           contactTypeLabels={contactTypeLabels}
           onClose={() => setSelectedContact(null)}
           onEdit={() => {
@@ -3198,6 +3239,7 @@ function App() {
               theme={theme}
             />
           }
+          contactFormCardView={contactFormCardView}
           onClose={closeContactModal}
           onDelete={() => {
             deleteContact(editingContact.id)
@@ -3216,17 +3258,52 @@ function App() {
           onContactInput={handleContactInput}
           onCardFileChange={handleContactCardChange}
           onResetCard={() => {
-            contactScanApi.setContactCardFile(null)
-            contactScanApi.setContactCardPreview('')
-            contactScanApi.setContactCardEnhancedFile(null)
-            contactScanApi.setContactCardEnhancedPreview('')
-            contactScanApi.setContactCardEnhancing(false)
-            contactScanApi.setContactCardRotation(0)
-            handleContactInput('businessCardUrl', '')
-            handleContactInput('businessCardUrlEnhanced', '')
+            const hasOriginal = contactCardPreview || contactForm.businessCardUrl
+            const hasEnhanced = contactCardEnhancedPreview || contactForm.businessCardUrlEnhanced
+            const hasBoth = hasOriginal && hasEnhanced
+
+            if (hasBoth) {
+              // Nur die aktuell angezeigte Version entfernen
+              if (contactFormCardView === 'enhanced') {
+                contactScanApi.setContactCardEnhancedFile(null)
+                contactScanApi.setContactCardEnhancedPreview('')
+                handleContactInput('businessCardUrlEnhanced', '')
+                // Zur verbleibenden Version wechseln
+                setContactFormCardView('original')
+              } else {
+                contactScanApi.setContactCardFile(null)
+                contactScanApi.setContactCardPreview('')
+                contactScanApi.setContactCardRotation(0)
+                handleContactInput('businessCardUrl', '')
+                // Zur verbleibenden Version wechseln
+                setContactFormCardView('enhanced')
+              }
+            } else {
+              // Nur eine Version vorhanden - alles entfernen
+              contactScanApi.setContactCardFile(null)
+              contactScanApi.setContactCardPreview('')
+              contactScanApi.setContactCardEnhancedFile(null)
+              contactScanApi.setContactCardEnhancedPreview('')
+              contactScanApi.setContactCardEnhancing(false)
+              contactScanApi.setContactCardRotation(0)
+              handleContactInput('businessCardUrl', '')
+              handleContactInput('businessCardUrlEnhanced', '')
+            }
           }}
           onRotateLeft={() => contactScanApi.setContactCardRotation((r) => (r - 90 + 360) % 360)}
           onRotateRight={() => contactScanApi.setContactCardRotation((r) => (r + 90) % 360)}
+          onSelectFormCardView={setContactFormCardView}
+          onConfirmEnhanced={async () => {
+            handleContactInput('businessCardEnhancedConfirmed', true)
+            // Sofort in DB speichern wenn Kontakt existiert
+            if (editingContact?.id) {
+              await supabase
+                .from('contacts')
+                .update({ business_card_enhanced_confirmed: true })
+                .eq('id', editingContact.id)
+              fetchContacts()
+            }
+          }}
           PhotoIcon={Icons.Photo}
           CloseIcon={Icons.X}
           deleteIcon={(
@@ -4339,6 +4416,160 @@ function App() {
                     </div>
                   ))
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Biowetter Modal */}
+        {showBiowetterModal && (
+          <div className={`fixed inset-0 ${theme.overlay} flex items-center justify-center z-50 p-4`}>
+            <div className={`${theme.panel} rounded-2xl border ${theme.border} ${theme.cardShadow} w-full max-w-lg max-h-[80vh] flex flex-col`}>
+              <div className={`flex items-center justify-between p-4 border-b ${theme.border}`}>
+                <h3 className={`text-lg font-semibold ${theme.text}`}>Biowetter</h3>
+                <button
+                  type="button"
+                  onClick={() => setShowBiowetterModal(false)}
+                  className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
+                >
+                  <Icons.X />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-auto p-4 space-y-4">
+                {/* Biowetter-Tabelle */}
+                {(() => {
+                  const forecasts = getBiowetterForecasts?.()
+                  if (!forecasts?.slots) return <p className={theme.textMuted}>Keine Daten verfügbar.</p>
+
+                  const availableSlots = forecasts.slots.filter(slot => slot.available)
+                  const allEffectLabels = new Map()
+                  const slotEffectsMap = availableSlots.map(slot => {
+                    const effectMap = new Map()
+                    slot.effects.forEach(e => {
+                      allEffectLabels.set(e.label, e.label)
+                      effectMap.set(e.label, e)
+                    })
+                    return effectMap
+                  })
+                  const effectList = Array.from(allEffectLabels.keys())
+
+                  const weekdayNames = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
+                  const today = new Date()
+                  const getWeekday = (daysFromNow) => weekdayNames[(today.getDay() + daysFromNow) % 7]
+
+                  const days = [
+                    { label: getWeekday(0), slots: availableSlots.filter(s => s.dayLabel === 'Heute') },
+                    { label: getWeekday(1), slots: availableSlots.filter(s => s.dayLabel === 'Morgen') },
+                    { label: getWeekday(2), slots: availableSlots.filter(s => s.dayLabel === 'Überm.') },
+                  ].filter(day => day.slots.length > 0)
+
+                  return (
+                    <>
+                      {effectList.length > 0 ? (
+                        <div className="flex">
+                          <div className="flex-1 mr-2">
+                            <div className="h-5" />
+                            <div className="h-4 mb-1" />
+                            <div className="space-y-1">
+                              {effectList.map((label) => (
+                                <div key={label} className="h-4 flex items-center">
+                                  <span className={`text-xs ${theme.text} truncate`}>{label}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          {days.map((day, dayIdx) => (
+                            <div key={day.label} className={`${dayIdx > 0 ? 'border-l border-[#E5E7EB] pl-1 ml-1' : ''}`}>
+                              <div className="h-5 flex justify-center items-center">
+                                <span className="text-[10px] text-[#6B7280]">{day.label}</span>
+                              </div>
+                              <div className="h-4 mb-1 flex gap-px justify-center items-center">
+                                {day.slots.map((slot) => (
+                                  <div key={slot.key} className="w-[18px] text-center">
+                                    <span className="text-[8px] text-[#9CA3AF]">{slot.label}</span>
+                                  </div>
+                                ))}
+                              </div>
+                              <div className="space-y-1">
+                                {effectList.map((label) => (
+                                  <div key={label} className="h-4 flex gap-px justify-center items-center">
+                                    {day.slots.map((slot) => {
+                                      const slotIdx = availableSlots.findIndex(s => s.key === slot.key)
+                                      const effect = slotEffectsMap[slotIdx]?.get(label)
+                                      return (
+                                        <div key={slot.key} className="w-[18px] flex justify-center items-center">
+                                          <span
+                                            className={`w-3 h-3 rounded-sm ${effect?.dotColor || 'bg-[#27AE60]'}`}
+                                            title={effect ? `${effect.value}` : 'kein Einfluss'}
+                                          />
+                                        </div>
+                                      )
+                                    })}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className={`text-sm ${theme.textMuted}`}>Kein Einfluss erwartet.</p>
+                      )}
+                    </>
+                  )
+                })()}
+
+                {/* KI-Empfehlung */}
+                <div className={`pt-4 border-t ${theme.border}`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Sparkle size={18} weight="fill" className="text-violet-500" />
+                    <p className={`text-sm font-medium ${theme.textSecondary}`}>KI-Empfehlung</p>
+                  </div>
+                  {biowetterAiLoading ? (
+                    <p className={`text-sm ${theme.textMuted} italic`}>Empfehlung wird generiert...</p>
+                  ) : biowetterAiRecommendation ? (
+                    <p className={`text-sm ${theme.text} leading-relaxed`}>{biowetterAiRecommendation}</p>
+                  ) : (
+                    <p className={`text-sm ${theme.textMuted}`}>Keine Empfehlung verfügbar.</p>
+                  )}
+                </div>
+
+                {/* Legende */}
+                <div className={`pt-4 border-t ${theme.border}`}>
+                  <p className={`text-xs font-medium ${theme.textSecondary} mb-2`}>Legende</p>
+                  <div className="flex flex-wrap gap-3 text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-3 h-3 rounded-sm bg-[#27AE60]" />
+                      <span className={theme.textMuted}>kein Einfluss</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-3 h-3 rounded-sm bg-[#F2C94C]" />
+                      <span className={theme.textMuted}>gering</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-3 h-3 rounded-sm bg-[#E5533D]" />
+                      <span className={theme.textMuted}>hoch</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-3 h-3 rounded-sm bg-[#2EC4B6]" />
+                      <span className={theme.textMuted}>Kälte</span>
+                    </div>
+                  </div>
+                </div>
+
+                {biowetterLastUpdate && (
+                  <p className={`text-xs ${theme.textMuted}`}>Stand: {biowetterLastUpdate}</p>
+                )}
+              </div>
+
+              <div className={`flex justify-end p-4 border-t ${theme.border}`}>
+                <button
+                  type="button"
+                  onClick={() => setShowBiowetterModal(false)}
+                  className={`px-4 py-2.5 rounded-lg ${theme.accent} text-white font-medium`}
+                >
+                  Schließen
+                </button>
               </div>
             </div>
           </div>

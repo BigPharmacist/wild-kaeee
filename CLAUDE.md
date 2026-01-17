@@ -157,7 +157,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 Lokale Supabase Tabelle `pharmacies` für die Apothekendaten:
 ```text
-id (uuid), name, street, postal_code, city, phone, owner, owner_role, website, email, fax
+id (uuid), name, street, postal_code, city, phone, owner, owner_role, website, email, fax, vat_id, trade_register, registry_court, bga_idf_number
 ```
 
 Lokale Supabase Tabelle `staff` für Kollegium:
@@ -167,7 +167,7 @@ id (uuid), pharmacy_id (uuid), first_name, last_name, street, postal_code, city,
 
 Lokale Supabase Tabelle `contacts` für Geschäftskontakte:
 ```text
-id (uuid), owner_id (uuid), first_name, last_name, company, position, email, phone, mobile, website, street, postal_code, city, country, contact_type, tags (jsonb), notes, shared (bool), business_card_url, status ('aktiv'|'inaktiv'), predecessor_id (uuid), transition_date (date)
+id (uuid), owner_id (uuid), first_name, last_name, company, position, email, phone, mobile, website, street, postal_code, city, country, contact_type, tags (jsonb), notes, shared (bool), business_card_url, business_card_url_enhanced, business_card_enhanced_confirmed (bool), status ('aktiv'|'inaktiv'), predecessor_id (uuid), transition_date (date)
 ```
 
 **Vertreterwechsel-Logik:**

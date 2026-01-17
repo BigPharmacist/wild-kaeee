@@ -1,3 +1,5 @@
+import { Sparkle } from '@phosphor-icons/react'
+
 const DashboardHome = ({
   theme,
   openWeatherModal,
@@ -13,6 +15,21 @@ const DashboardHome = ({
   setActiveView,
   photoUploading,
   latestPhoto,
+  pollenData,
+  pollenLoading,
+  pollenError,
+  pollenRegion,
+  pollenNames,
+  severityLabels,
+  severityColors,
+  biowetterLoading,
+  biowetterError,
+  biowetterZone,
+  getBiowetterForecasts,
+  biowetterLastUpdate,
+  biowetterAiRecommendation,
+  biowetterAiLoading,
+  openBiowetterModal,
 }) => (
   <>
     <h2 className="text-2xl lg:text-3xl font-semibold mb-6 tracking-tight">Dashboard</h2>
@@ -223,6 +240,216 @@ const DashboardHome = ({
             Noch kein Foto vorhanden. Nutze das Kamera-Symbol oben.
           </p>
         )}
+      </div>
+
+      <div className={`${theme.panel} rounded-2xl p-5 border ${theme.border} ${theme.cardShadow}`}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className={`text-lg font-medium ${theme.text}`}>Pollenflug</h3>
+          {pollenRegion && (
+            <span className={`text-xs ${theme.textMuted}`}>
+              {pollenRegion.replace(/_/g, ' ')}
+            </span>
+          )}
+        </div>
+
+        {pollenLoading && (
+          <p className={`text-sm ${theme.textMuted}`}>Pollendaten werden geladen...</p>
+        )}
+        {!pollenLoading && pollenError && (
+          <p className="text-rose-400 text-sm">{pollenError}</p>
+        )}
+        {!pollenLoading && !pollenError && pollenData && pollenData.pollen && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between mb-1">
+              <span></span>
+              <div className="flex gap-1 text-xs text-[#6B7280]">
+                <span className="w-16 text-center">Heute</span>
+                <span className="w-16 text-center">Morgen</span>
+              </div>
+            </div>
+            {pollenData.pollen
+              .filter(p => p.today?.severity !== '-1' && p.today?.severity !== undefined)
+              .sort((a, b) => {
+                const order = { '3': 0, '2-3': 1, '2': 2, '1-2': 3, '1': 4, '0-1': 5, '0': 6 }
+                return (order[a.today?.severity] ?? 7) - (order[b.today?.severity] ?? 7)
+              })
+              .map(pollen => (
+                <div key={pollen.name} className="flex items-center justify-between">
+                  <span className={`text-sm ${theme.text}`}>
+                    {pollenNames[pollen.name] || pollen.name}
+                  </span>
+                  <div className="flex gap-1">
+                    <span
+                      className={`text-xs w-16 text-center py-0.5 rounded ${severityColors[pollen.today?.severity] || 'bg-gray-100'}`}
+                    >
+                      {severityLabels[pollen.today?.severity] || pollen.today?.severity}
+                    </span>
+                    <span
+                      className={`text-xs w-16 text-center py-0.5 rounded ${pollen.tomorrow?.severity && pollen.tomorrow.severity !== '-1' ? severityColors[pollen.tomorrow?.severity] || 'bg-gray-100' : 'bg-transparent'}`}
+                    >
+                      {pollen.tomorrow?.severity && pollen.tomorrow.severity !== '-1'
+                        ? (severityLabels[pollen.tomorrow?.severity] || pollen.tomorrow?.severity)
+                        : '–'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            {pollenData.pollen.filter(p => p.today?.severity !== '-1' && p.today?.severity !== undefined).length === 0 && (
+              <p className={`text-sm ${theme.textMuted}`}>Aktuell keine Pollenbelastung.</p>
+            )}
+          </div>
+        )}
+        {!pollenLoading && !pollenError && !pollenData && (
+          <p className={theme.textMuted}>Keine Pollendaten verfügbar.</p>
+        )}
+      </div>
+
+      <div
+        className={`${theme.panel} rounded-2xl p-5 border ${theme.border} ${theme.cardShadow} cursor-pointer hover:border-[#4C8BF5] transition-colors`}
+        onClick={openBiowetterModal}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className={`text-lg font-medium ${theme.text}`}>Biowetter</h3>
+          {biowetterZone && (
+            <span className={`text-xs ${theme.textMuted}`}>
+              Zone {biowetterZone}
+            </span>
+          )}
+        </div>
+
+        {biowetterLoading && (
+          <p className={`text-sm ${theme.textMuted}`}>Biowetter wird geladen...</p>
+        )}
+        {!biowetterLoading && biowetterError && (
+          <p className="text-rose-400 text-sm">{biowetterError}</p>
+        )}
+        {!biowetterLoading && !biowetterError && getBiowetterForecasts && (() => {
+          const forecasts = getBiowetterForecasts()
+          if (!forecasts || !forecasts.slots) {
+            return <p className={theme.textMuted}>Keine Biowetter-Daten verfügbar.</p>
+          }
+
+          // Nur verfügbare Slots filtern
+          const availableSlots = forecasts.slots.filter(slot => slot.available)
+
+          // Alle Effekte aus verfügbaren Slots sammeln (nur mit Belastung)
+          const allEffectLabels = new Map()
+          const slotEffectsMap = availableSlots.map(slot => {
+            const effectMap = new Map()
+            slot.effects.forEach(e => {
+              allEffectLabels.set(e.label, e.label)
+              effectMap.set(e.label, e)
+            })
+            return effectMap
+          })
+
+          const effectList = Array.from(allEffectLabels.keys())
+          const hasAnyEffects = effectList.length > 0
+
+          // Wochentage berechnen
+          const weekdayNames = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
+          const today = new Date()
+          const getWeekday = (daysFromNow) => weekdayNames[(today.getDay() + daysFromNow) % 7]
+
+          // Tage für Header gruppieren (nur mit verfügbaren Slots)
+          const days = [
+            { label: getWeekday(0), slots: availableSlots.filter(s => s.dayLabel === 'Heute') },
+            { label: getWeekday(1), slots: availableSlots.filter(s => s.dayLabel === 'Morgen') },
+            { label: getWeekday(2), slots: availableSlots.filter(s => s.dayLabel === 'Überm.') },
+          ].filter(day => day.slots.length > 0)
+
+          return (
+            <div className="space-y-3">
+              {hasAnyEffects ? (
+                <>
+                  {/* Tabelle mit durchgängigen Trennlinien */}
+                  <div className="flex">
+                    {/* Labels-Spalte */}
+                    <div className="flex-1 mr-2">
+                      <div className="h-5" /> {/* Platz für Tage-Header */}
+                      <div className="h-4 mb-1" /> {/* Platz für VM/NM-Header */}
+                      <div className="space-y-1">
+                        {effectList.map((label) => (
+                          <div key={label} className="h-4 flex items-center">
+                            <span className={`text-xs ${theme.text} truncate`}>{label}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    {/* Tages-Spalten */}
+                    {days.map((day, dayIdx) => (
+                      <div
+                        key={day.label}
+                        className={`${dayIdx > 0 ? 'border-l border-[#E5E7EB] pl-1 ml-1' : ''}`}
+                      >
+                        {/* Tages-Header */}
+                        <div className="h-5 flex justify-center items-center">
+                          <span className="text-[10px] text-[#6B7280]">{day.label}</span>
+                        </div>
+                        {/* VM/NM-Header */}
+                        <div className="h-4 mb-1 flex gap-px justify-center items-center">
+                          {day.slots.map((slot) => (
+                            <div key={slot.key} className="w-[18px] text-center">
+                              <span className="text-[8px] text-[#9CA3AF]">{slot.label}</span>
+                            </div>
+                          ))}
+                        </div>
+                        {/* Werte */}
+                        <div className="space-y-1">
+                          {effectList.map((label) => (
+                            <div key={label} className="h-4 flex gap-px justify-center items-center">
+                              {day.slots.map((slot) => {
+                                const slotIdx = availableSlots.findIndex(s => s.key === slot.key)
+                                const effect = slotEffectsMap[slotIdx]?.get(label)
+                                return (
+                                  <div key={slot.key} className="w-[18px] flex justify-center items-center">
+                                    {effect ? (
+                                      <span
+                                        className={`w-3 h-3 rounded-sm ${effect.dotColor}`}
+                                        title={`${slot.dayLabel} ${slot.label}: ${effect.value}`}
+                                      />
+                                    ) : (
+                                      <span className="w-3 h-3 rounded-sm bg-[#27AE60]" title={`${slot.dayLabel} ${slot.label}: kein Einfluss`} />
+                                    )}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <p className={`text-sm ${theme.textMuted}`}>Kein Einfluss erwartet.</p>
+              )}
+
+              {/* KI-Empfehlung (gekürzt) */}
+              <div className={`pt-3 border-t ${theme.border}`}>
+                {biowetterAiLoading ? (
+                  <div className="flex items-center gap-2">
+                    <Sparkle size={16} weight="fill" className="text-[#9CA3AF] animate-pulse" />
+                    <p className={`text-xs ${theme.textMuted} italic`}>...</p>
+                  </div>
+                ) : biowetterAiRecommendation ? (
+                  <div className="flex items-start gap-2">
+                    <Sparkle size={16} weight="fill" className="text-violet-500 flex-shrink-0 mt-0.5" />
+                    <p className={`text-xs ${theme.textMuted} line-clamp-2`}>
+                      {biowetterAiRecommendation.split('.')[0]}.
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+
+              {biowetterLastUpdate && (
+                <p className={`text-xs ${theme.textMuted} mt-2`}>
+                  Stand: {biowetterLastUpdate}
+                </p>
+              )}
+            </div>
+          )
+        })()}
       </div>
     </div>
   </>

@@ -21,6 +21,7 @@ const DEFAULT_CONTACT_FORM = {
   shared: true,
   businessCardUrl: '',
   businessCardUrlEnhanced: '',
+  businessCardEnhancedConfirmed: false,
   status: 'aktiv',
   predecessorId: null,
   transitionDate: null,
@@ -57,6 +58,7 @@ export default function useContacts({ sessionUserId }) {
   const [contactViewMode, setContactViewMode] = useState('cards')
   const [selectedContact, setSelectedContact] = useState(null)
   const [selectedContactCardView, setSelectedContactCardView] = useState('enhanced')
+  const [contactFormCardView, setContactFormCardView] = useState('enhanced')
 
   useEffect(() => {
     if (sessionUserId) return
@@ -82,6 +84,7 @@ export default function useContacts({ sessionUserId }) {
     setContactViewMode('cards')
     setSelectedContact(null)
     setSelectedContactCardView('enhanced')
+    setContactFormCardView('enhanced')
   }, [sessionUserId])
 
   const fetchContacts = useCallback(async () => {
@@ -125,6 +128,7 @@ export default function useContacts({ sessionUserId }) {
       shared: contact?.shared ?? true,
       businessCardUrl: contact?.business_card_url || '',
       businessCardUrlEnhanced: contact?.business_card_url_enhanced || '',
+      businessCardEnhancedConfirmed: contact?.business_card_enhanced_confirmed ?? false,
       status: contact?.status || 'aktiv',
       predecessorId: contact?.predecessor_id || null,
       transitionDate: contact?.transition_date || null,
@@ -132,9 +136,10 @@ export default function useContacts({ sessionUserId }) {
     setContactCardFile(null)
     setContactCardEnhancedFile(null)
     setContactCardEnhancedPreview(contact?.business_card_url_enhanced || '')
-    setContactCardPreview(contact?.business_card_url_enhanced || contact?.business_card_url || '')
+    setContactCardPreview(contact?.business_card_url || '')
     setContactCardEnhancing(false)
     setContactCardRotation(0)
+    setContactFormCardView(contact?.business_card_url_enhanced ? 'enhanced' : 'original')
   }, [])
 
   const closeContactModal = useCallback(() => {
@@ -147,6 +152,7 @@ export default function useContacts({ sessionUserId }) {
     setContactCardEnhancedPreview('')
     setContactCardEnhancing(false)
     setContactCardRotation(0)
+    setContactFormCardView('enhanced')
   }, [])
 
   const handleContactInput = useCallback((field, value) => {
@@ -192,6 +198,7 @@ export default function useContacts({ sessionUserId }) {
       shared: contactForm.shared,
       business_card_url: contactForm.businessCardUrl || null,
       business_card_url_enhanced: contactForm.businessCardUrlEnhanced || null,
+      business_card_enhanced_confirmed: contactForm.businessCardEnhancedConfirmed ?? false,
       status: contactForm.status || 'aktiv',
       predecessor_id: contactForm.predecessorId || null,
       transition_date: contactForm.transitionDate || null,
@@ -290,6 +297,7 @@ export default function useContacts({ sessionUserId }) {
     setContactForm,
     setContactSaveMessage,
     setOcrError,
+    setContactFormCardView,
     duplicateCheckResult,
   }), [
     duplicateCheckResult,
@@ -302,6 +310,7 @@ export default function useContacts({ sessionUserId }) {
     setContactCardPreview,
     setContactCardRotation,
     setContactForm,
+    setContactFormCardView,
     setContactSaveMessage,
     setDuplicateCheckResult,
     setDuplicateDialogOpen,
@@ -405,6 +414,7 @@ export default function useContacts({ sessionUserId }) {
     selectedCardUrl,
     selectedCardHasEnhanced,
     selectedCardHasOriginal,
+    contactFormCardView,
     contactTypeLabels,
     filteredContacts,
     setContacts,
@@ -429,6 +439,7 @@ export default function useContacts({ sessionUserId }) {
     setContactViewMode,
     setSelectedContact,
     setSelectedContactCardView,
+    setContactFormCardView,
     fetchContacts,
     openContactModal,
     closeContactModal,

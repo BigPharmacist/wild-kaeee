@@ -11,6 +11,7 @@ export default function ContactFormModal({
   contactCardRotation,
   contactCardEnhancing,
   contactScanStatus,
+  contactFormCardView,
   onClose,
   onDelete,
   onSubmit,
@@ -19,6 +20,8 @@ export default function ContactFormModal({
   onRotateLeft,
   onRotateRight,
   onCardFileChange,
+  onSelectFormCardView,
+  onConfirmEnhanced,
   PhotoIcon,
   CloseIcon,
   deleteIcon,
@@ -69,17 +72,45 @@ export default function ContactFormModal({
 
         <form onSubmit={onSubmit} className="p-5 space-y-4">
           <div>
-            <label className={`block text-xs font-medium mb-2 ${theme.textSecondary}`}>
-              Visitenkarte
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className={`text-xs font-medium ${theme.textSecondary}`}>
+                Visitenkarte
+              </label>
+              {contactCardPreview && contactCardEnhancedPreview && (
+                <div className={`flex items-center rounded-lg border ${theme.border} overflow-hidden`}>
+                  <button
+                    type="button"
+                    onClick={() => onSelectFormCardView('enhanced')}
+                    className={`px-2.5 py-1 text-[11px] ${contactFormCardView === 'enhanced' ? theme.accent + ' text-white' : theme.bgHover + ' ' + theme.textMuted}`}
+                    title="KI-optimiert anzeigen"
+                  >
+                    KI
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onSelectFormCardView('original')}
+                    className={`px-2.5 py-1 text-[11px] ${contactFormCardView === 'original' ? theme.accent + ' text-white' : theme.bgHover + ' ' + theme.textMuted}`}
+                    title="Original anzeigen"
+                  >
+                    Original
+                  </button>
+                </div>
+              )}
+            </div>
             <div className="flex items-center gap-4">
-              {contactCardPreview ? (
+              {(contactCardPreview || contactCardEnhancedPreview) ? (
                 <div className="relative">
+                  {/* Warnung über unbestätigtem KI-Bild */}
+                  {contactCardEnhancedPreview && !contactForm.businessCardEnhancedConfirmed && (
+                    <div className="absolute -top-5 left-0 right-0 text-[10px] text-red-500 font-normal text-center whitespace-nowrap">
+                      Achtung, bitte bestätigen
+                    </div>
+                  )}
                   <img
-                    src={contactCardPreview}
+                    src={contactFormCardView === 'enhanced' && contactCardEnhancedPreview ? contactCardEnhancedPreview : contactCardPreview}
                     alt="Visitenkarte Vorschau"
                     className={`h-20 w-32 rounded-lg object-cover border ${theme.border}`}
-                    style={{ transform: `rotate(${contactCardRotation}deg)` }}
+                    style={{ transform: `rotate(${contactFormCardView === 'original' ? contactCardRotation : 0}deg)` }}
                   />
                   {!contactCardEnhancedPreview && (
                     <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 flex gap-1">
@@ -126,9 +157,38 @@ export default function ContactFormModal({
                   }}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${theme.border} ${theme.bgHover}`}
                 >
-                  {contactCardPreview ? 'Ändern' : 'Hochladen'}
+                  {(contactCardPreview || contactCardEnhancedPreview) ? 'Ändern' : 'Hochladen'}
                 </button>
-                {contactCardPreview && (
+                {contactCardPreview && contactCardEnhancedPreview && contactFormCardView === 'enhanced' && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={onResetCard}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium ${theme.danger}`}
+                    >
+                      KI entfernen
+                    </button>
+                    {!contactForm.businessCardEnhancedConfirmed && (
+                      <button
+                        type="button"
+                        onClick={onConfirmEnhanced}
+                        className="px-3 py-1.5 rounded-lg text-xs font-medium text-green-600 hover:text-green-700 hover:bg-green-50"
+                      >
+                        KI bestätigen
+                      </button>
+                    )}
+                  </>
+                )}
+                {contactCardPreview && contactCardEnhancedPreview && contactFormCardView === 'original' && (
+                  <button
+                    type="button"
+                    onClick={onResetCard}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium ${theme.danger}`}
+                  >
+                    Original entfernen
+                  </button>
+                )}
+                {!(contactCardPreview && contactCardEnhancedPreview) && (contactCardPreview || contactCardEnhancedPreview) && (
                   <button
                     type="button"
                     onClick={onResetCard}

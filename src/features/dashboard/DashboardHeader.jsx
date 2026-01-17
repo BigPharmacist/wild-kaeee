@@ -14,9 +14,6 @@ const DashboardHeader = ({
   pznCameraInputRef,
   handlePznCameraCapture,
   setActiveView,
-  currentStaff,
-  session,
-  handleSignOut,
   Icons,
   urgentFaxe = [],
   onUrgentFaxClick,
@@ -127,28 +124,6 @@ const DashboardHeader = ({
         title="GH-Rechnungen"
       >
         <Icons.FileText />
-      </button>
-
-      <div className="hidden sm:flex items-center gap-2">
-        {currentStaff?.avatar_url ? (
-          <img
-            src={currentStaff.avatar_url}
-            alt={session.user.email}
-            className={`h-9 w-9 rounded-full object-cover border ${theme.border}`}
-          />
-        ) : (
-          <div className={`h-9 w-9 rounded-full border ${theme.border} flex items-center justify-center text-xs ${theme.textMuted}`}>
-            {session.user.email?.[0]?.toUpperCase() || '?'}
-          </div>
-        )}
-      </div>
-
-      <button
-        onClick={handleSignOut}
-        className={`p-2 rounded-[6px] ${theme.danger} transition-colors`}
-        title="Ausloggen"
-      >
-        <Icons.Logout />
       </button>
     </div>
   </header>

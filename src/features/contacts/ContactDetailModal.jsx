@@ -5,6 +5,7 @@ export default function ContactDetailModal({
   selectedCardHasEnhanced,
   selectedCardHasOriginal,
   selectedContactCardView,
+  selectedCardNeedsConfirmation,
   contactTypeLabels,
   onClose,
   onEdit,
@@ -91,6 +92,11 @@ export default function ContactDetailModal({
                   </div>
                 )}
               </div>
+              {selectedCardNeedsConfirmation && (
+                <div className="text-[11px] text-red-500 font-normal mb-1">
+                  Achtung, bitte bestätigen
+                </div>
+              )}
               {selectedCardUrl ? (
                 <a
                   href={selectedCardUrl}

@@ -16,13 +16,9 @@ const badgeColors = {
 function formatDate(dateString) {
   if (!dateString) return ''
   const date = new Date(dateString)
-  const now = new Date()
-  const isToday = date.toDateString() === now.toDateString()
-
-  if (isToday) {
-    return date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
-  }
-  return date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })
+  const datePart = date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })
+  const timePart = date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+  return `${datePart} ${timePart}`
 }
 
 export default function FaxListPane({

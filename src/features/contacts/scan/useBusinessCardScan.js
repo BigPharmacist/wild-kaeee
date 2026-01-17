@@ -26,6 +26,7 @@ export default function useBusinessCardScan({
     setBusinessCardOcrResult,
     setDuplicateCheckResult,
     setDuplicateDialogOpen,
+    setContactForm,
   } = contactsApi
 
   const handleBusinessCardScan = useCallback(async (event) => {
@@ -64,6 +65,8 @@ export default function useBusinessCardScan({
             setContactCardEnhancedFile(enhancedFile)
             setContactCardEnhancedPreview(previewUrl)
             setContactCardPreview(previewUrl)
+            // Neues KI-Bild muss bestätigt werden
+            setContactForm((prev) => ({ ...prev, businessCardEnhancedConfirmed: false }))
           })
           .catch((error) => {
             console.warn('Nano Banana Pro Enhance fehlgeschlagen:', error)
@@ -187,9 +190,11 @@ Fülle nur Felder aus, die im Text eindeutig erkennbar sind. Lasse unbekannte Fe
     setContactCardFile,
     setContactCardPreview,
     setContactCardRotation,
+    setContactForm,
     setContactSaveMessage,
     setDuplicateCheckResult,
     setDuplicateDialogOpen,
+    setOcrError,
   ])
 
   return {

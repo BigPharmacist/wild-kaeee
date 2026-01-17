@@ -1,3 +1,5 @@
+import { useState, useRef, useEffect } from 'react'
+
 const SidebarNav = ({
   theme,
   mobileNavOpen,
@@ -11,7 +13,27 @@ const SidebarNav = ({
   unreadCounts,
   Icons,
   UnreadBadge,
-}) => (
+  currentStaff,
+  session,
+  handleSignOut,
+}) => {
+  const [showLogoutMenu, setShowLogoutMenu] = useState(false)
+  const logoutMenuRef = useRef(null)
+
+  // Schließe Menü bei Klick außerhalb
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (logoutMenuRef.current && !logoutMenuRef.current.contains(event.target)) {
+        setShowLogoutMenu(false)
+      }
+    }
+    if (showLogoutMenu) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showLogoutMenu])
+
+  return (
   <>
     {mobileNavOpen && (
       <div
@@ -77,7 +99,7 @@ const SidebarNav = ({
             })}
           </nav>
 
-          <nav className="p-2 space-y-1">
+          <nav className="p-2 space-y-1 flex-1">
             {(secondaryNavMap[activeView] || []).map((item) => {
               const isActive = getActiveSecondaryId() === item.id
               const badgeCount = activeView === 'apo'
@@ -105,13 +127,50 @@ const SidebarNav = ({
               )
             })}
           </nav>
+
+          {/* Avatar mit Logout für Mobile */}
+          <div className="p-4 border-t border-[#4F5469]">
+            <div className="flex items-center gap-3">
+              {currentStaff?.avatar_url ? (
+                <img
+                  src={currentStaff.avatar_url}
+                  alt={session?.user?.email}
+                  className="h-10 w-10 rounded-full object-cover border-2 border-[#4F5469]"
+                />
+              ) : (
+                <div className="h-10 w-10 rounded-full border-2 border-[#4F5469] flex items-center justify-center text-sm text-[#E5E7EB] bg-[#4F5469]">
+                  {session?.user?.email?.[0]?.toUpperCase() || '?'}
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                {currentStaff?.first_name && (
+                  <p className="text-sm font-medium text-[#E5E7EB] truncate">
+                    {currentStaff.first_name} {currentStaff.last_name || ''}
+                  </p>
+                )}
+                <p className="text-xs text-[#7697A0] truncate">
+                  {session?.user?.email}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                setMobileNavOpen(false)
+                handleSignOut()
+              }}
+              className="mt-3 w-full px-3 py-2 text-left text-sm text-[#E5533D] flex items-center gap-2 rounded-[6px] hover:bg-[#4F5469] transition-colors"
+            >
+              <Icons.Logout />
+              Abmelden
+            </button>
+          </div>
         </div>
       </div>
     </aside>
 
     <aside className={`hidden lg:flex flex-shrink-0 ${theme.sidebarBg} w-16 min-w-[4rem] max-w-[4rem] overflow-visible`}>
       <div className="h-full flex flex-col">
-        <nav className="py-3 space-y-1 flex flex-col items-center">
+        <nav className="py-3 space-y-1 flex flex-col items-center flex-1">
           {navItems.map((item) => {
             const totalApoUnread = item.id === 'apo' ? unreadCounts.amk + unreadCounts.recall + unreadCounts.lav : 0
             const totalPostUnread = item.id === 'post' ? (unreadCounts.fax || 0) + (unreadCounts.email || 0) : 0
@@ -138,6 +197,62 @@ const SidebarNav = ({
             )
           })}
         </nav>
+
+        {/* Avatar mit Logout-Dropdown */}
+        <div className="py-3 flex justify-center border-t border-[#4F5469]" ref={logoutMenuRef}>
+          <div className="relative group">
+            <button
+              onClick={() => setShowLogoutMenu(!showLogoutMenu)}
+              className="w-10 h-10 flex items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-[#4C8BF5]"
+              title={currentStaff?.first_name ? `${currentStaff.first_name} ${currentStaff.last_name || ''}` : session?.user?.email}
+            >
+              {currentStaff?.avatar_url ? (
+                <img
+                  src={currentStaff.avatar_url}
+                  alt={session?.user?.email}
+                  className={`h-9 w-9 rounded-full object-cover border-2 ${showLogoutMenu ? 'border-[#4C8BF5]' : 'border-[#4F5469]'} transition-colors`}
+                />
+              ) : (
+                <div className={`h-9 w-9 rounded-full border-2 ${showLogoutMenu ? 'border-[#4C8BF5]' : 'border-[#4F5469]'} flex items-center justify-center text-xs text-[#E5E7EB] bg-[#4F5469] transition-colors`}>
+                  {session?.user?.email?.[0]?.toUpperCase() || '?'}
+                </div>
+              )}
+            </button>
+
+            {/* Tooltip */}
+            {!showLogoutMenu && (
+              <span className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-[#173B61] text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                {currentStaff?.first_name ? `${currentStaff.first_name} ${currentStaff.last_name || ''}` : session?.user?.email}
+              </span>
+            )}
+
+            {/* Dropdown-Menü */}
+            {showLogoutMenu && (
+              <div className="absolute left-full ml-2 bottom-0 w-56 rounded-lg bg-white border border-[#E5E7EB] shadow-lg py-1 z-50">
+                <div className="px-4 py-3 border-b border-[#E5E7EB]">
+                  {currentStaff?.first_name && (
+                    <p className="text-sm font-medium text-[#1F2937]">
+                      {currentStaff.first_name} {currentStaff.last_name || ''}
+                    </p>
+                  )}
+                  <p className="text-xs text-[#B5B9C8] truncate">
+                    {session?.user?.email}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowLogoutMenu(false)
+                    handleSignOut()
+                  }}
+                  className="w-full px-4 py-2 text-left text-sm text-[#E5533D] hover:text-[#C94431] flex items-center gap-2 hover:bg-[#FDE8E5] transition-colors"
+                >
+                  <Icons.Logout />
+                  Abmelden
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </aside>
 
@@ -186,6 +301,7 @@ const SidebarNav = ({
       </div>
     </aside>
   </>
-)
+  )
+}
 
 export default SidebarNav

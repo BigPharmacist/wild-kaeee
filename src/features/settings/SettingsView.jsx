@@ -132,6 +132,18 @@ const SettingsView = ({
                   <p className={theme.textMuted}>
                     Fax: <span className={theme.text}>{pharmacy.fax || '-'}</span>
                   </p>
+                  <p className={theme.textMuted}>
+                    USt-ID: <span className={theme.text}>{pharmacy.vat_id || '-'}</span>
+                  </p>
+                  <p className={theme.textMuted}>
+                    Handelsregister: <span className={theme.text}>{pharmacy.trade_register || '-'}</span>
+                  </p>
+                  <p className={theme.textMuted}>
+                    Amtsgericht: <span className={theme.text}>{pharmacy.registry_court || '-'}</span>
+                  </p>
+                  <p className={theme.textMuted}>
+                    BGA/IDF: <span className={theme.text}>{pharmacy.bga_idf_number || '-'}</span>
+                  </p>
                 </div>
               </button>
             ))}
@@ -374,6 +386,18 @@ const SettingsView = ({
           onAddContact={() => openContactModal()}
           onOpenContactDetail={openContactDetail}
         />
+      )}
+
+      {settingsTab === 'admin' && (
+        <div className={`${theme.panel} rounded-2xl p-5 border ${theme.border} ${theme.cardShadow}`}>
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h3 className="text-base font-semibold">Admin-Einstellungen</h3>
+              <p className={`text-xs ${theme.textMuted}`}>Nur für Administratoren sichtbar.</p>
+            </div>
+          </div>
+          <p className={theme.textMuted}>Hier können später Admin-spezifische Einstellungen hinzugefügt werden.</p>
+        </div>
       )}
     </div>
   </>

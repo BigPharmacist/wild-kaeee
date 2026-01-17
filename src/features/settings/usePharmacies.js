@@ -12,6 +12,10 @@ const emptyForm = {
   website: '',
   email: '',
   fax: '',
+  vatId: '',
+  tradeRegister: '',
+  registryCourt: '',
+  bgaIdfNumber: '',
 }
 
 export function usePharmacies() {
@@ -27,7 +31,7 @@ export function usePharmacies() {
     setPharmaciesLoading(true)
     const { data, error } = await supabase
       .from('pharmacies')
-      .select('id, name, street, postal_code, city, phone, owner, owner_role, website, email, fax')
+      .select('id, name, street, postal_code, city, phone, owner, owner_role, website, email, fax, vat_id, trade_register, registry_court, bga_idf_number')
       .order('name', { ascending: true })
 
     if (error) {
@@ -64,6 +68,10 @@ export function usePharmacies() {
       website: pharmacy.website || '',
       email: pharmacy.email || '',
       fax: pharmacy.fax || '',
+      vatId: pharmacy.vat_id || '',
+      tradeRegister: pharmacy.trade_register || '',
+      registryCourt: pharmacy.registry_court || '',
+      bgaIdfNumber: pharmacy.bga_idf_number || '',
     })
   }
 
@@ -100,6 +108,10 @@ export function usePharmacies() {
       website: editForm.website.trim(),
       email: editForm.email.trim(),
       fax: editForm.fax.trim(),
+      vat_id: editForm.vatId.trim(),
+      trade_register: editForm.tradeRegister.trim(),
+      registry_court: editForm.registryCourt.trim(),
+      bga_idf_number: editForm.bgaIdfNumber.trim(),
     }
 
     const { error } = editingPharmacy.id
