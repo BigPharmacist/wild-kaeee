@@ -35,7 +35,7 @@ const ChatView = ({
   return (
   <>
     <h2 className="text-2xl lg:text-3xl font-semibold mb-6 tracking-tight">{chatTitle}</h2>
-    <div className="flex flex-col h-[70vh]">
+    <div className="flex flex-col h-[calc(100vh-180px)]">
       <div className={`flex-1 overflow-auto rounded-2xl border ${theme.border} ${theme.bg} p-4 space-y-4`}>
         {chatLoading && (
           <p className={theme.textMuted}>Nachrichten werden geladen...</p>

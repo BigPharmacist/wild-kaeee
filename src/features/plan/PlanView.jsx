@@ -217,11 +217,11 @@ const PlanView = ({
                         return (
                           <div
                             key={`${emp.firstName}-${emp.lastName}-${idx}`}
-                            className="relative h-7 rounded bg-[#7697A0]/70"
+                            className="relative h-7 rounded"
                           >
                             <div className="absolute inset-0 flex">
                               {hours.slice(0, -1).map((h) => (
-                                <div key={h} className="flex-1 border-r border-[#7697A0]" />
+                                <div key={h} className="flex-1 border-r border-[#E5E7EB]" />
                               ))}
                             </div>
 
