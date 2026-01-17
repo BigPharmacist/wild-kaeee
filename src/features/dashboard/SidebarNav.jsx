@@ -5,6 +5,7 @@ const SidebarNav = ({
   mobileNavOpen,
   setMobileNavOpen,
   navItems,
+  miscNavItem,
   activeView,
   setActiveView,
   secondaryNavMap,
@@ -104,6 +105,17 @@ const SidebarNav = ({
                 </button>
               )
             })}
+            {/* Sonstiges in Mobile-Nav */}
+            <button
+              type="button"
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-[6px] text-sm font-medium transition-colors ${
+                activeView === miscNavItem.id ? 'bg-[#4F5469] text-white' : 'text-[#E5E7EB] hover:bg-[#4F5469]'
+              }`}
+              onClick={() => setActiveView(miscNavItem.id)}
+            >
+              <miscNavItem.icon />
+              <span className="flex-1">{miscNavItem.label}</span>
+            </button>
           </nav>
 
           <nav className="p-2 space-y-1 flex-1">
@@ -210,6 +222,24 @@ const SidebarNav = ({
             )
           })}
         </nav>
+
+        {/* Sonstiges-Icon */}
+        <div className="py-2 flex justify-center border-t border-[#4F5469]">
+          <div className="relative group">
+            <button
+              type="button"
+              className={`w-10 h-10 flex items-center justify-center mx-auto rounded-[6px] border-l-[3px] border-transparent box-border transition-colors ${theme.sidebarText} ${
+                activeView === miscNavItem.id ? theme.sidebarActive : theme.sidebarHover
+              }`}
+              onClick={() => setActiveView(miscNavItem.id)}
+            >
+              <miscNavItem.icon />
+            </button>
+            <span className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-[#173B61] text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+              {miscNavItem.label}
+            </span>
+          </div>
+        </div>
 
         {/* Avatar mit Logout-Dropdown */}
         <div className="py-3 flex justify-center border-t border-[#4F5469]" ref={logoutMenuRef}>

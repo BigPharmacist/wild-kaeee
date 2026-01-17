@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { supabase, supabaseUrl } from './lib/supabase'
-import { House, Camera, Pill, CalendarDots, CalendarBlank, ChatCircle, GearSix, EnvelopeSimple, Printer, Palette, Sparkle } from '@phosphor-icons/react'
+import { House, Camera, Pill, CalendarDots, CalendarBlank, ChatCircle, GearSix, EnvelopeSimple, Printer, Palette, Sparkle, DotsThree } from '@phosphor-icons/react'
 import { EmailAccountModal, EmailSettingsSection, EmailView, useEmailSettings, useEmailUnreadCount } from './features/email'
 import { FaxView, useFaxCounts, useUrgentFax } from './features/fax'
 import { ContactDetailModal, ContactFormModal, ContactsSettingsSection, useContacts } from './features/contacts'
@@ -56,6 +56,7 @@ function App() {
   } = usePharmacies()
   const {
     staff,
+    filteredStaff,
     staffLoading,
     staffMessage,
     editingStaff,
@@ -68,6 +69,8 @@ function App() {
     staffAvatarPreview,
     currentStaff,
     staffByAuthId,
+    showExited,
+    staffViewMode,
     fetchStaff,
     openStaffModal,
     closeStaffModal,
@@ -76,6 +79,9 @@ function App() {
     linkCurrentUser,
     handleStaffSubmit,
     handleSendInvite,
+    setShowExited,
+    setStaffViewMode,
+    isExited,
   } = useStaff({ session, pharmacies })
   const {
     emailAccounts,
@@ -617,23 +623,18 @@ function App() {
 
   const navItems = [
     { id: 'dashboard', icon: () => <House size={20} weight="regular" />, label: 'Dashboard' },
-    { id: 'photos', icon: () => <Camera size={20} weight="regular" />, label: 'Fotos' },
     { id: 'apo', icon: () => <Pill size={20} weight="regular" />, label: 'Apo' },
     { id: 'plan', icon: () => <CalendarDots size={20} weight="regular" />, label: 'Plan' },
     { id: 'calendar', icon: () => <CalendarBlank size={20} weight="regular" />, label: 'Kalender' },
     { id: 'chat', icon: () => <ChatCircle size={20} weight="regular" />, label: 'Chat' },
     { id: 'post', icon: () => <Icons.PostHorn />, label: 'Post' },
-    { id: 'colors', icon: () => <Palette size={20} weight="regular" />, label: 'Farben' },
     { id: 'settings', icon: () => <GearSix size={20} weight="regular" />, label: 'Einstellungen' },
   ]
 
+  // Sonstiges-Item (separat, über dem Avatar)
+  const miscNavItem = { id: 'misc', icon: () => <DotsThree size={20} weight="bold" />, label: 'Sonstiges' }
+
   const secondaryNavMap = useMemo(() => ({
-    photos: [
-      { id: 'uploads', label: 'Uploads' },
-      { id: 'library', label: 'Archiv' },
-      { id: 'ocr', label: 'OCR' },
-      { id: 'visitenkarten', label: 'Visitenkarten' },
-    ],
     apo: [
       { id: 'amk', label: 'AMK' },
       { id: 'recall', label: 'Rückrufe' },
@@ -655,15 +656,19 @@ function App() {
       { id: 'email', label: 'Email' },
       { id: 'fax', label: 'Fax' },
     ],
-    colors: [
-      { id: 'overview', label: 'Übersicht' },
+    misc: [
+      { id: 'uploads', label: 'Uploads' },
+      { id: 'library', label: 'Archiv' },
+      { id: 'ocr', label: 'OCR' },
+      { id: 'visitenkarten', label: 'Visitenkarten' },
+      { id: 'colors', label: 'Farben' },
+      { id: 'card-enhance', label: 'Karten-Test' },
     ],
     settings: [
       { id: 'pharmacies', label: 'Apotheken' },
       { id: 'staff', label: 'Kollegium' },
       { id: 'contacts', label: 'Kontakte' },
       { id: 'email', label: 'E-Mail' },
-      { id: 'card-enhance', label: 'Karten-Test' },
       ...(currentStaff?.is_admin ? [{ id: 'admin', label: 'Admin' }] : []),
     ],
   }), [currentStaff?.is_admin, staff, session?.user?.id])
@@ -2329,6 +2334,7 @@ function App() {
             mobileNavOpen={mobileNavOpen}
             setMobileNavOpen={setMobileNavOpen}
             navItems={navItems}
+            miscNavItem={miscNavItem}
             activeView={activeView}
             setActiveView={setActiveView}
             secondaryNavMap={secondaryNavMap}
@@ -2379,7 +2385,7 @@ function App() {
                 />
               )}
 
-              {activeView === 'photos' && (
+              {activeView === 'misc' && ['uploads', 'library', 'ocr', 'visitenkarten'].includes(secondaryTab) && (
                 <PhotosView
                   theme={theme}
                   Icons={Icons}
@@ -2486,8 +2492,91 @@ function App() {
                 />
               )}
 
-              {activeView === 'colors' && (
+              {activeView === 'misc' && secondaryTab === 'colors' && (
                 <ColorsView theme={theme} />
+              )}
+
+              {activeView === 'misc' && secondaryTab === 'card-enhance' && (
+                <>
+                  <h2 className="text-2xl lg:text-3xl font-semibold mb-6 tracking-tight">Karten-Test</h2>
+                  <div className={`${theme.panel} rounded-2xl p-5 border ${theme.border} ${theme.cardShadow}`}>
+                    <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+                      <div>
+                        <h3 className="text-base font-semibold">Visitenkarten-Enhance</h3>
+                        <p className={`text-xs ${theme.textMuted}`}>Google Nano Banana Pro: zuschneiden + Lesbarkeit verbessern.</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={fetchGoogleApiKey}
+                        className={`text-xs font-medium ${theme.accentText} hover:opacity-80`}
+                        title="Google API Key aus DB laden"
+                      >
+                        Key laden
+                      </button>
+                    </div>
+
+                    {enhanceMessage && (
+                      <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3 mb-3">
+                        <p className="text-rose-400 text-sm">{enhanceMessage}</p>
+                      </div>
+                    )}
+
+                    <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleEnhanceFileChange}
+                        className={`flex-1 text-sm ${theme.input} ${theme.inputPlaceholder} border rounded-xl px-3 py-2`}
+                      />
+                      <button
+                        type="button"
+                        onClick={runBusinessCardEnhance}
+                        disabled={!enhanceFile || enhanceLoading}
+                        className={`h-10 px-4 rounded-xl text-sm font-medium ${theme.accent} text-white disabled:opacity-50 disabled:cursor-not-allowed`}
+                      >
+                        {enhanceLoading ? 'Verbessere...' : 'Verbessern'}
+                      </button>
+                    </div>
+
+                    {enhanceLoading && (
+                      <div className={`mb-4 flex items-center gap-2 text-xs ${theme.textMuted}`}>
+                        <span className="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-transparent border-t-current" />
+                        Nano Banana Pro arbeitet im Hintergrund...
+                      </div>
+                    )}
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className={`rounded-xl border ${theme.border} p-3`}>
+                        <p className={`text-xs ${theme.textMuted} mb-2`}>Vorher</p>
+                        {enhancePreview ? (
+                          <img
+                            src={enhancePreview}
+                            alt="Original"
+                            className="w-full max-h-[360px] object-contain rounded-lg bg-white"
+                          />
+                        ) : (
+                          <div className={`h-48 rounded-lg ${theme.bgHover} flex items-center justify-center text-xs ${theme.textMuted}`}>
+                            Kein Bild ausgewählt
+                          </div>
+                        )}
+                      </div>
+                      <div className={`rounded-xl border ${theme.border} p-3`}>
+                        <p className={`text-xs ${theme.textMuted} mb-2`}>Nachher</p>
+                        {enhanceResultPreview ? (
+                          <img
+                            src={enhanceResultPreview}
+                            alt="Verbessert"
+                            className="w-full max-h-[360px] object-contain rounded-lg bg-white"
+                          />
+                        ) : (
+                          <div className={`h-48 rounded-lg ${theme.bgHover} flex items-center justify-center text-xs ${theme.textMuted}`}>
+                            Noch kein Ergebnis
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </>
               )}
 
               {activeView === 'rechnungen' && (
@@ -2680,11 +2769,17 @@ function App() {
                   openCreateModal={openCreateModal}
                   openEditModal={openEditModal}
                   staff={staff}
+                  filteredStaff={filteredStaff}
                   staffMessage={staffMessage}
                   staffLoading={staffLoading}
                   fetchStaff={fetchStaff}
                   openStaffModal={openStaffModal}
                   pharmacyLookup={pharmacyLookup}
+                  showExited={showExited}
+                  setShowExited={setShowExited}
+                  isExited={isExited}
+                  staffViewMode={staffViewMode}
+                  setStaffViewMode={setStaffViewMode}
                   EmailSettingsSection={EmailSettingsSection}
                   currentStaff={currentStaff}
                   emailAccounts={emailAccounts}
@@ -3126,6 +3221,19 @@ function App() {
                       className={`w-full px-3 py-2 ${theme.input} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
                     />
                   </div>
+                  {currentStaff?.is_admin && (
+                    <div>
+                      <label className={`block text-xs font-medium mb-1 ${theme.textSecondary}`}>
+                        Ausscheidedatum
+                      </label>
+                      <input
+                        type="date"
+                        value={staffForm.exitDate}
+                        onChange={(e) => handleStaffInput('exitDate', e.target.value)}
+                        className={`w-full px-3 py-2 ${theme.input} border rounded-xl outline-none transition-all ${theme.text} text-sm`}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">

@@ -15,6 +15,7 @@ const emptyForm = {
   isAdmin: false,
   avatarUrl: '',
   employedSince: '',
+  exitDate: '',
 }
 
 export function useStaff({ session, pharmacies }) {
@@ -30,12 +31,14 @@ export function useStaff({ session, pharmacies }) {
   const [staffAvatarFile, setStaffAvatarFile] = useState(null)
   const [staffAvatarPreview, setStaffAvatarPreview] = useState('')
   const [currentStaff, setCurrentStaff] = useState(null)
+  const [showExited, setShowExited] = useState(false)
+  const [staffViewMode, setStaffViewMode] = useState('cards') // 'cards' | 'table'
 
   const fetchStaff = async () => {
     setStaffLoading(true)
     const { data, error } = await supabase
       .from('staff')
-      .select('id, first_name, last_name, street, postal_code, city, mobile, email, role, pharmacy_id, auth_user_id, is_admin, avatar_url, created_at')
+      .select('id, first_name, last_name, street, postal_code, city, mobile, email, role, pharmacy_id, auth_user_id, is_admin, avatar_url, employed_since, exit_date, created_at')
       .order('last_name', { ascending: true })
 
     if (error) {
@@ -79,6 +82,7 @@ export function useStaff({ session, pharmacies }) {
       isAdmin: member?.is_admin || false,
       avatarUrl: member?.avatar_url || '',
       employedSince: member?.employed_since || '',
+      exitDate: member?.exit_date || '',
     })
     setStaffAvatarFile(null)
     setStaffAvatarPreview(member?.avatar_url || '')
@@ -143,6 +147,7 @@ export function useStaff({ session, pharmacies }) {
       is_admin: staffForm.isAdmin,
       avatar_url: staffForm.avatarUrl || null,
       employed_since: staffForm.employedSince || null,
+      exit_date: staffForm.exitDate || null,
     }
 
     const uploadAvatar = async (staffId) => {
@@ -240,6 +245,17 @@ export function useStaff({ session, pharmacies }) {
     setStaffInviteLoading(false)
   }
 
+  // Hilfsfunktion: Prüft ob Mitarbeiter ausgeschieden ist
+  const isExited = (member) => {
+    if (!member?.exit_date) return false
+    return new Date(member.exit_date) < new Date()
+  }
+
+  // Gefilterte Staff-Liste (ohne Ausgeschiedene, außer showExited ist true)
+  const filteredStaff = showExited
+    ? staff
+    : staff.filter((member) => !isExited(member))
+
   // Lookup-Objekt: { auth_user_id: staffMember }
   const staffByAuthId = Object.fromEntries(
     staff
@@ -250,6 +266,7 @@ export function useStaff({ session, pharmacies }) {
   return {
     // State
     staff,
+    filteredStaff,
     staffLoading,
     staffMessage,
     editingStaff,
@@ -262,6 +279,8 @@ export function useStaff({ session, pharmacies }) {
     staffAvatarPreview,
     currentStaff,
     staffByAuthId,
+    showExited,
+    staffViewMode,
     // Actions
     fetchStaff,
     openStaffModal,
@@ -271,5 +290,8 @@ export function useStaff({ session, pharmacies }) {
     linkCurrentUser,
     handleStaffSubmit,
     handleSendInvite,
+    setShowExited,
+    setStaffViewMode,
+    isExited,
   }
 }

@@ -8,11 +8,17 @@ const SettingsView = ({
   openCreateModal,
   openEditModal,
   staff,
+  filteredStaff,
   staffMessage,
   staffLoading,
   fetchStaff,
   openStaffModal,
   pharmacyLookup,
+  showExited,
+  setShowExited,
+  isExited,
+  staffViewMode,
+  setStaffViewMode,
   EmailSettingsSection,
   currentStaff,
   emailAccounts,
@@ -159,6 +165,39 @@ const SettingsView = ({
               <p className={`text-xs ${theme.textMuted}`}>Global über alle Apotheken.</p>
             </div>
             <div className="flex items-center gap-2">
+              {currentStaff?.is_admin && (
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showExited}
+                    onChange={(e) => setShowExited(e.target.checked)}
+                    className="w-3.5 h-3.5 rounded accent-[#4C8BF5]"
+                  />
+                  <span className={`text-xs ${theme.textMuted}`}>Ausgeschiedene</span>
+                </label>
+              )}
+              <div className={`flex rounded-lg border ${theme.border} overflow-hidden`}>
+                <button
+                  type="button"
+                  onClick={() => setStaffViewMode('cards')}
+                  className={`px-2 py-1 text-xs ${staffViewMode === 'cards' ? 'bg-[#4C8BF5] text-white' : theme.bgHover}`}
+                  title="Kartenansicht"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStaffViewMode('table')}
+                  className={`px-2 py-1 text-xs ${staffViewMode === 'table' ? 'bg-[#4C8BF5] text-white' : theme.bgHover}`}
+                  title="Tabellenansicht"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                  </svg>
+                </button>
+              </div>
               <button
                 type="button"
                 onClick={fetchStaff}
@@ -195,75 +234,164 @@ const SettingsView = ({
             </p>
           )}
 
-          {!staffLoading && pharmacies.length > 0 && staff.length === 0 && (
+          {!staffLoading && pharmacies.length > 0 && filteredStaff.length === 0 && (
             <p className={theme.textMuted}>
-              Noch keine Personen erfasst. Nutze das + oben rechts.
+              {showExited ? 'Noch keine Personen erfasst. Nutze das + oben rechts.' : 'Keine aktiven Personen. Aktiviere "Ausgeschiedene" um alle zu sehen.'}
             </p>
           )}
 
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {staff.map((member) => (
-              <button
-                type="button"
-                key={member.id}
-                className={`rounded-xl border ${theme.border} p-4 ${theme.bgHover} text-left`}
-                title="Person bearbeiten"
-                onClick={() => openStaffModal(member)}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      {member.avatar_url ? (
-                        <img
-                          src={member.avatar_url}
-                          alt={`${member.first_name} ${member.last_name}`}
-                          className={`h-8 w-8 rounded-full object-cover border ${theme.border}`}
-                        />
-                      ) : (
-                        <div className={`h-8 w-8 rounded-full border ${theme.border} flex items-center justify-center text-[10px] ${theme.textMuted}`}>
-                          {(member.first_name?.[0] || '') + (member.last_name?.[0] || '')}
-                        </div>
-                      )}
+          {/* Kartenansicht */}
+          {staffViewMode === 'cards' && (
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {filteredStaff.map((member) => {
+                const memberExited = isExited(member)
+                return (
+                  <button
+                    type="button"
+                    key={member.id}
+                    className={`rounded-xl border ${theme.border} p-4 ${theme.bgHover} text-left ${memberExited ? 'opacity-50' : ''}`}
+                    title="Person bearbeiten"
+                    onClick={() => openStaffModal(member)}
+                  >
+                    <div className="flex items-start justify-between gap-2">
                       <div>
-                        <p className="font-medium text-sm">
-                          {member.first_name} {member.last_name}
-                        </p>
-                        <p className={`text-xs ${theme.textMuted}`}>
-                          {member.role || '-'}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          {member.avatar_url ? (
+                            <img
+                              src={member.avatar_url}
+                              alt={`${member.first_name} ${member.last_name}`}
+                              className={`h-8 w-8 rounded-full object-cover border ${theme.border} ${memberExited ? 'grayscale' : ''}`}
+                            />
+                          ) : (
+                            <div className={`h-8 w-8 rounded-full border ${theme.border} flex items-center justify-center text-[10px] ${theme.textMuted}`}>
+                              {(member.first_name?.[0] || '') + (member.last_name?.[0] || '')}
+                            </div>
+                          )}
+                          <div>
+                            <p className="font-medium text-sm">
+                              {member.first_name} {member.last_name}
+                            </p>
+                            <p className={`text-xs ${theme.textMuted}`}>
+                              {member.role || '-'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        {memberExited && (
+                          <span className="text-[10px] uppercase tracking-wide px-2 py-1 rounded-full bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                            Ausgeschieden
+                          </span>
+                        )}
+                        {member.is_admin && (
+                          <span className={`text-[10px] uppercase tracking-wide px-2 py-1 rounded-full border ${theme.border} ${theme.textMuted}`}>
+                            Admin
+                          </span>
+                        )}
                       </div>
                     </div>
-                  </div>
-                  {member.is_admin && (
-                    <span className={`text-[10px] uppercase tracking-wide px-2 py-1 rounded-full border ${theme.border} ${theme.textMuted}`}>
-                      Admin
-                    </span>
-                  )}
-                </div>
-                <div className="mt-3 grid gap-1.5 text-xs">
-                  <p className={theme.textMuted}>
-                    Apotheke: <span className={theme.text}>{pharmacyLookup[member.pharmacy_id] || '-'}</span>
-                  </p>
-                  <p className={theme.textMuted}>
-                    Adresse: <span className={theme.text}>
-                      {[member.street, [member.postal_code, member.city].filter(Boolean).join(' ')].filter(Boolean).join(', ') || '-'}
-                    </span>
-                  </p>
-                  <p className={theme.textMuted}>
-                    Mobil: <span className={theme.text}>{member.mobile || '-'}</span>
-                  </p>
-                  <p className={theme.textMuted}>
-                    E-Mail: <span className={theme.text}>{member.email || '-'}</span>
-                  </p>
-                  {member.auth_user_id && (
-                    <p className={theme.textMuted}>
-                      Login verknüpft
-                    </p>
-                  )}
-                </div>
-              </button>
-            ))}
-          </div>
+                    <div className="mt-3 grid gap-1.5 text-xs">
+                      <p className={theme.textMuted}>
+                        Apotheke: <span className={theme.text}>{pharmacyLookup[member.pharmacy_id] || '-'}</span>
+                      </p>
+                      <p className={theme.textMuted}>
+                        Adresse: <span className={theme.text}>
+                          {[member.street, [member.postal_code, member.city].filter(Boolean).join(' ')].filter(Boolean).join(', ') || '-'}
+                        </span>
+                      </p>
+                      <p className={theme.textMuted}>
+                        Mobil: <span className={theme.text}>{member.mobile || '-'}</span>
+                      </p>
+                      <p className={theme.textMuted}>
+                        E-Mail: <span className={theme.text}>{member.email || '-'}</span>
+                      </p>
+                      {currentStaff?.is_admin && member.exit_date && (
+                        <p className={theme.textMuted}>
+                          {memberExited ? 'Ausgeschieden am:' : 'Ausscheiden am:'} <span className={memberExited ? 'text-rose-500' : theme.text}>{new Date(member.exit_date).toLocaleDateString('de-DE')}</span>
+                        </p>
+                      )}
+                      {member.auth_user_id && (
+                        <p className={theme.textMuted}>
+                          Login verknüpft
+                        </p>
+                      )}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Tabellenansicht */}
+          {staffViewMode === 'table' && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className={`border-b ${theme.border}`}>
+                    <th className={`text-left py-2 px-3 font-medium ${theme.textMuted}`}></th>
+                    <th className={`text-left py-2 px-3 font-medium ${theme.textMuted}`}>Name</th>
+                    <th className={`text-left py-2 px-3 font-medium ${theme.textMuted}`}>Beruf</th>
+                    <th className={`text-left py-2 px-3 font-medium ${theme.textMuted}`}>Apotheke</th>
+                    <th className={`text-left py-2 px-3 font-medium ${theme.textMuted}`}>E-Mail</th>
+                    <th className={`text-left py-2 px-3 font-medium ${theme.textMuted}`}>Mobil</th>
+                    <th className={`text-left py-2 px-3 font-medium ${theme.textMuted}`}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredStaff.map((member) => {
+                    const memberExited = isExited(member)
+                    return (
+                      <tr
+                        key={member.id}
+                        onClick={() => openStaffModal(member)}
+                        className={`border-b ${theme.border} ${theme.bgHover} cursor-pointer ${memberExited ? 'opacity-50' : ''}`}
+                      >
+                        <td className="py-2 px-3">
+                          {member.avatar_url ? (
+                            <img
+                              src={member.avatar_url}
+                              alt=""
+                              className={`h-8 w-8 rounded-full object-cover border ${theme.border} ${memberExited ? 'grayscale' : ''}`}
+                            />
+                          ) : (
+                            <div className={`h-8 w-8 rounded-full border ${theme.border} flex items-center justify-center text-[10px] ${theme.textMuted}`}>
+                              {(member.first_name?.[0] || '') + (member.last_name?.[0] || '')}
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-2 px-3 font-medium">
+                          {member.first_name} {member.last_name}
+                        </td>
+                        <td className={`py-2 px-3 ${theme.textMuted}`}>{member.role || '-'}</td>
+                        <td className={`py-2 px-3 ${theme.textMuted}`}>{pharmacyLookup[member.pharmacy_id] || '-'}</td>
+                        <td className={`py-2 px-3 ${theme.textMuted}`}>{member.email || '-'}</td>
+                        <td className={`py-2 px-3 ${theme.textMuted}`}>{member.mobile || '-'}</td>
+                        <td className="py-2 px-3">
+                          <div className="flex flex-wrap gap-1">
+                            {memberExited && (
+                              <span className="text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                                Ausgeschieden
+                              </span>
+                            )}
+                            {member.is_admin && (
+                              <span className={`text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full border ${theme.border} ${theme.textMuted}`}>
+                                Admin
+                              </span>
+                            )}
+                            {member.auth_user_id && (
+                              <span className="text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                                Login
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
