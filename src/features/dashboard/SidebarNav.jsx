@@ -189,9 +189,9 @@ const SidebarNav = ({
       </div>
     </aside>
 
-    <aside className={`hidden lg:flex flex-shrink-0 ${theme.sidebarBg} w-16 min-w-[4rem] max-w-[4rem] overflow-visible`}>
+    <aside className={`hidden lg:flex flex-shrink-0 ${theme.sidebarBg} w-12 min-w-[3rem] max-w-[3rem] overflow-visible`}>
       <div className="h-full flex flex-col">
-        <nav className="py-3 space-y-1 flex flex-col items-center flex-1">
+        <nav className="py-3 space-y-1 flex flex-col items-center flex-1 pl-1">
           {navItems.map((item) => {
             const totalApoUnread = item.id === 'apo' ? unreadCounts.amk + unreadCounts.recall + unreadCounts.lav : 0
             const totalPostUnread = item.id === 'post' ? (unreadCounts.fax || 0) + (unreadCounts.email || 0) : 0
@@ -201,9 +201,12 @@ const SidebarNav = ({
             const hasUnread = totalApoUnread > 0 || totalPostUnread > 0 || totalChatUnread > 0
             return (
               <div key={item.id} className="relative group">
+                {activeView === item.id && (
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] bg-[#FD8916] rounded-r" />
+                )}
                 <button
                   type="button"
-                  className={`w-10 h-10 flex items-center justify-center mx-auto rounded-[6px] border-l-[3px] border-transparent box-border transition-colors ${theme.sidebarText} ${
+                  className={`w-10 h-10 flex items-center justify-center mx-auto rounded-[6px] transition-colors ${theme.sidebarText} ${
                     activeView === item.id ? theme.sidebarActive : theme.sidebarHover
                   }`}
                   onClick={() => {
@@ -224,11 +227,14 @@ const SidebarNav = ({
         </nav>
 
         {/* Sonstiges-Icon */}
-        <div className="py-2 flex justify-center border-t border-[#4F5469]">
+        <div className="py-2 flex justify-center border-t border-[#4F5469] pl-1">
           <div className="relative group">
+            {activeView === miscNavItem.id && (
+              <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] bg-[#FD8916] rounded-r" />
+            )}
             <button
               type="button"
-              className={`w-10 h-10 flex items-center justify-center mx-auto rounded-[6px] border-l-[3px] border-transparent box-border transition-colors ${theme.sidebarText} ${
+              className={`w-10 h-10 flex items-center justify-center mx-auto rounded-[6px] transition-colors ${theme.sidebarText} ${
                 activeView === miscNavItem.id ? theme.sidebarActive : theme.sidebarHover
               }`}
               onClick={() => setActiveView(miscNavItem.id)}
@@ -242,7 +248,7 @@ const SidebarNav = ({
         </div>
 
         {/* Avatar mit Logout-Dropdown */}
-        <div className="py-3 flex justify-center border-t border-[#4F5469]" ref={logoutMenuRef}>
+        <div className="py-3 flex justify-center border-t border-[#4F5469] pl-1" ref={logoutMenuRef}>
           <div className="relative group">
             <button
               onClick={() => setShowLogoutMenu(!showLogoutMenu)}
@@ -308,12 +314,14 @@ const SidebarNav = ({
     >
       <div className="h-full flex flex-col">
         <div className="px-4 pt-4 pb-3 border-b border-[#3C4255]">
-          <p className="text-xs uppercase tracking-[0.08em] text-[#7697A0]">Navigation</p>
+          <p className="text-xs uppercase tracking-[0.08em] text-[#7697A0]">
+            Navigation
+          </p>
           <h2 className="text-sm font-semibold text-[#E5E7EB] mt-1">
             {navItems.find((item) => item.id === activeView)?.label || 'Kontext'}
           </h2>
         </div>
-        <nav className="p-2 space-y-1 overflow-y-auto">
+        <nav className="p-2 overflow-y-auto space-y-1">
           {(secondaryNavMap[activeView] || []).map((item) => {
             const isActive = getActiveSecondaryId() === item.id
             const badgeCount = activeView === 'apo'

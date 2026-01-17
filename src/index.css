@@ -4,6 +4,8 @@
 
 @theme {
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-space: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --font-serif: 'Source Serif 4', ui-serif, Georgia, serif;
 }
 
 html {
@@ -184,4 +186,102 @@ html {
   content: attr(data-placeholder);
   color: #7697A0;
   pointer-events: none;
+}
+
+/* ===== Brief Editor (DIN 5008 Form B) ===== */
+.brief-editor {
+  font-family: var(--font-space);
+}
+
+.brief-editor .font-space {
+  font-family: var(--font-space);
+}
+
+.brief-editor .font-serif {
+  font-family: var(--font-serif);
+}
+
+/* A4 Seitenverhältnis (210mm × 297mm) */
+.brief-page {
+  aspect-ratio: 210 / 297;
+  width: 100%;
+  max-width: 595px; /* A4 bei 72dpi */
+  position: relative;
+  background: white;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* DIN 5008 Form B Maße (umgerechnet in %) */
+.brief-page .margin-guides {
+  position: absolute;
+  /* Oben: 20mm = 6.73%, Links: 25mm = 11.9%, Rechts: 25mm, Unten: 35mm = 11.78% */
+  top: 6.73%;
+  left: 11.9%;
+  right: 11.9%;
+  bottom: 11.78%;
+  pointer-events: none;
+}
+
+/* Anschriftfeld Position: 45mm von oben, 25mm von links, 85mm breit, 45mm hoch */
+.brief-anschrift {
+  position: absolute;
+  top: 15.15%; /* 45mm / 297mm */
+  left: 11.9%; /* 25mm / 210mm */
+  width: 40.48%; /* 85mm / 210mm */
+  height: 15.15%; /* 45mm / 297mm */
+}
+
+/* Absenderblock rechts: 25mm von oben, 25mm vom rechten Rand */
+.brief-absender {
+  position: absolute;
+  top: 6.73%; /* 20mm / 297mm */
+  right: 11.9%; /* 25mm / 210mm */
+  text-align: right;
+}
+
+/* Inhaltsbereich: ab 95mm von oben */
+.brief-inhalt {
+  position: absolute;
+  top: 31.99%; /* 95mm / 297mm */
+  left: 11.9%;
+  right: 11.9%;
+  bottom: 11.78%;
+}
+
+/* Fußzeile: 15mm vom unteren Rand */
+.brief-fusszeile {
+  position: absolute;
+  bottom: 5.05%; /* 15mm / 297mm */
+  left: 11.9%;
+  right: 11.9%;
+}
+
+/* Einschreiben-Modus Anpassungen */
+.brief-page.einschreiben .brief-anschrift {
+  top: 24.92%; /* 74mm / 297mm für Empfängeradresse */
+}
+
+.brief-page.einschreiben .brief-vermerk {
+  top: 17.95%; /* 53.3mm / 297mm */
+}
+
+/* Seitenumbruch-Markierung */
+.brief-page-break {
+  border-top: 2px dashed #E5E7EB;
+  margin: 1rem 0;
+  position: relative;
+}
+
+.brief-page-break::after {
+  content: 'Seitenumbruch';
+  position: absolute;
+  top: -0.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  padding: 0 0.5rem;
+  font-size: 0.625rem;
+  color: #B5B9C8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }

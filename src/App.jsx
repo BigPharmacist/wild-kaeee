@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { supabase, supabaseUrl } from './lib/supabase'
-import { House, Camera, Pill, CalendarDots, CalendarBlank, ChatCircle, GearSix, EnvelopeSimple, Printer, Palette, Sparkle, DotsThree } from '@phosphor-icons/react'
+import { House, Camera, Pill, CalendarDots, CalendarBlank, ChatCircle, GearSix, EnvelopeSimple, Printer, Palette, Sparkle, DotsThree, Files } from '@phosphor-icons/react'
 import { EmailAccountModal, EmailSettingsSection, EmailView, useEmailSettings, useEmailUnreadCount } from './features/email'
 import { FaxView, useFaxCounts, useUrgentFax } from './features/fax'
 import { ContactDetailModal, ContactFormModal, ContactsSettingsSection, useContacts } from './features/contacts'
@@ -12,6 +12,7 @@ import { PhotosView, usePhotos } from './features/photos'
 import { ChatView, useChat, useChatUnreadCounts } from './features/chat'
 import { SettingsView, usePharmacies, useStaff } from './features/settings'
 import { PlanView } from './features/plan'
+import { DokumenteView } from './features/dokumente'
 import { CalendarView, useCalendar } from './features/calendar'
 import { ColorsView } from './features/colors'
 import { useRechnungen } from './features/rechnungen'
@@ -38,6 +39,7 @@ function App() {
   const [activeView, setActiveView] = useState(() => localStorage.getItem('nav_activeView') || 'dashboard')
   const [settingsTab, setSettingsTab] = useState(() => localStorage.getItem('nav_settingsTab') || 'pharmacies')
   const [chatTab, setChatTab] = useState(() => localStorage.getItem('nav_chatTab') || 'group')
+  const [dokumenteTab, setDokumenteTab] = useState(() => localStorage.getItem('nav_dokumenteTab') || 'briefe')
   const {
     pharmacies,
     pharmaciesLoading,
@@ -628,6 +630,7 @@ function App() {
     { id: 'calendar', icon: () => <CalendarBlank size={20} weight="regular" />, label: 'Kalender' },
     { id: 'chat', icon: () => <ChatCircle size={20} weight="regular" />, label: 'Chat' },
     { id: 'post', icon: () => <Icons.PostHorn />, label: 'Post' },
+    { id: 'dokumente', icon: () => <Files size={20} weight="regular" />, label: 'Dokumente' },
     { id: 'settings', icon: () => <GearSix size={20} weight="regular" />, label: 'Einstellungen' },
   ]
 
@@ -656,6 +659,13 @@ function App() {
       { id: 'email', label: 'Email' },
       { id: 'fax', label: 'Fax' },
     ],
+    dokumente: [
+      { id: 'briefe', label: 'Briefe' },
+      { id: 'alle', label: 'Alle Dokumente' },
+      { id: 'rechnungen', label: 'Rechnungen' },
+      { id: 'vertraege', label: 'Verträge' },
+      { id: 'sonstiges', label: 'Sonstiges' },
+    ],
     misc: [
       { id: 'uploads', label: 'Uploads' },
       { id: 'library', label: 'Archiv' },
@@ -679,7 +689,7 @@ function App() {
       isInitialMount.current = false
       return
     }
-    if (activeView === 'settings' || activeView === 'apo' || activeView === 'chat') return
+    if (activeView === 'settings' || activeView === 'apo' || activeView === 'chat' || activeView === 'dokumente') return
     const nextItems = secondaryNavMap[activeView] || []
     if (nextItems.length) {
       setSecondaryTab(nextItems[0].id)
@@ -706,6 +716,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem('nav_apoTab', apoTab)
   }, [apoTab])
+
+  useEffect(() => {
+    localStorage.setItem('nav_dokumenteTab', dokumenteTab)
+  }, [dokumenteTab])
 
   // Browser-Tab-Titel mit Fax-Count aktualisieren
   useEffect(() => {
@@ -747,6 +761,7 @@ function App() {
     if (activeView === 'settings') return settingsTab
     if (activeView === 'apo') return apoTab
     if (activeView === 'chat') return chatTab
+    if (activeView === 'dokumente') return dokumenteTab
     return secondaryTab
   }
 
@@ -757,6 +772,8 @@ function App() {
       setApoTab(itemId)
     } else if (activeView === 'chat') {
       setChatTab(itemId)
+    } else if (activeView === 'dokumente') {
+      setDokumenteTab(itemId)
     } else {
       setSecondaryTab(itemId)
     }
@@ -2489,6 +2506,15 @@ function App() {
                   canWriteCurrentCalendar={canWriteCurrentCalendar}
                   openEventModal={openEventModal}
                   getEventColor={getEventColor}
+                />
+              )}
+
+              {activeView === 'dokumente' && (
+                <DokumenteView
+                  theme={theme}
+                  dokumenteTab={dokumenteTab}
+                  pharmacies={pharmacies}
+                  aiSettings={aiSettings}
                 />
               )}
 
