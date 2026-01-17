@@ -87,7 +87,7 @@ const PlanView = ({
                         className={`
                           w-8 h-8 rounded-lg text-xs font-medium transition-colors
                           ${day.isSelected
-                            ? 'bg-[#FD8916] text-white'
+                            ? 'bg-[#4F5469] text-white'
                             : day.isTodayDate
                               ? `border-2 border-[#FD8916]/50 ${day.hasData ? theme.text : theme.textMuted}`
                               : day.hasData
@@ -166,7 +166,7 @@ const PlanView = ({
                 <div className="flex items-center gap-2 mb-4">
                   <h3 className="text-lg font-semibold">{dayData.issueDate}</h3>
                   {isToday && (
-                    <span className="text-[10px] uppercase tracking-wide px-2 py-1 rounded-full bg-[#FD8916]/15 text-[#FD8916] border border-[#FD8916]/20">
+                    <span className="text-[10px] uppercase tracking-wide px-2 py-1 rounded-full bg-[#4F5469]/15 text-[#FD8916] border border-[#FD8916]/20">
                       Heute
                     </span>
                   )}
@@ -228,7 +228,7 @@ const PlanView = ({
                             {hasWork && !isAbsent && (
                               <>
                                 <div
-                                  className="absolute top-0.5 bottom-0.5 bg-[#FD8916] rounded"
+                                  className="absolute top-0.5 bottom-0.5 bg-[#4F5469] rounded"
                                   style={getBarStyle(startTime, endTime)}
                                 />
                                 {breakStart && breakEnd && (
@@ -241,7 +241,7 @@ const PlanView = ({
                                   className="absolute top-0.5 bottom-0.5 flex items-center justify-center overflow-hidden pointer-events-none"
                                   style={getBarStyle(startTime, endTime)}
                                 >
-                                  <span className="text-[11px] font-semibold text-[#173B61] truncate px-2 drop-shadow-[0_0_2px_rgba(255,255,255,0.8)]">
+                                  <span className="text-[11px] font-semibold text-white truncate px-2">
                                     {emp.firstName} {emp.lastName}
                                   </span>
                                 </div>
@@ -286,7 +286,7 @@ const PlanView = ({
 
                 <div className={`flex flex-wrap gap-4 mt-4 pt-4 border-t ${theme.border} text-[10px] ${theme.textMuted}`}>
                   <div className="flex items-center gap-1.5">
-                    <div className="w-3 h-3 rounded bg-[#FD8916]" />
+                    <div className="w-3 h-3 rounded bg-[#4F5469]" />
                     <span>Arbeit</span>
                   </div>
                   <div className="flex items-center gap-1.5">
