@@ -418,6 +418,7 @@ function App() {
     messageReads,
     setChatInput,
     sendChatMessage,
+    deleteChatMessage,
   } = useChat({ session, activeView, directChatUserId: chatTab === 'group' ? null : chatTab })
   const { unreadCounts: chatUnreadCounts } = useChatUnreadCounts({ session, staff })
   const {
@@ -2440,6 +2441,7 @@ function App() {
                   directChatUserId={chatTab === 'group' ? null : chatTab}
                   directChatUser={chatTab === 'group' ? null : staffByAuthId[chatTab]}
                   messageReads={messageReads}
+                  deleteChatMessage={deleteChatMessage}
                 />
               )}
 

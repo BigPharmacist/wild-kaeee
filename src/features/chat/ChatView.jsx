@@ -1,4 +1,4 @@
-import { Check, Checks } from '@phosphor-icons/react'
+import { Check, Checks, Trash } from '@phosphor-icons/react'
 
 const ChatView = ({
   theme,
@@ -15,6 +15,7 @@ const ChatView = ({
   directChatUserId,
   directChatUser,
   messageReads,
+  deleteChatMessage,
 }) => {
   const chatTitle = directChatUserId
     ? `Chat mit ${directChatUser?.first_name || 'Unbekannt'}`
@@ -94,15 +95,29 @@ const ChatView = ({
                 {isOwn ? (
                   /* Eigene Nachricht: Links von der Mittellinie */
                   <>
-                    <div className="w-1/2 pr-12 flex justify-end">
+                    <div className="w-1/2 pr-12 flex justify-end group">
                       <div className="max-w-[85%] text-right">
                         <div className={`text-xs ${theme.textMuted} flex items-center gap-2 justify-end mb-0.5`}>
+                          {!entry.deleted_at && (
+                            <button
+                              type="button"
+                              onClick={() => deleteChatMessage(entry.id)}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity text-rose-400 hover:text-rose-500"
+                              title="Nachricht löschen"
+                            >
+                              <Trash size={14} />
+                            </button>
+                          )}
                           <span>{senderName}</span>
                           {timeLabel && <span>{timeLabel}</span>}
                           <ReadStatus />
                         </div>
-                        <div className="inline-block rounded-2xl px-4 py-2 border bg-[#FD8916]/15 border-[#FD8916]/30 text-[#173B61]">
-                          <p className="text-sm leading-relaxed whitespace-pre-wrap text-left">{entry.message}</p>
+                        <div className={`inline-block rounded-2xl px-4 py-2 border ${entry.deleted_at ? `${theme.panel} ${theme.border}` : 'bg-[#FD8916]/15 border-[#FD8916]/30 text-[#173B61]'}`}>
+                          {entry.deleted_at ? (
+                            <p className={`text-sm italic ${theme.textMuted}`}>Nachricht gelöscht</p>
+                          ) : (
+                            <p className="text-sm leading-relaxed whitespace-pre-wrap text-left">{entry.message}</p>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -119,7 +134,11 @@ const ChatView = ({
                           {timeLabel && <span>{timeLabel}</span>}
                         </div>
                         <div className={`inline-block rounded-2xl px-4 py-2 border ${theme.panel} ${theme.border}`}>
-                          <p className="text-sm leading-relaxed whitespace-pre-wrap">{entry.message}</p>
+                          {entry.deleted_at ? (
+                            <p className={`text-sm italic ${theme.textMuted}`}>Nachricht gelöscht</p>
+                          ) : (
+                            <p className="text-sm leading-relaxed whitespace-pre-wrap">{entry.message}</p>
+                          )}
                         </div>
                       </div>
                     </div>

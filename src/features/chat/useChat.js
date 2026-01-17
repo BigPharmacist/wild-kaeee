@@ -16,7 +16,7 @@ export function useChat({ session, activeView, directChatUserId }) {
 
     let query = supabase
       .from('chat_messages')
-      .select('id, user_id, recipient_id, message, created_at')
+      .select('id, user_id, recipient_id, message, created_at, deleted_at')
       .order('created_at', { ascending: true })
       .limit(200)
 
@@ -121,6 +121,28 @@ export function useChat({ session, activeView, directChatUserId }) {
     setChatSending(false)
   }
 
+  // Nachricht löschen (soft delete)
+  const deleteChatMessage = async (messageId) => {
+    if (!session?.user?.id) return false
+
+    const { error } = await supabase
+      .from('chat_messages')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', messageId)
+      .eq('user_id', session.user.id) // Nur eigene Nachrichten
+
+    if (error) {
+      setChatError(error.message)
+      return false
+    }
+
+    // Lokal als gelöscht markieren
+    setChatMessages((prev) => prev.map((m) =>
+      m.id === messageId ? { ...m, deleted_at: new Date().toISOString() } : m
+    ))
+    return true
+  }
+
   // Real-time subscription for chat messages
   useEffect(() => {
     if (!session || activeView !== 'chat') return
@@ -160,6 +182,13 @@ export function useChat({ session, activeView, directChatUserId }) {
           return updated
         })
       })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'chat_messages' }, (payload) => {
+        // Nachricht wurde aktualisiert (z.B. soft delete)
+        const updatedMsg = payload.new
+        setChatMessages((prev) => prev.map((m) =>
+          m.id === updatedMsg.id ? { ...m, ...updatedMsg } : m
+        ))
+      })
       .subscribe()
 
     return () => {
@@ -192,6 +221,7 @@ export function useChat({ session, activeView, directChatUserId }) {
     setChatInput,
     fetchChatMessages,
     sendChatMessage,
+    deleteChatMessage,
     markMessagesAsRead,
   }
 }
