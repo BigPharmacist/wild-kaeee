@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'react'
-import { CircleNotch, Link, ListBullets, ListNumbers, PaperPlaneTilt, Quotes, Sparkle, TextB, TextItalic, TextUnderline, X } from '@phosphor-icons/react'
+import { CircleNotch, Link, ListBullets, ListNumbers, Paperclip, PaperPlaneTilt, Quotes, Sparkle, TextB, TextItalic, TextUnderline, X } from '@phosphor-icons/react'
 
 export default function EmailComposeModal({
   theme,
@@ -7,13 +7,17 @@ export default function EmailComposeModal({
   composeMode,
   composeData,
   originalEmail,
+  attachments = [],
   sendError,
   sending,
   onClose,
   onSend,
   setComposeData,
+  onAddAttachment,
+  onRemoveAttachment,
   aiSettings,
 }) {
+  const fileInputRef = useRef(null)
   const editorRef = useRef(null)
   const [showCcBcc, setShowCcBcc] = useState(false)
   const [aiPrompt, setAiPrompt] = useState('')
@@ -179,6 +183,20 @@ Inhalt: ${originalEmail.preview || originalEmail.textBody || ''}`
     if (url) {
       applyFormat('createLink', url)
     }
+  }
+
+  // Datei hinzufügen
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files || [])
+    files.forEach(file => onAddAttachment(file))
+    e.target.value = '' // Reset für erneute Auswahl derselben Datei
+  }
+
+  // Dateigröße formatieren
+  const formatFileSize = (bytes) => {
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   }
 
   // Inhalt bei Änderungen synchronisieren
@@ -409,6 +427,24 @@ Inhalt: ${originalEmail.preview || originalEmail.textBody || ''}`
               >
                 <Quotes size={14} />
               </button>
+
+              <div className={`w-px h-4 mx-1 bg-gray-300`} />
+
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className={`p-1 rounded ${theme.bgHover}`}
+                title="Anhang hinzufügen"
+              >
+                <Paperclip size={14} />
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                onChange={handleFileSelect}
+                className="hidden"
+              />
           </div>
 
           {/* Editor - ohne Label, direkt der Inhalt */}
@@ -420,6 +456,40 @@ Inhalt: ${originalEmail.preview || originalEmail.textBody || ''}`
             data-placeholder="Nachricht schreiben..."
             style={{ whiteSpace: 'pre-wrap' }}
           />
+
+          {/* Anhänge */}
+          {attachments.length > 0 && (
+            <div className={`px-4 py-3 border-t ${theme.border}`}>
+              <div className="flex flex-wrap gap-2">
+                {attachments.map(att => (
+                  <div
+                    key={att.id}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${theme.border} ${att.error ? 'bg-rose-50 border-rose-200' : theme.bg}`}
+                  >
+                    {att.uploading ? (
+                      <CircleNotch size={14} className="animate-spin text-gray-400" />
+                    ) : (
+                      <Paperclip size={14} className={att.error ? 'text-rose-500' : theme.textMuted} />
+                    )}
+                    <span className={`text-sm truncate max-w-[150px] ${att.error ? 'text-rose-600' : theme.text}`}>
+                      {att.name}
+                    </span>
+                    <span className={`text-xs ${theme.textMuted}`}>
+                      {formatFileSize(att.size)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => onRemoveAttachment(att.id)}
+                      className={`p-0.5 rounded hover:bg-gray-200 ${theme.textMuted}`}
+                      title="Entfernen"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}

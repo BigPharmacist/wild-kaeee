@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react'
 import { CircleNotch, EnvelopeSimple, File, Folder, GearSix, MagnifyingGlass, PaperPlaneRight, Tray, Trash, Warning, X } from '@phosphor-icons/react'
 import EmailComposeModal from './EmailComposeModal'
 import EmailDetailPane from './EmailDetailPane'
+import EmailFolderSidebar from './EmailFolderSidebar'
 import EmailListPane from './EmailListPane'
 import { formatEmailDate, getEmailBodyHtml } from './emailUtils'
 import useEmailAttachments from './useEmailAttachments'
@@ -63,18 +64,24 @@ export default function EmailView({ theme, account, hasAccess, onConfigureClick,
     composeMode,
     composeData,
     originalEmail,
+    attachments,
     sending,
     sendError,
     openCompose,
     closeCompose,
     handleSend,
     setComposeData,
+    addAttachment,
+    removeAttachment,
   } = useEmailCompose({ selectedMailbox, loadEmails, formatDate: formatEmailDate, signature: account?.signature || '' })
 
   const { downloadingAttachmentId, downloadAttachment } = useEmailAttachments()
 
   // Suche
   const [searchQuery, setSearchQuery] = useState('')
+
+  // Folder-Sidebar (eingeklappt per default)
+  const [folderSidebarExpanded, setFolderSidebarExpanded] = useState(false)
 
   // Refs
   const emailListRef = useRef(null)
@@ -202,6 +209,17 @@ export default function EmailView({ theme, account, hasAccess, onConfigureClick,
       </div>
 
       <div className="flex h-[calc(100vh-280px)] min-h-[500px] overflow-hidden">
+        <EmailFolderSidebar
+          theme={theme}
+          account={account}
+          mailboxes={mailboxes}
+          selectedMailbox={selectedMailbox}
+          onSelectMailbox={setSelectedMailbox}
+          getMailboxIcon={getMailboxIcon}
+          isExpanded={folderSidebarExpanded}
+          onToggle={() => setFolderSidebarExpanded(!folderSidebarExpanded)}
+        />
+
         <EmailListPane
           theme={theme}
           mailboxes={mailboxes}
@@ -241,11 +259,14 @@ export default function EmailView({ theme, account, hasAccess, onConfigureClick,
         composeMode={composeMode}
         composeData={composeData}
         originalEmail={originalEmail}
+        attachments={attachments}
         sendError={sendError}
         sending={sending}
         onClose={closeCompose}
         onSend={handleSend}
         setComposeData={setComposeData}
+        onAddAttachment={addAttachment}
+        onRemoveAttachment={removeAttachment}
         aiSettings={aiSettings}
       />
     </div>

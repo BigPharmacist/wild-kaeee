@@ -643,8 +643,6 @@ function App() {
     ],
     chat: [
       { id: 'inbox', label: 'Inbox' },
-      { id: 'team', label: 'Team' },
-      { id: 'settings', label: 'Einstellungen' },
     ],
     post: [
       { id: 'email', label: 'Email' },

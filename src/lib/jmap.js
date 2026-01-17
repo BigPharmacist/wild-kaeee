@@ -185,8 +185,10 @@ class JMAPClient {
 
   /**
    * E-Mail senden
+   * @param {Object} options
+   * @param {Array} options.attachments - [{blobId, type, name, size}]
    */
-  async sendEmail({ to, cc, bcc, subject, textBody, htmlBody, replyTo, inReplyTo }) {
+  async sendEmail({ to, cc, bcc, subject, textBody, htmlBody, replyTo, inReplyTo, attachments }) {
     // Identity ID holen (benötigt für Stalwart)
     const identityResponses = await this.request([
       ['Identity/get', { accountId: this.accountId }, 'identity']
@@ -222,6 +224,17 @@ class JMAPClient {
     if (htmlBody) {
       email.bodyValues.html = { value: htmlBody }
       email.htmlBody = [{ partId: 'html', type: 'text/html' }]
+    }
+
+    // Anhänge hinzufügen
+    if (attachments && attachments.length > 0) {
+      email.attachments = attachments.map(att => ({
+        blobId: att.blobId,
+        type: att.type,
+        name: att.name,
+        size: att.size,
+        disposition: 'attachment'
+      }))
     }
 
     // Mailbox IDs für Drafts und Sent finden
@@ -396,6 +409,37 @@ class JMAPClient {
   onUpdate(callback) {
     this.listeners.add(callback)
     return () => this.listeners.delete(callback)
+  }
+
+  /**
+   * Datei hochladen (für Anhänge)
+   */
+  async uploadBlob(file) {
+    if (!this.uploadUrl || !this.credentials) {
+      throw new Error('Upload nicht möglich - nicht authentifiziert')
+    }
+
+    const url = this.uploadUrl.replace('{accountId}', this.accountId)
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${this.credentials}`,
+        'Content-Type': file.type || 'application/octet-stream'
+      },
+      body: file
+    })
+
+    if (!response.ok) {
+      throw new Error(`Upload fehlgeschlagen: ${response.status}`)
+    }
+
+    const result = await response.json()
+    return {
+      blobId: result.blobId,
+      type: result.type,
+      size: result.size
+    }
   }
 
   /**

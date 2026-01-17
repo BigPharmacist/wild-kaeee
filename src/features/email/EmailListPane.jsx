@@ -41,7 +41,7 @@ export default function EmailListPane({
 
   return (
     <div className={`w-80 flex-shrink-0 border-r ${theme.border} flex flex-col ${selectedEmail ? 'hidden lg:flex' : 'flex'}`}>
-      <div className={`p-3 border-b ${theme.border} flex items-center gap-2`}>
+      <div className={`h-[52px] px-3 border-b ${theme.border} flex items-center gap-2`}>
         {/* Ordner-Dropdown */}
         <div className="relative flex-1" ref={dropdownRef}>
           <button
