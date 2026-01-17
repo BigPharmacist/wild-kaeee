@@ -8,6 +8,7 @@ import { formatEmailDate, getEmailBodyHtml } from './emailUtils'
 import useEmailAttachments from './useEmailAttachments'
 import useEmailCompose from './useEmailCompose'
 import useJmapMail from './useJmapMail'
+import { jmap } from '../../lib/jmap'
 
 export default function EmailView({ theme, account, hasAccess, onConfigureClick, aiSettings }) {
   // Berechtigungsprüfung
@@ -56,6 +57,7 @@ export default function EmailView({ theme, account, hasAccess, onConfigureClick,
     handleSelectEmail,
     handleDeleteEmail,
     handleMoveEmail,
+    handleToggleRead,
     setSelectedEmail,
     setEmailDetail,
     searchQuery,
@@ -129,6 +131,57 @@ export default function EmailView({ theme, account, hasAccess, onConfigureClick,
     setSelectedEmail(null)
     setEmailDetail(null)
   }
+
+  // Kontextmenü-Aktionen: Laden E-Mail-Details wenn nötig
+  const handleContextReply = useCallback(async (email) => {
+    const detail = await jmap.getEmail(email.id)
+    openCompose('reply', detail)
+  }, [openCompose])
+
+  const handleContextForward = useCallback(async (email) => {
+    const detail = await jmap.getEmail(email.id)
+    openCompose('forward', detail)
+  }, [openCompose])
+
+  const handleContextPrint = useCallback(async (email) => {
+    const detail = await jmap.getEmail(email.id)
+    const printWindow = window.open('', '_blank')
+    const from = detail.from?.[0]
+    const to = detail.to?.map(t => t.email).join(', ')
+    const date = new Date(detail.receivedAt).toLocaleString('de-DE')
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>${detail.subject || 'E-Mail'}</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
+          .header { border-bottom: 1px solid #e5e7eb; padding-bottom: 16px; margin-bottom: 24px; }
+          .subject { font-size: 24px; font-weight: 600; margin-bottom: 12px; }
+          .meta { color: #6b7280; font-size: 14px; line-height: 1.6; }
+          .meta strong { color: #374151; }
+          .body { line-height: 1.6; }
+          .body img { max-width: 100%; }
+          @media print { body { padding: 20px; } }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="subject">${detail.subject || '(Kein Betreff)'}</div>
+          <div class="meta">
+            <div><strong>Von:</strong> ${from?.name || ''} &lt;${from?.email || ''}&gt;</div>
+            <div><strong>An:</strong> ${to}</div>
+            <div><strong>Datum:</strong> ${date}</div>
+          </div>
+        </div>
+        <div class="body">${getEmailBodyHtml(detail)}</div>
+      </body>
+      </html>
+    `)
+    printWindow.document.close()
+    printWindow.print()
+  }, [])
 
   // Kein Account konfiguriert
   if (!account) {
@@ -267,6 +320,11 @@ export default function EmailView({ theme, account, hasAccess, onConfigureClick,
           listRef={emailListRef}
           formatDate={formatEmailDate}
           isSearchActive={isSearchActive}
+          onReply={handleContextReply}
+          onForward={handleContextForward}
+          onDelete={handleDeleteEmail}
+          onToggleRead={handleToggleRead}
+          onPrint={handleContextPrint}
         />
 
         <EmailDetailPane

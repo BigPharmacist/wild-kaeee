@@ -9,7 +9,7 @@ import { AuthView } from './features/auth'
 import { DashboardHeader, SidebarNav, DashboardHome, useWeather, usePollen, useBiowetter } from './features/dashboard'
 import { ApoView } from './features/apo'
 import { PhotosView, usePhotos } from './features/photos'
-import { ChatView, useChat } from './features/chat'
+import { ChatView, useChat, useChatUnreadCounts } from './features/chat'
 import { SettingsView, usePharmacies, useStaff } from './features/settings'
 import { PlanView } from './features/plan'
 import { CalendarView, useCalendar } from './features/calendar'
@@ -37,6 +37,7 @@ function App() {
   const [secondaryTab, setSecondaryTab] = useState(() => localStorage.getItem('nav_secondaryTab') || 'overview')
   const [activeView, setActiveView] = useState(() => localStorage.getItem('nav_activeView') || 'dashboard')
   const [settingsTab, setSettingsTab] = useState(() => localStorage.getItem('nav_settingsTab') || 'pharmacies')
+  const [chatTab, setChatTab] = useState(() => localStorage.getItem('nav_chatTab') || 'group')
   const {
     pharmacies,
     pharmaciesLoading,
@@ -414,9 +415,11 @@ function App() {
     chatInput,
     chatSending,
     chatEndRef,
+    messageReads,
     setChatInput,
     sendChatMessage,
-  } = useChat({ session, activeView })
+  } = useChat({ session, activeView, directChatUserId: chatTab === 'group' ? null : chatTab })
+  const { unreadCounts: chatUnreadCounts } = useChatUnreadCounts({ session, staff })
   const {
     latestPhoto,
     photoUploading,
@@ -642,7 +645,10 @@ function App() {
       { id: 'calendars', label: 'Kalender' },
     ],
     chat: [
-      { id: 'inbox', label: 'Inbox' },
+      { id: 'group', label: 'Gruppenchat' },
+      ...staff
+        .filter((s) => s.auth_user_id && s.auth_user_id !== session?.user?.id)
+        .map((s) => ({ id: s.auth_user_id, label: s.first_name || 'Unbekannt' })),
     ],
     post: [
       { id: 'email', label: 'Email' },
@@ -659,7 +665,7 @@ function App() {
       { id: 'card-enhance', label: 'Karten-Test' },
       ...(currentStaff?.is_admin ? [{ id: 'admin', label: 'Admin' }] : []),
     ],
-  }), [currentStaff?.is_admin])
+  }), [currentStaff?.is_admin, staff, session?.user?.id])
 
   useEffect(() => {
     // Beim ersten Mount den gespeicherten Wert behalten
@@ -667,7 +673,7 @@ function App() {
       isInitialMount.current = false
       return
     }
-    if (activeView === 'settings' || activeView === 'apo') return
+    if (activeView === 'settings' || activeView === 'apo' || activeView === 'chat') return
     const nextItems = secondaryNavMap[activeView] || []
     if (nextItems.length) {
       setSecondaryTab(nextItems[0].id)
@@ -686,6 +692,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem('nav_settingsTab', settingsTab)
   }, [settingsTab])
+
+  useEffect(() => {
+    localStorage.setItem('nav_chatTab', chatTab)
+  }, [chatTab])
 
   useEffect(() => {
     localStorage.setItem('nav_apoTab', apoTab)
@@ -730,6 +740,7 @@ function App() {
   const getActiveSecondaryId = () => {
     if (activeView === 'settings') return settingsTab
     if (activeView === 'apo') return apoTab
+    if (activeView === 'chat') return chatTab
     return secondaryTab
   }
 
@@ -738,6 +749,8 @@ function App() {
       setSettingsTab(itemId)
     } else if (activeView === 'apo') {
       setApoTab(itemId)
+    } else if (activeView === 'chat') {
+      setChatTab(itemId)
     } else {
       setSecondaryTab(itemId)
     }
@@ -2320,7 +2333,7 @@ function App() {
             secondaryNavMap={secondaryNavMap}
             getActiveSecondaryId={getActiveSecondaryId}
             handleSecondarySelect={handleSecondarySelect}
-            unreadCounts={{ ...unreadCounts, fax: faxCount, email: emailUnreadCount }}
+            unreadCounts={{ ...unreadCounts, fax: faxCount, email: emailUnreadCount, chat: chatUnreadCounts }}
             Icons={Icons}
             UnreadBadge={UnreadBadge}
             currentStaff={currentStaff}
@@ -2424,6 +2437,9 @@ function App() {
                   chatInput={chatInput}
                   setChatInput={setChatInput}
                   chatSending={chatSending}
+                  directChatUserId={chatTab === 'group' ? null : chatTab}
+                  directChatUser={chatTab === 'group' ? null : staffByAuthId[chatTab]}
+                  messageReads={messageReads}
                 />
               )}
 

@@ -110,6 +110,30 @@ export default function useJmapMail({ account }) {
     }
   }, [])
 
+  const handleToggleRead = useCallback(async (emailId, currentlyRead) => {
+    const newReadState = !currentlyRead
+    try {
+      await jmap.setEmailRead(emailId, newReadState)
+      // Liste aktualisieren
+      setEmails(prev => prev.map(e =>
+        e.id === emailId ? { ...e, keywords: { ...e.keywords, '$seen': newReadState } } : e
+      ))
+      // Suchergebnisse aktualisieren
+      setSearchResults(prev => prev ? {
+        ...prev,
+        emails: prev.emails.map(e =>
+          e.id === emailId ? { ...e, keywords: { ...e.keywords, '$seen': newReadState } } : e
+        )
+      } : null)
+      // Detail aktualisieren falls geöffnet
+      setEmailDetail(prev => prev?.id === emailId ? { ...prev, keywords: { ...prev.keywords, '$seen': newReadState } } : prev)
+      // Event für Badge-Update
+      window.dispatchEvent(new CustomEvent(newReadState ? 'email-read' : 'email-unread'))
+    } catch (e) {
+      console.error('Fehler beim Markieren:', e)
+    }
+  }, [])
+
   const searchEmails = useCallback(async (query) => {
     if (!query.trim()) {
       setSearchQuery('')
@@ -222,6 +246,7 @@ export default function useJmapMail({ account }) {
     handleSelectEmail,
     handleDeleteEmail,
     handleMoveEmail,
+    handleToggleRead,
     setSelectedEmail,
     setEmailDetail,
     searchQuery,

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { CaretDown, CircleNotch, EnvelopeSimple, Paperclip, PaperPlaneTilt } from '@phosphor-icons/react'
+import { ArrowBendUpLeft, ArrowBendUpRight, CaretDown, CircleNotch, EnvelopeOpen, EnvelopeSimple, Paperclip, PaperPlaneTilt, Printer, Trash } from '@phosphor-icons/react'
 
 export default function EmailListPane({
   theme,
@@ -18,6 +18,11 @@ export default function EmailListPane({
   listRef,
   formatDate,
   isSearchActive = false,
+  onReply,
+  onForward,
+  onDelete,
+  onToggleRead,
+  onPrint,
 }) {
   // Hilfsfunktion: Ordnername aus mailboxIds ermitteln
   const getMailboxName = (mailboxIds) => {
@@ -28,6 +33,10 @@ export default function EmailListPane({
   }
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef(null)
+
+  // Kontextmenü State
+  const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, email: null })
+  const contextMenuRef = useRef(null)
 
   // Dropdown schließen bei Klick außerhalb
   useEffect(() => {
@@ -41,6 +50,58 @@ export default function EmailListPane({
     }
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [dropdownOpen])
+
+  // Kontextmenü schließen bei Klick außerhalb
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (contextMenuRef.current && !contextMenuRef.current.contains(e.target)) {
+        setContextMenu(prev => ({ ...prev, visible: false }))
+      }
+    }
+    if (contextMenu.visible) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [contextMenu.visible])
+
+  // Kontextmenü Handler
+  const handleContextMenu = (e, email) => {
+    e.preventDefault()
+    setContextMenu({
+      visible: true,
+      x: e.clientX,
+      y: e.clientY,
+      email
+    })
+  }
+
+  const closeContextMenu = () => {
+    setContextMenu(prev => ({ ...prev, visible: false }))
+  }
+
+  const handleContextAction = (action) => {
+    const email = contextMenu.email
+    if (!email) return
+
+    switch (action) {
+      case 'reply':
+        onReply?.(email)
+        break
+      case 'forward':
+        onForward?.(email)
+        break
+      case 'delete':
+        onDelete?.(email.id)
+        break
+      case 'toggleRead':
+        onToggleRead?.(email.id, email.keywords?.['$seen'])
+        break
+      case 'print':
+        onPrint?.(email)
+        break
+    }
+    closeContextMenu()
+  }
 
   const handleSelectMailbox = (mailbox) => {
     onSelectMailbox(mailbox)
@@ -132,6 +193,7 @@ export default function EmailListPane({
                     e.dataTransfer.effectAllowed = 'move'
                   }}
                   onClick={() => onSelectEmail(email)}
+                  onContextMenu={(e) => handleContextMenu(e, email)}
                   className={`w-full text-left p-3 border-b ${theme.border} transition-colors cursor-grab active:cursor-grabbing ${
                     selectedEmail?.id === email.id ? theme.navActive : theme.bgHover
                   }`}
@@ -179,6 +241,60 @@ export default function EmailListPane({
         )}
       </div>
 
+      {/* Kontextmenü */}
+      {contextMenu.visible && (
+        <div
+          ref={contextMenuRef}
+          className={`fixed ${theme.surface} border ${theme.border} rounded-lg shadow-lg z-[100] py-1 min-w-[180px]`}
+          style={{
+            left: contextMenu.x,
+            top: contextMenu.y,
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => handleContextAction('reply')}
+            className={`w-full flex items-center gap-3 px-3 py-2 text-sm ${theme.text} ${theme.bgHover} text-left`}
+          >
+            <ArrowBendUpLeft size={18} className={theme.textMuted} />
+            Antworten
+          </button>
+          <button
+            type="button"
+            onClick={() => handleContextAction('forward')}
+            className={`w-full flex items-center gap-3 px-3 py-2 text-sm ${theme.text} ${theme.bgHover} text-left`}
+          >
+            <ArrowBendUpRight size={18} className={theme.textMuted} />
+            Weiterleiten
+          </button>
+          <div className={`my-1 border-t ${theme.border}`} />
+          <button
+            type="button"
+            onClick={() => handleContextAction('toggleRead')}
+            className={`w-full flex items-center gap-3 px-3 py-2 text-sm ${theme.text} ${theme.bgHover} text-left`}
+          >
+            <EnvelopeOpen size={18} className={theme.textMuted} />
+            {contextMenu.email?.keywords?.['$seen'] ? 'Als ungelesen markieren' : 'Als gelesen markieren'}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleContextAction('print')}
+            className={`w-full flex items-center gap-3 px-3 py-2 text-sm ${theme.text} ${theme.bgHover} text-left`}
+          >
+            <Printer size={18} className={theme.textMuted} />
+            Drucken
+          </button>
+          <div className={`my-1 border-t ${theme.border}`} />
+          <button
+            type="button"
+            onClick={() => handleContextAction('delete')}
+            className={`w-full flex items-center gap-3 px-3 py-2 text-sm text-[#E5533D] hover:bg-[#FDE8E5] text-left`}
+          >
+            <Trash size={18} />
+            Löschen
+          </button>
+        </div>
+      )}
     </div>
   )
 }
