@@ -201,7 +201,7 @@ export default function EmailView({ theme, account, hasAccess, onConfigureClick,
         </div>
       </div>
 
-      <div className="flex h-[calc(100vh-280px)] min-h-[500px]">
+      <div className="flex h-[calc(100vh-280px)] min-h-[500px] overflow-hidden">
         <EmailListPane
           theme={theme}
           mailboxes={mailboxes}

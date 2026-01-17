@@ -5,6 +5,7 @@ import {
   ArrowUUpLeft,
   ArrowUUpRight,
   CaretLeft,
+  DownloadSimple,
   MagnifyingGlassMinus,
   MagnifyingGlassPlus,
   Printer,
@@ -54,7 +55,7 @@ export default function FaxDetailPane({
   onDelete,
   onRestore,
 }) {
-  const [zoom, setZoom] = useState(1)
+  const [zoom, setZoom] = useState(0.75)
   const [rotation, setRotation] = useState(0)
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
@@ -66,7 +67,7 @@ export default function FaxDetailPane({
   const handleRotateLeft = () => setRotation(r => (r - 90) % 360)
   const handleRotateRight = () => setRotation(r => (r + 90) % 360)
   const handleReset = () => {
-    setZoom(1)
+    setZoom(0.75)
     setRotation(0)
     setPosition({ x: 0, y: 0 })
   }
@@ -99,10 +100,35 @@ export default function FaxDetailPane({
 
   // Zoom/Rotation/Position zurücksetzen bei Fax-Wechsel
   useEffect(() => {
-    setZoom(1)
+    setZoom(0.75)
     setRotation(0)
     setPosition({ x: 0, y: 0 })
   }, [selectedFax?.id])
+
+  const handleDownload = () => {
+    const pdfUrl = getLocalPdfUrl(selectedFax)
+    if (!pdfUrl) return
+
+    const link = document.createElement('a')
+    link.href = pdfUrl
+    link.download = `Fax_${selectedFax.absender || 'Unbekannt'}_${new Date(selectedFax.fax_received_at).toISOString().split('T')[0]}.pdf`
+    link.target = '_blank'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  const handlePrint = () => {
+    const pdfUrl = getLocalPdfUrl(selectedFax)
+    if (!pdfUrl) return
+
+    const printWindow = window.open(pdfUrl, '_blank')
+    if (printWindow) {
+      printWindow.addEventListener('load', () => {
+        printWindow.print()
+      })
+    }
+  }
 
   return (
     <div className={`flex-1 flex flex-col ${!selectedFax ? 'hidden lg:flex' : 'flex'}`}>
@@ -148,6 +174,22 @@ export default function FaxDetailPane({
               </div>
 
               <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={handleDownload}
+                  className={`p-2 rounded-lg ${theme.bgHover}`}
+                  title="PDF herunterladen"
+                >
+                  <DownloadSimple size={20} />
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePrint}
+                  className={`p-2 rounded-lg ${theme.bgHover}`}
+                  title="Drucken"
+                >
+                  <Printer size={20} />
+                </button>
                 {selectedFolder === 'eingang' ? (
                   <button
                     type="button"

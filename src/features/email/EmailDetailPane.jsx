@@ -62,7 +62,7 @@ export default function EmailDetailPane({
   }
 
   return (
-    <div className={`flex-1 flex flex-col ${!selectedEmail ? 'hidden lg:flex' : 'flex'}`}>
+    <div className={`flex-1 min-w-0 flex flex-col ${!selectedEmail ? 'hidden lg:flex' : 'flex'}`}>
       {!selectedEmail ? (
         <div className={`flex-1 flex items-center justify-center ${theme.textMuted}`}>
           <div className="text-center">
@@ -139,10 +139,10 @@ export default function EmailDetailPane({
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto overflow-x-hidden p-4">
+          <div className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden p-4">
             <div
-              className={`prose prose-sm max-w-none ${theme.text} [&_*]:max-w-full [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full [&_table]:table-fixed [&_td]:break-words [&_th]:break-words [&_pre]:overflow-x-auto [&_pre]:max-w-full`}
-              style={{ overflowWrap: 'break-word', wordBreak: 'break-word' }}
+              className={`prose prose-sm max-w-none ${theme.text} [&_*]:max-w-full [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full [&_table]:w-full [&_table]:table-fixed [&_td]:break-words [&_th]:break-words [&_pre]:overflow-x-auto [&_pre]:max-w-full [&_div]:max-w-full [&_p]:max-w-full`}
+              style={{ overflowWrap: 'anywhere', wordBreak: 'break-word', maxWidth: '100%' }}
               dangerouslySetInnerHTML={{ __html: getEmailBody(emailDetail) }}
             />
 
