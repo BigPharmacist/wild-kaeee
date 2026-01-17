@@ -14,6 +14,9 @@ export default function useJmapMail({ account }) {
   const [selectedEmail, setSelectedEmail] = useState(null)
   const [emailDetail, setEmailDetail] = useState(null)
   const [emailDetailLoading, setEmailDetailLoading] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState(null)
+  const [searchLoading, setSearchLoading] = useState(false)
 
   const lastAccountId = useRef(null)
   const selectedMailboxIdRef = useRef(null)
@@ -83,6 +86,53 @@ export default function useJmapMail({ account }) {
     } catch (e) {
       console.error('Fehler beim Löschen:', e)
     }
+  }, [])
+
+  const handleMoveEmail = useCallback(async (emailId, toMailboxId) => {
+    try {
+      await jmap.moveEmail(emailId, toMailboxId)
+      // E-Mail aus aktueller Liste entfernen
+      setEmails(prev => prev.filter(e => e.id !== emailId))
+      setEmailsTotal(prev => Math.max(0, prev - 1))
+      // Auch aus Suchergebnissen entfernen
+      setSearchResults(prev => prev ? {
+        ...prev,
+        emails: prev.emails.filter(e => e.id !== emailId),
+        total: Math.max(0, prev.total - 1)
+      } : null)
+      // Falls die verschobene E-Mail gerade angezeigt wird, Detail schließen
+      setSelectedEmail(prev => (prev?.id === emailId ? null : prev))
+      setEmailDetail(prev => (prev?.id === emailId ? null : prev))
+      // Event für Badge-Update
+      window.dispatchEvent(new CustomEvent('email-moved'))
+    } catch (e) {
+      console.error('Fehler beim Verschieben:', e)
+    }
+  }, [])
+
+  const searchEmails = useCallback(async (query) => {
+    if (!query.trim()) {
+      setSearchQuery('')
+      setSearchResults(null)
+      return
+    }
+
+    setSearchQuery(query)
+    setSearchLoading(true)
+    try {
+      const result = await jmap.searchEmails(query, { limit: 100 })
+      setSearchResults(result)
+    } catch (e) {
+      console.error('Fehler bei der Suche:', e)
+      setSearchResults({ emails: [], total: 0 })
+    } finally {
+      setSearchLoading(false)
+    }
+  }, [])
+
+  const clearSearch = useCallback(() => {
+    setSearchQuery('')
+    setSearchResults(null)
   }, [])
 
   const authenticateAccount = useCallback(async (acc) => {
@@ -171,7 +221,13 @@ export default function useJmapMail({ account }) {
     loadMoreEmails,
     handleSelectEmail,
     handleDeleteEmail,
+    handleMoveEmail,
     setSelectedEmail,
     setEmailDetail,
+    searchQuery,
+    searchResults,
+    searchLoading,
+    searchEmails,
+    clearSearch,
   }
 }

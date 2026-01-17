@@ -158,6 +158,44 @@ class JMAPClient {
   }
 
   /**
+   * Globale Fulltext-Suche über alle Ordner
+   */
+  async searchEmails(query, options = {}) {
+    const { limit = 50 } = options
+
+    const responses = await this.request([
+      ['Email/query', {
+        accountId: this.accountId,
+        filter: { text: query },
+        sort: [{ property: 'receivedAt', isAscending: false }],
+        limit
+      }, 'a'],
+      ['Email/get', {
+        accountId: this.accountId,
+        '#ids': {
+          resultOf: 'a',
+          name: 'Email/query',
+          path: '/ids'
+        },
+        properties: [
+          'id', 'blobId', 'threadId', 'mailboxIds',
+          'from', 'to', 'cc', 'bcc', 'replyTo',
+          'subject', 'sentAt', 'receivedAt',
+          'hasAttachment', 'preview', 'keywords'
+        ]
+      }, 'b']
+    ])
+
+    const queryResult = responses.find(r => r[0] === 'Email/query')
+    const getResult = responses.find(r => r[0] === 'Email/get')
+
+    return {
+      emails: getResult ? getResult[1].list : [],
+      total: queryResult ? queryResult[1].total : 0
+    }
+  }
+
+  /**
    * Einzelne E-Mail mit vollem Body abrufen
    */
   async getEmail(emailId) {

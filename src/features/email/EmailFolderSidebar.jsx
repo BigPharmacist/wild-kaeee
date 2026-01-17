@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { CaretLeft, CaretRight } from '@phosphor-icons/react'
 
 export default function EmailFolderSidebar({
@@ -6,10 +7,32 @@ export default function EmailFolderSidebar({
   mailboxes,
   selectedMailbox,
   onSelectMailbox,
+  onMoveEmail,
   getMailboxIcon,
   isExpanded,
   onToggle,
 }) {
+  const [dragOverMailboxId, setDragOverMailboxId] = useState(null)
+
+  const handleDragOver = (e, mailboxId) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    setDragOverMailboxId(mailboxId)
+  }
+
+  const handleDragLeave = () => {
+    setDragOverMailboxId(null)
+  }
+
+  const handleDrop = (e, mailboxId) => {
+    e.preventDefault()
+    setDragOverMailboxId(null)
+    const emailId = e.dataTransfer.getData('emailId')
+    if (emailId && mailboxId) {
+      onMoveEmail(emailId, mailboxId)
+    }
+  }
+
   return (
     <div
       className={`flex-shrink-0 border-r ${theme.border} ${theme.surface} flex flex-col transition-all duration-200 ${
@@ -30,34 +53,44 @@ export default function EmailFolderSidebar({
 
       {/* Mailbox-Liste */}
       <div className="flex-1 overflow-y-auto p-1.5">
-        {mailboxes.map(mailbox => (
-          <button
-            key={mailbox.id}
-            type="button"
-            onClick={() => onSelectMailbox(mailbox)}
-            className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors mb-0.5 ${
-              selectedMailbox?.id === mailbox.id
-                ? theme.navActive
-                : `${theme.text} ${theme.navHover}`
-            } ${!isExpanded ? 'justify-center' : ''}`}
-            title={!isExpanded ? mailbox.name : undefined}
-          >
-            <span className={selectedMailbox?.id === mailbox.id ? theme.accentText : theme.textMuted}>
-              {getMailboxIcon(mailbox.role)}
-            </span>
-            {isExpanded && (
-              <>
-                <span className="flex-1 truncate text-left">{mailbox.name}</span>
-                {mailbox.unreadEmails > 0 && (
-                  <span className={`text-xs font-medium ${theme.accentText}`}>{mailbox.unreadEmails}</span>
-                )}
-              </>
-            )}
-            {!isExpanded && mailbox.unreadEmails > 0 && (
-              <span className={`absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[#4C8BF5]`} />
-            )}
-          </button>
-        ))}
+        {mailboxes.map(mailbox => {
+          const isDragOver = dragOverMailboxId === mailbox.id
+          const isCurrentMailbox = selectedMailbox?.id === mailbox.id
+
+          return (
+            <button
+              key={mailbox.id}
+              type="button"
+              onClick={() => onSelectMailbox(mailbox)}
+              onDragOver={(e) => handleDragOver(e, mailbox.id)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, mailbox.id)}
+              className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors mb-0.5 ${
+                isDragOver
+                  ? 'bg-[#4C8BF5]/20 ring-2 ring-[#4C8BF5]'
+                  : isCurrentMailbox
+                    ? theme.navActive
+                    : `${theme.text} ${theme.navHover}`
+              } ${!isExpanded ? 'justify-center' : ''}`}
+              title={!isExpanded ? mailbox.name : undefined}
+            >
+              <span className={isCurrentMailbox ? theme.accentText : theme.textMuted}>
+                {getMailboxIcon(mailbox.role)}
+              </span>
+              {isExpanded && (
+                <>
+                  <span className="flex-1 truncate text-left">{mailbox.name}</span>
+                  {mailbox.unreadEmails > 0 && (
+                    <span className={`text-xs font-medium ${theme.accentText}`}>{mailbox.unreadEmails}</span>
+                  )}
+                </>
+              )}
+              {!isExpanded && mailbox.unreadEmails > 0 && (
+                <span className={`absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[#4C8BF5]`} />
+              )}
+            </button>
+          )
+        })}
       </div>
 
       {/* Account Info (nur wenn ausgeklappt) */}

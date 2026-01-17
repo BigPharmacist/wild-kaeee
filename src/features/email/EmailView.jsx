@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { CircleNotch, EnvelopeSimple, File, Folder, GearSix, MagnifyingGlass, PaperPlaneRight, Tray, Trash, Warning, X } from '@phosphor-icons/react'
 import EmailComposeModal from './EmailComposeModal'
 import EmailDetailPane from './EmailDetailPane'
@@ -55,8 +55,14 @@ export default function EmailView({ theme, account, hasAccess, onConfigureClick,
     loadMoreEmails,
     handleSelectEmail,
     handleDeleteEmail,
+    handleMoveEmail,
     setSelectedEmail,
     setEmailDetail,
+    searchQuery,
+    searchResults,
+    searchLoading,
+    searchEmails,
+    clearSearch,
   } = useJmapMail({ account })
 
   const {
@@ -77,8 +83,31 @@ export default function EmailView({ theme, account, hasAccess, onConfigureClick,
 
   const { downloadingAttachmentId, downloadAttachment } = useEmailAttachments()
 
-  // Suche
-  const [searchQuery, setSearchQuery] = useState('')
+  // Suche (lokaler Input + debounced Server-Suche)
+  const [searchInput, setSearchInput] = useState('')
+  const searchTimeoutRef = useRef(null)
+
+  // Debounced Suche auslösen
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+    }
+
+    if (!searchInput.trim()) {
+      clearSearch()
+      return
+    }
+
+    searchTimeoutRef.current = setTimeout(() => {
+      searchEmails(searchInput.trim())
+    }, 300)
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current)
+      }
+    }
+  }, [searchInput, searchEmails, clearSearch])
 
   // Folder-Sidebar (eingeklappt per default)
   const [folderSidebarExpanded, setFolderSidebarExpanded] = useState(false)
@@ -168,19 +197,10 @@ export default function EmailView({ theme, account, hasAccess, onConfigureClick,
     )
   }
 
-  // E-Mails filtern basierend auf Suche
-  const filteredEmails = searchQuery.trim()
-    ? emails.filter(email => {
-        const query = searchQuery.toLowerCase()
-        const from = email.from?.[0]
-        return (
-          email.subject?.toLowerCase().includes(query) ||
-          email.preview?.toLowerCase().includes(query) ||
-          from?.name?.toLowerCase().includes(query) ||
-          from?.email?.toLowerCase().includes(query)
-        )
-      })
-    : emails
+  // Angezeigte E-Mails: Suchergebnisse oder normale Ordner-Ansicht
+  const isSearchActive = searchResults !== null
+  const displayedEmails = isSearchActive ? searchResults.emails : emails
+  const displayedTotal = isSearchActive ? searchResults.total : emailsTotal
 
   // Main Email View
   return (
@@ -188,24 +208,33 @@ export default function EmailView({ theme, account, hasAccess, onConfigureClick,
       {/* Suchfeld */}
       <div className={`p-3 border-b ${theme.border}`}>
         <div className="relative">
-          <MagnifyingGlass size={18} className={`absolute left-3 top-1/2 -translate-y-1/2 ${theme.textMuted}`} />
+          {searchLoading ? (
+            <CircleNotch size={18} className={`absolute left-3 top-1/2 -translate-y-1/2 ${theme.textMuted} animate-spin`} />
+          ) : (
+            <MagnifyingGlass size={18} className={`absolute left-3 top-1/2 -translate-y-1/2 ${theme.textMuted}`} />
+          )}
           <input
             type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="E-Mails durchsuchen..."
-            className={`w-full pl-10 pr-10 py-2 rounded-lg border ${theme.border} ${theme.surface} ${theme.text} text-sm outline-none focus:border-[#FD8916] focus:ring-1 focus:ring-[#FD8916]`}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="Alle E-Mails durchsuchen..."
+            className={`w-full pl-10 pr-10 py-2 rounded-lg border ${theme.border} ${theme.surface} ${theme.text} text-sm outline-none focus:border-[#4C8BF5] focus:ring-1 focus:ring-[#4C8BF5]`}
           />
-          {searchQuery && (
+          {searchInput && (
             <button
               type="button"
-              onClick={() => setSearchQuery('')}
+              onClick={() => setSearchInput('')}
               className={`absolute right-3 top-1/2 -translate-y-1/2 ${theme.textMuted} hover:${theme.text}`}
             >
               <X size={16} />
             </button>
           )}
         </div>
+        {isSearchActive && (
+          <div className={`mt-2 text-xs ${theme.textMuted}`}>
+            {searchResults.total} Treffer in allen Ordnern
+          </div>
+        )}
       </div>
 
       <div className="flex h-[calc(100vh-280px)] min-h-[500px] overflow-hidden">
@@ -215,6 +244,7 @@ export default function EmailView({ theme, account, hasAccess, onConfigureClick,
           mailboxes={mailboxes}
           selectedMailbox={selectedMailbox}
           onSelectMailbox={setSelectedMailbox}
+          onMoveEmail={handleMoveEmail}
           getMailboxIcon={getMailboxIcon}
           isExpanded={folderSidebarExpanded}
           onToggle={() => setFolderSidebarExpanded(!folderSidebarExpanded)}
@@ -226,16 +256,17 @@ export default function EmailView({ theme, account, hasAccess, onConfigureClick,
           selectedMailbox={selectedMailbox}
           onSelectMailbox={setSelectedMailbox}
           getMailboxIcon={getMailboxIcon}
-          emailsTotal={searchQuery ? filteredEmails.length : emailsTotal}
-          emailsLoading={emailsLoading}
+          emailsTotal={displayedTotal}
+          emailsLoading={emailsLoading || searchLoading}
           emailsLoadingMore={emailsLoadingMore}
-          emails={filteredEmails}
+          emails={displayedEmails}
           selectedEmail={selectedEmail}
           onSelectEmail={handleSelectEmail}
           onCompose={openCompose}
           onScroll={handleEmailListScroll}
           listRef={emailListRef}
           formatDate={formatEmailDate}
+          isSearchActive={isSearchActive}
         />
 
         <EmailDetailPane

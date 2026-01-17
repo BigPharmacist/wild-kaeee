@@ -17,7 +17,15 @@ export default function EmailListPane({
   onScroll,
   listRef,
   formatDate,
+  isSearchActive = false,
 }) {
+  // Hilfsfunktion: Ordnername aus mailboxIds ermitteln
+  const getMailboxName = (mailboxIds) => {
+    if (!mailboxIds || !mailboxes.length) return null
+    const mailboxId = Object.keys(mailboxIds)[0]
+    const mailbox = mailboxes.find(m => m.id === mailboxId)
+    return mailbox?.name || null
+  }
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef(null)
 
@@ -112,13 +120,19 @@ export default function EmailListPane({
             {emails.map(email => {
               const isUnread = !email.keywords?.['$seen']
               const from = email.from?.[0]
+              const folderName = isSearchActive ? getMailboxName(email.mailboxIds) : null
 
               return (
                 <button
                   key={email.id}
                   type="button"
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData('emailId', email.id)
+                    e.dataTransfer.effectAllowed = 'move'
+                  }}
                   onClick={() => onSelectEmail(email)}
-                  className={`w-full text-left p-3 border-b ${theme.border} transition-colors ${
+                  className={`w-full text-left p-3 border-b ${theme.border} transition-colors cursor-grab active:cursor-grabbing ${
                     selectedEmail?.id === email.id ? theme.navActive : theme.bgHover
                   }`}
                 >
@@ -130,6 +144,11 @@ export default function EmailListPane({
                         </span>
                         {email.hasAttachment && (
                           <Paperclip size={14} className={theme.textMuted} />
+                        )}
+                        {folderName && (
+                          <span className={`text-xs px-1.5 py-0.5 rounded ${theme.bg} ${theme.textMuted}`}>
+                            {folderName}
+                          </span>
                         )}
                       </div>
                       <p className={`text-sm truncate ${isUnread ? 'font-medium' : ''} ${theme.text}`}>
