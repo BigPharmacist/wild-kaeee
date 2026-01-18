@@ -1,4 +1,4 @@
-import BriefEditor from './BriefEditor'
+import PagedBriefEditor from './PagedBriefEditor'
 
 const DokumenteView = ({
   theme,
@@ -8,7 +8,7 @@ const DokumenteView = ({
 }) => {
   // Briefe-Tab hat eigenes Layout
   if (dokumenteTab === 'briefe') {
-    return <BriefEditor theme={theme} pharmacies={pharmacies} aiSettings={aiSettings} />
+    return <PagedBriefEditor theme={theme} pharmacies={pharmacies} aiSettings={aiSettings} />
   }
 
   return (
