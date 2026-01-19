@@ -18,7 +18,7 @@ const PhotosView = ({
       {secondaryTab === 'visitenkarten' ? 'Visitenkarten' : 'Fotos'}
     </h2>
 
-    {(secondaryTab === 'uploads' || secondaryTab === 'library' || secondaryTab === 'ocr') && (
+    {(secondaryTab === 'uploads' || secondaryTab === 'ocr') && (
       <>
         {photosLoading ? (
           <p className={theme.textMuted}>Fotos werden geladen...</p>
@@ -70,13 +70,15 @@ const PhotosView = ({
                       <p className="text-xs text-rose-400">OCR fehlgeschlagen</p>
                     )}
                     {!ocrProcessing[photo.name] && !photoOcrData[photo.name] && (
-                      <button
-                        type="button"
+                      <span
+                        role="button"
+                        tabIndex={0}
                         onClick={(e) => { e.stopPropagation(); runOcrForPhoto(photo.name, photo.url); }}
-                        className={`text-xs ${theme.accentText} hover:underline`}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); runOcrForPhoto(photo.name, photo.url); } }}
+                        className={`text-xs ${theme.accentText} hover:underline cursor-pointer`}
                       >
                         OCR starten
-                      </button>
+                      </span>
                     )}
                   </div>
                 </button>

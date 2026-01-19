@@ -16,6 +16,7 @@ import { DokumenteView } from './features/dokumente'
 import { CalendarView, useCalendar } from './features/calendar'
 import { ColorsView } from './features/colors'
 import { useRechnungen } from './features/rechnungen'
+import { ArchivView, useArchiv } from './features/archiv'
 import { useTracking, TrackingWidget, CourierMap, CourierTable } from './features/tracking'
 import ReactCrop from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
@@ -535,6 +536,38 @@ function App() {
     closePdfModal,
     setCollapsedDays,
   } = useRechnungen()
+  const {
+    documents: archivDocuments,
+    tags: archivTags,
+    correspondents: archivCorrespondents,
+    documentTypes: archivDocumentTypes,
+    loading: archivLoading,
+    uploading: archivUploading,
+    error: archivError,
+    selectedDocument: archivSelectedDocument,
+    previewUrl: archivPreviewUrl,
+    previewLoading: archivPreviewLoading,
+    searchQuery: archivSearchQuery,
+    selectedTag: archivSelectedTag,
+    selectedCorrespondent: archivSelectedCorrespondent,
+    selectedType: archivSelectedType,
+    fetchDocuments: fetchArchivDocuments,
+    fetchMetadata: fetchArchivMetadata,
+    uploadDocument: uploadArchivDocument,
+    downloadDocument: downloadArchivDocument,
+    loadPreview: loadArchivPreview,
+    closePreview: closeArchivPreview,
+    loadThumbnail: loadArchivThumbnail,
+    fetchPaperlessConfig,
+    search: archivSearch,
+    filterByTag: archivFilterByTag,
+    filterByCorrespondent: archivFilterByCorrespondent,
+    filterByType: archivFilterByType,
+    clearFilters: archivClearFilters,
+    getTagsForDocument: getArchivTagsForDocument,
+    getCorrespondentForDocument: getArchivCorrespondentForDocument,
+    getTypeForDocument: getArchivTypeForDocument,
+  } = useArchiv()
   const {
     calendars,
     calendarsLoading,
@@ -2431,7 +2464,7 @@ function App() {
                 </>
               )}
 
-              {activeView === 'misc' && ['uploads', 'library', 'ocr', 'visitenkarten'].includes(secondaryTab) && (
+              {activeView === 'misc' && ['uploads', 'ocr', 'visitenkarten'].includes(secondaryTab) && (
                 <PhotosView
                   theme={theme}
                   Icons={Icons}
@@ -2446,6 +2479,42 @@ function App() {
                   businessCardsLoading={businessCardsLoading}
                   businessCards={businessCards}
                   deleteBusinessCard={deleteBusinessCard}
+                />
+              )}
+
+              {activeView === 'misc' && secondaryTab === 'library' && (
+                <ArchivView
+                  theme={theme}
+                  documents={archivDocuments}
+                  tags={archivTags}
+                  correspondents={archivCorrespondents}
+                  documentTypes={archivDocumentTypes}
+                  loading={archivLoading}
+                  uploading={archivUploading}
+                  error={archivError}
+                  selectedDocument={archivSelectedDocument}
+                  previewUrl={archivPreviewUrl}
+                  previewLoading={archivPreviewLoading}
+                  searchQuery={archivSearchQuery}
+                  selectedTag={archivSelectedTag}
+                  selectedCorrespondent={archivSelectedCorrespondent}
+                  selectedType={archivSelectedType}
+                  fetchDocuments={fetchArchivDocuments}
+                  fetchMetadata={fetchArchivMetadata}
+                  uploadDocument={uploadArchivDocument}
+                  downloadDocument={downloadArchivDocument}
+                  loadPreview={loadArchivPreview}
+                  closePreview={closeArchivPreview}
+                  loadThumbnail={loadArchivThumbnail}
+                  fetchPaperlessConfig={fetchPaperlessConfig}
+                  search={archivSearch}
+                  filterByTag={archivFilterByTag}
+                  filterByCorrespondent={archivFilterByCorrespondent}
+                  filterByType={archivFilterByType}
+                  clearFilters={archivClearFilters}
+                  getTagsForDocument={getArchivTagsForDocument}
+                  getCorrespondentForDocument={getArchivCorrespondentForDocument}
+                  getTypeForDocument={getArchivTypeForDocument}
                 />
               )}
 
