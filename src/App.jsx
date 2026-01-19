@@ -16,6 +16,7 @@ import { DokumenteView } from './features/dokumente'
 import { CalendarView, useCalendar } from './features/calendar'
 import { ColorsView } from './features/colors'
 import { useRechnungen } from './features/rechnungen'
+import { useTracking, TrackingWidget, CourierMap, CourierTable } from './features/tracking'
 import ReactCrop from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 import { jsPDF } from 'jspdf'
@@ -84,7 +85,19 @@ function App() {
     setShowExited,
     setStaffViewMode,
     isExited,
+    toggleTrackingEnabled,
   } = useStaff({ session, pharmacies })
+  const {
+    isTracking,
+    trackingError,
+    lastPosition,
+    canTrack,
+    courierLocations,
+    locationsLoading,
+    startTracking,
+    stopTracking,
+    fetchCourierLocations,
+  } = useTracking({ currentStaff, session, isTrackingViewOpen: activeView === 'settings' && settingsTab === 'tracking' })
   const {
     emailAccounts,
     emailPermissions,
@@ -679,6 +692,7 @@ function App() {
       { id: 'staff', label: 'Kollegium' },
       { id: 'contacts', label: 'Kontakte' },
       { id: 'email', label: 'E-Mail' },
+      ...(currentStaff?.is_admin ? [{ id: 'tracking', label: 'Tracking' }] : []),
       ...(currentStaff?.is_admin ? [{ id: 'admin', label: 'Admin' }] : []),
     ],
   }), [currentStaff?.is_admin, staff, session?.user?.id])
@@ -2369,37 +2383,52 @@ function App() {
           <main className="flex-1 p-4 lg:p-8 overflow-auto">
             <div className={activeView === 'chat' || activeView === 'post' ? 'w-full' : 'max-w-5xl'}>
               {activeView === 'dashboard' && (
-                <DashboardHome
-                  theme={theme}
-                  openWeatherModal={openWeatherModal}
-                  weatherLoading={weatherLoading}
-                  weatherError={weatherError}
-                  weatherData={weatherData}
-                  weatherLocation={weatherLocation}
-                  weatherDescription={weatherDescription}
-                  WeatherIcon={WeatherIcon}
-                  Icons={Icons}
-                  dashboardEventsLoading={dashboardEventsLoading}
-                  dashboardEvents={dashboardEvents}
-                  setActiveView={setActiveView}
-                  photoUploading={photoUploading}
-                  latestPhoto={latestPhoto}
-                  pollenData={pollenData}
-                  pollenLoading={pollenLoading}
-                  pollenError={pollenError}
-                  pollenRegion={pollenRegion}
-                  pollenNames={pollenNames}
-                  severityLabels={severityLabels}
-                  severityColors={severityColors}
-                  biowetterLoading={biowetterLoading}
-                  biowetterError={biowetterError}
-                  biowetterZone={biowetterZone}
-                  getBiowetterForecasts={getBiowetterForecasts}
-                  biowetterLastUpdate={biowetterLastUpdate}
-                  biowetterAiRecommendation={biowetterAiRecommendation}
-                  biowetterAiLoading={biowetterAiLoading}
-                  openBiowetterModal={() => setShowBiowetterModal(true)}
-                />
+                <>
+                  {canTrack && (
+                    <div className="mb-6">
+                      <TrackingWidget
+                        theme={theme}
+                        isTracking={isTracking}
+                        trackingError={trackingError}
+                        lastPosition={lastPosition}
+                        canTrack={canTrack}
+                        onStartTracking={startTracking}
+                        onStopTracking={stopTracking}
+                      />
+                    </div>
+                  )}
+                  <DashboardHome
+                    theme={theme}
+                    openWeatherModal={openWeatherModal}
+                    weatherLoading={weatherLoading}
+                    weatherError={weatherError}
+                    weatherData={weatherData}
+                    weatherLocation={weatherLocation}
+                    weatherDescription={weatherDescription}
+                    WeatherIcon={WeatherIcon}
+                    Icons={Icons}
+                    dashboardEventsLoading={dashboardEventsLoading}
+                    dashboardEvents={dashboardEvents}
+                    setActiveView={setActiveView}
+                    photoUploading={photoUploading}
+                    latestPhoto={latestPhoto}
+                    pollenData={pollenData}
+                    pollenLoading={pollenLoading}
+                    pollenError={pollenError}
+                    pollenRegion={pollenRegion}
+                    pollenNames={pollenNames}
+                    severityLabels={severityLabels}
+                    severityColors={severityColors}
+                    biowetterLoading={biowetterLoading}
+                    biowetterError={biowetterError}
+                    biowetterZone={biowetterZone}
+                    getBiowetterForecasts={getBiowetterForecasts}
+                    biowetterLastUpdate={biowetterLastUpdate}
+                    biowetterAiRecommendation={biowetterAiRecommendation}
+                    biowetterAiLoading={biowetterAiLoading}
+                    openBiowetterModal={() => setShowBiowetterModal(true)}
+                  />
+                </>
               )}
 
               {activeView === 'misc' && ['uploads', 'library', 'ocr', 'visitenkarten'].includes(secondaryTab) && (
@@ -2842,6 +2871,12 @@ function App() {
                   fetchContacts={fetchContacts}
                   openContactModal={openContactModal}
                   openContactDetail={openContactDetail}
+                  toggleTrackingEnabled={toggleTrackingEnabled}
+                  CourierMap={CourierMap}
+                  courierLocations={courierLocations}
+                  locationsLoading={locationsLoading}
+                  fetchCourierLocations={fetchCourierLocations}
+                  CourierTable={CourierTable}
                 />
               )}
             </div>

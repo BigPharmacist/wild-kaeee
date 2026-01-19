@@ -75,6 +75,7 @@ export default function EmailView({ theme, account, hasAccess, onConfigureClick,
     attachments,
     sending,
     sendError,
+    sendSuccess,
     openCompose,
     closeCompose,
     handleSend,
@@ -351,6 +352,7 @@ export default function EmailView({ theme, account, hasAccess, onConfigureClick,
         attachments={attachments}
         sendError={sendError}
         sending={sending}
+        sendSuccess={sendSuccess}
         onClose={closeCompose}
         onSend={handleSend}
         setComposeData={setComposeData}

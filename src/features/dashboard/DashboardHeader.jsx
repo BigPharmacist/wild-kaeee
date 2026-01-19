@@ -1,3 +1,5 @@
+import SplitFlapDisplay from './SplitFlapDisplay'
+
 const DashboardHeader = ({
   theme,
   mobileNavOpen,
@@ -18,7 +20,7 @@ const DashboardHeader = ({
   urgentFaxe = [],
   onUrgentFaxClick,
 }) => (
-  <header className={`bg-white border-b ${theme.border} px-4 lg:px-6 py-3 flex items-center justify-between sticky top-0 z-40`}>
+  <header className={`bg-white border-b ${theme.border} px-4 lg:px-6 py-3 flex items-center justify-between sticky top-0 z-40 relative`}>
     <div className="flex items-center gap-3">
       <button
         onClick={() => setMobileNavOpen(!mobileNavOpen)}
@@ -29,50 +31,13 @@ const DashboardHeader = ({
       </button>
       <img src="/logo.png" alt="Kaeee" className="h-8" />
 
-      {urgentFaxe.length > 0 && (() => {
-        // Ältestes Fax zuerst (aufsteigend nach Datum)
-        const sorted = [...urgentFaxe].sort((a, b) =>
-          new Date(a.fax_received_at) - new Date(b.fax_received_at)
-        )
-        const oldest = sorted[0]
-        const rest = sorted.slice(1)
-
-        return (
-          <div className="flex items-center gap-1.5 ml-2">
-            {/* Ältestes Fax - vollständig */}
-            <button
-              type="button"
-              onClick={() => onUrgentFaxClick?.(oldest.id)}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-white text-sm max-w-[280px] cursor-pointer hover:opacity-90 transition-opacity ${
-                oldest.prioritaet === 'ROT' ? 'bg-red-500 hover:bg-red-600' : 'bg-orange-500 hover:bg-orange-600'
-              }`}
-              title={`${oldest.absender}: ${oldest.zusammenfassung}`}
-            >
-              <Icons.PostHorn className="w-4 h-4 flex-shrink-0" />
-              <span className="font-medium truncate">{oldest.absender}</span>
-              <span className="hidden sm:inline text-white/80 truncate">
-                {oldest.zusammenfassung?.slice(0, 40)}{oldest.zusammenfassung?.length > 40 ? '…' : ''}
-              </span>
-            </button>
-
-            {/* Weitere Faxe - kompakt */}
-            {rest.map((fax) => (
-              <button
-                type="button"
-                key={fax.id}
-                onClick={() => onUrgentFaxClick?.(fax.id)}
-                className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-white text-xs cursor-pointer hover:opacity-90 transition-opacity ${
-                  fax.prioritaet === 'ROT' ? 'bg-red-500 hover:bg-red-600' : 'bg-orange-500 hover:bg-orange-600'
-                }`}
-                title={`${fax.absender}: ${fax.zusammenfassung}`}
-              >
-                <Icons.PostHorn className="w-3 h-3 flex-shrink-0" />
-                <span className="font-medium truncate max-w-[50px]">{fax.absender?.slice(0, 6)}</span>
-              </button>
-            ))}
-          </div>
-        )
-      })()}
+      <div className="hidden lg:block absolute left-[17rem]">
+        <SplitFlapDisplay
+          charCount={24}
+          interval={12000}
+          urgentFaxe={urgentFaxe}
+        />
+      </div>
     </div>
 
     <div className="flex items-center gap-2 sm:gap-4">

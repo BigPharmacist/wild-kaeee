@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'react'
-import { CircleNotch, Link, ListBullets, ListNumbers, Paperclip, PaperPlaneTilt, Quotes, Sparkle, TextB, TextItalic, TextUnderline, X } from '@phosphor-icons/react'
+import { CheckCircle, CircleNotch, Link, ListBullets, ListNumbers, Paperclip, PaperPlaneTilt, Quotes, Sparkle, TextB, TextItalic, TextUnderline, X } from '@phosphor-icons/react'
 
 export default function EmailComposeModal({
   theme,
@@ -10,6 +10,7 @@ export default function EmailComposeModal({
   attachments = [],
   sendError,
   sending,
+  sendSuccess,
   onClose,
   onSend,
   setComposeData,
@@ -34,6 +35,16 @@ export default function EmailComposeModal({
       setAiChatHistory([]) // Chat-Verlauf zurücksetzen
     }
   }, [show])
+
+  // Nach erfolgreicher Sendung kurz die Erfolgsmeldung zeigen, dann schließen
+  useEffect(() => {
+    if (sendSuccess) {
+      const timer = setTimeout(() => {
+        onClose()
+      }, 1500)
+      return () => clearTimeout(timer)
+    }
+  }, [sendSuccess, onClose])
 
   // KI-Text generieren via Nebius API mit strukturiertem JSON-Output
   const handleAiGenerate = async () => {
@@ -211,6 +222,16 @@ Inhalt: ${originalEmail.preview || originalEmail.textBody || ''}`
   return (
     <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${theme.overlay}`}>
       <div className={`${theme.panel} rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col ${theme.cardShadow} relative`}>
+
+        {/* Erfolgs-Overlay nach dem Senden */}
+        {sendSuccess && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/95 rounded-2xl backdrop-blur-sm">
+            <div className="relative">
+              <CheckCircle size={64} weight="fill" className="text-emerald-500" />
+            </div>
+            <p className="mt-4 text-lg font-medium text-emerald-600">E-Mail gesendet</p>
+          </div>
+        )}
 
         {/* KI-Generierung Overlay */}
         {aiGenerating && (

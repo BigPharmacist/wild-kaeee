@@ -15,11 +15,14 @@ export default function useEmailCompose({ selectedMailbox, loadEmails, formatDat
   const [attachments, setAttachments] = useState([]) // {file, blobId, name, type, size, uploading, error}
   const [sending, setSending] = useState(false)
   const [sendError, setSendError] = useState('')
+  const [sendSuccess, setSendSuccess] = useState(false)
 
   const closeCompose = useCallback(() => {
     setShowCompose(false)
     setOriginalEmail(null)
     setAttachments([])
+    setSendSuccess(false)
+    setComposeData({ to: '', cc: '', bcc: '', subject: '', body: '' })
   }, [])
 
   const openCompose = useCallback((mode = 'new', replyToEmail = null) => {
@@ -157,9 +160,8 @@ ${composeData.body}
         attachments: jmapAttachments.length > 0 ? jmapAttachments : undefined
       })
 
-      setShowCompose(false)
-      setComposeData({ to: '', cc: '', bcc: '', subject: '', body: '' })
-      setAttachments([])
+      // Erfolgsmeldung anzeigen (Modal schließt sich nach kurzer Verzögerung)
+      setSendSuccess(true)
 
       if (selectedMailbox?.role === 'sent') {
         loadEmails(selectedMailbox.id)
@@ -179,6 +181,7 @@ ${composeData.body}
     attachments,
     sending,
     sendError,
+    sendSuccess,
     openCompose,
     closeCompose,
     handleSend,
