@@ -13,7 +13,7 @@ import { ChatView, useChat, useChatUnreadCounts } from './features/chat'
 import { SettingsView, usePharmacies, useStaff } from './features/settings'
 import { PlanView } from './features/plan'
 import { DokumenteView } from './features/dokumente'
-import { CalendarView, useCalendar } from './features/calendar'
+import { CalendarView, useCalendar, NotdienstplanungView } from './features/calendar'
 import { ColorsView } from './features/colors'
 import { useRechnungen } from './features/rechnungen'
 import { ArchivView, useArchiv } from './features/archiv'
@@ -516,6 +516,7 @@ function App() {
   } = useFaxCounts()
   const { urgentFaxe } = useUrgentFax()
   const [pendingFaxId, setPendingFaxId] = useState(null)
+  const [newFaxModal, setNewFaxModal] = useState(null) // { id, absender, fax_received_at }
   const [faxPdfPopup, setFaxPdfPopup] = useState(null) // { id, pdfUrl, absender }
   const [readMessageIds, setReadMessageIds] = useState({ amk: new Set(), recall: new Set(), lav: new Set() })
   const [planData, setPlanData] = useState(null)
@@ -702,6 +703,7 @@ function App() {
     ],
     calendar: [
       { id: 'calendars', label: 'Kalender' },
+      { id: 'notdienstplanung', label: 'Notdienstplanung' },
     ],
     chat: [
       { id: 'group', label: 'Gruppenchat' },
@@ -848,6 +850,21 @@ function App() {
       document.title = 'Kaeee'
     }
   }, [faxCount])
+
+  // Neues Fax Modal anzeigen
+  useEffect(() => {
+    const handleNewFax = (event) => {
+      const fax = event.detail
+      setNewFaxModal({
+        id: fax.id,
+        absender: fax.absender || 'Unbekannt',
+        fax_received_at: fax.fax_received_at
+      })
+    }
+
+    window.addEventListener('new-fax-received', handleNewFax)
+    return () => window.removeEventListener('new-fax-received', handleNewFax)
+  }, [])
 
   // Mobile Nav: Nach 3 Sekunden automatisch schließen wenn primärer Punkt gewählt
   useEffect(() => {
@@ -2479,6 +2496,7 @@ function App() {
           setActiveView={setActiveView}
           Icons={Icons}
           urgentFaxe={urgentFaxe}
+          faxCount={faxCount}
           onUrgentFaxClick={handleUrgentFaxClick}
         />
 
@@ -2674,7 +2692,7 @@ function App() {
                 />
               )}
 
-              {activeView === 'calendar' && (
+              {activeView === 'calendar' && secondaryTab === 'calendars' && (
                 <CalendarView
                   theme={theme}
                   calendars={calendars}
@@ -2698,6 +2716,14 @@ function App() {
                   canWriteCurrentCalendar={canWriteCurrentCalendar}
                   openEventModal={openEventModal}
                   getEventColor={getEventColor}
+                />
+              )}
+
+              {activeView === 'calendar' && secondaryTab === 'notdienstplanung' && (
+                <NotdienstplanungView
+                  theme={theme}
+                  staff={staff}
+                  session={session}
                 />
               )}
 
@@ -4941,6 +4967,49 @@ function App() {
                   className={`px-4 py-2.5 rounded-lg ${theme.accent} text-white font-medium`}
                 >
                   Schließen
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Neues Fax Modal */}
+        {newFaxModal && (
+          <div className={`fixed inset-0 ${theme.overlay} flex items-center justify-center z-50 p-4`}>
+            <div className={`${theme.panel} rounded-2xl border ${theme.border} ${theme.cardShadow} w-full max-w-md`}>
+              <div className={`flex items-center gap-4 p-6`}>
+                <div className="w-14 h-14 rounded-full bg-[#4C8BF5]/10 flex items-center justify-center flex-shrink-0">
+                  <Printer size={28} className="text-[#4C8BF5]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className={`text-lg font-semibold ${theme.text}`}>Neues Fax eingetroffen</h3>
+                  <p className={`text-sm ${theme.textSecondary} mt-1`}>
+                    {newFaxModal.absender !== 'Unbekannt' ? `Von: ${newFaxModal.absender}` : 'Absender unbekannt'}
+                  </p>
+                  {newFaxModal.fax_received_at && (
+                    <p className={`text-xs ${theme.textMuted} mt-1`}>
+                      {new Date(newFaxModal.fax_received_at).toLocaleString('de-DE')}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className={`flex gap-3 p-4 border-t ${theme.border}`}>
+                <button
+                  type="button"
+                  onClick={() => setNewFaxModal(null)}
+                  className={`flex-1 px-4 py-2.5 rounded-lg border ${theme.border} ${theme.text} font-medium ${theme.bgHover}`}
+                >
+                  Später
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveView('fax')
+                    setNewFaxModal(null)
+                  }}
+                  className={`flex-1 px-4 py-2.5 rounded-lg ${theme.accent} text-white font-medium`}
+                >
+                  Zum Fax
                 </button>
               </div>
             </div>

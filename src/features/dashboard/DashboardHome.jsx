@@ -141,15 +141,18 @@ const DashboardHome = ({
           endOfWeek.setDate(today.getDate() + (today.getDay() === 0 ? 0 : daysUntilSunday))
           const endOfWeekStr = `${endOfWeek.getFullYear()}-${String(endOfWeek.getMonth() + 1).padStart(2, '0')}-${String(endOfWeek.getDate()).padStart(2, '0')}`
 
-          const todayEvents = dashboardEvents.filter((e) => e.start_time.substring(0, 10) === todayStr)
+          // Notdienst-Kalender ausfiltern
+          const isNotNotdienst = (e) => e.calendarName !== 'Notdienst'
+
+          const todayEvents = dashboardEvents.filter((e) => e.start_time.substring(0, 10) === todayStr && isNotNotdienst(e))
           const weekEvents = dashboardEvents.filter((e) => {
             const eventDate = e.start_time.substring(0, 10)
-            return eventDate > todayStr && eventDate <= endOfWeekStr
+            return eventDate > todayStr && eventDate <= endOfWeekStr && isNotNotdienst(e)
           })
-          const futureEvents = dashboardEvents.filter((e) => {
-            const eventDate = e.start_time.substring(0, 10)
-            return eventDate > endOfWeekStr
-          }).slice(0, 5)
+          // Nächste 5 Termine (ohne Notdienste)
+          const nextFiveEvents = dashboardEvents
+            .filter(isNotNotdienst)
+            .slice(0, 5)
 
           const formatTime = (dateStr) => {
             return new Date(dateStr).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
@@ -180,9 +183,11 @@ const DashboardHome = ({
                 )}
               </div>
 
-              {weekEvents.length > 0 && (
-                <div>
-                  <p className={`text-xs font-medium mb-2 ${theme.textSecondary}`}>Diese Woche</p>
+              <div>
+                <p className={`text-xs font-medium mb-2 ${theme.textSecondary}`}>Diese Woche</p>
+                {weekEvents.length === 0 ? (
+                  <p className={`text-xs ${theme.textMuted}`}>Keine Termine</p>
+                ) : (
                   <div className="space-y-1.5">
                     {weekEvents.map((event) => (
                       <div key={event.id} className="flex items-center gap-2">
@@ -192,14 +197,16 @@ const DashboardHome = ({
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
-              {futureEvents.length > 0 && (
-                <div>
-                  <p className={`text-xs font-medium mb-2 ${theme.textSecondary}`}>Demnächst</p>
+              <div>
+                <p className={`text-xs font-medium mb-2 ${theme.textSecondary}`}>Nächste 5 Termine</p>
+                {nextFiveEvents.length === 0 ? (
+                  <p className={`text-xs ${theme.textMuted}`}>Keine Termine</p>
+                ) : (
                   <div className="space-y-1.5">
-                    {futureEvents.map((event) => (
+                    {nextFiveEvents.map((event) => (
                       <div key={event.id} className="flex items-center gap-2">
                         <div className="w-1 h-4 rounded" style={{ backgroundColor: event.calendarColor }} />
                         <span className={`text-xs ${theme.textMuted} w-16`}>{formatDate(event.start_time)}</span>
@@ -207,8 +214,8 @@ const DashboardHome = ({
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           )
         })()}
