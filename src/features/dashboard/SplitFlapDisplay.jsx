@@ -132,7 +132,7 @@ const SplitFlapChar = ({ targetChar, delay = 0 }) => {
   )
 }
 
-const SplitFlapDisplay = ({ messages = [], charCount = 20, interval = 5000, urgentFaxe = [] }) => {
+const SplitFlapDisplay = ({ messages = [], charCount = 20, interval = 5000, urgentFaxe = [], faxCount = 0 }) => {
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0)
   const [displayText, setDisplayText] = useState('')
 
@@ -158,12 +158,19 @@ const SplitFlapDisplay = ({ messages = [], charCount = 20, interval = 5000, urge
     fax.zusammenfassung || '',
   ]).filter(msg => msg.length > 0)
 
-  // Priorität: Fax-Nachrichten > übergebene Messages > Standard
+  // Fax-Eingang Nachricht wenn Faxe vorhanden aber keine urgenten
+  const faxCountMessages = faxCount > 0 && faxMessages.length === 0
+    ? [`${faxCount} FAX IM EINGANG`]
+    : []
+
+  // Priorität: Urgent Fax > Fax-Count > übergebene Messages > Standard
   const activeMessages = faxMessages.length > 0
     ? faxMessages
-    : messages.length > 0
-      ? messages
-      : defaultMessages
+    : faxCountMessages.length > 0
+      ? [...faxCountMessages, ...defaultMessages]
+      : messages.length > 0
+        ? messages
+        : defaultMessages
 
   useEffect(() => {
     const updateDisplay = () => {

@@ -1,7 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 
-const POLLING_INTERVAL = 30000 // 30 Sekunden als Fallback
+const POLLING_INTERVAL = 30000 // 30 Sekunden
+const FAX_NOTIFICATION_SOUND = 'https://proxy.notificationsounds.com/message-tones/relax-message-tone/download/file-sounds-1217-relax.mp3'
+
+const playNotificationSound = () => {
+  const audio = new Audio(FAX_NOTIFICATION_SOUND)
+  audio.play().catch(() => {}) // Ignoriere Autoplay-Fehler, Modal ist wichtiger
+}
 
 /**
  * Hook für Fax Unread-Count mit Echtzeit-Updates
@@ -12,15 +18,38 @@ const POLLING_INTERVAL = 30000 // 30 Sekunden als Fallback
 export default function useFaxCounts() {
   const [faxCount, setFaxCount] = useState(0)
   const channelRef = useRef(null)
+  const prevCountRef = useRef(0)
+  const lastFaxIdRef = useRef(null)
 
-  const fetchCount = useCallback(async () => {
+  const fetchCount = useCallback(async (checkForNew = false) => {
     const { count, error } = await supabase
       .from('faxe')
       .select('id', { count: 'exact', head: true })
       .eq('status', 'neu')
 
     if (!error) {
-      setFaxCount(count || 0)
+      const newCount = count || 0
+
+      // Prüfen ob neue Faxe hinzugekommen sind (nur beim Polling, nicht beim Initial-Load)
+      if (checkForNew && newCount > prevCountRef.current) {
+        // Neuestes Fax abrufen für Modal
+        const { data: newestFax } = await supabase
+          .from('faxe')
+          .select('*')
+          .eq('status', 'neu')
+          .order('fax_received_at', { ascending: false })
+          .limit(1)
+          .single()
+
+        if (newestFax && newestFax.id !== lastFaxIdRef.current) {
+          lastFaxIdRef.current = newestFax.id
+          window.dispatchEvent(new CustomEvent('new-fax-received', { detail: newestFax }))
+          playNotificationSound()
+        }
+      }
+
+      prevCountRef.current = newCount
+      setFaxCount(newCount)
     }
   }, [])
 
@@ -45,9 +74,9 @@ export default function useFaxCounts() {
     fetchCount()
   }, [fetchCount])
 
-  // Fallback Polling (kürzer für bessere UX)
+  // Fallback Polling (kürzer für bessere UX) - mit Check für neue Faxe
   useEffect(() => {
-    const interval = setInterval(fetchCount, POLLING_INTERVAL)
+    const interval = setInterval(() => fetchCount(true), POLLING_INTERVAL)
     return () => clearInterval(interval)
   }, [fetchCount])
 
@@ -66,6 +95,10 @@ export default function useFaxCounts() {
         // Neues Fax - prüfen ob Status 'neu'
         if (payload.new?.status === 'neu') {
           setFaxCount(prev => prev + 1)
+          // Modal-Event dispatchen
+          window.dispatchEvent(new CustomEvent('new-fax-received', { detail: payload.new }))
+          // Sound versuchen (funktioniert nur nach Benutzerinteraktion)
+          playNotificationSound()
         }
       })
       .on('postgres_changes', {

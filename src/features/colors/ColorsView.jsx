@@ -1,3 +1,21 @@
+const notificationSounds = [
+  { name: 'Slick', url: 'https://proxy.notificationsounds.com/soft-subtle-ringtones/slick-notification/download/file-sounds-1329-slick.mp3', duration: '2s' },
+  { name: 'Come Here', url: 'https://proxy.notificationsounds.com/notification-sounds/come-here-notification/download/file-sounds-1332-come-here.mp3', duration: '1s' },
+  { name: 'So Proud', url: 'https://proxy.notificationsounds.com/notification-sounds/so-proud-notification/download/file-sounds-1228-so-proud.mp3', duration: '3s' },
+  { name: 'Relax', url: 'https://proxy.notificationsounds.com/message-tones/relax-message-tone/download/file-sounds-1217-relax.mp3', duration: '4s' },
+  { name: 'Jokingly', url: 'https://proxy.notificationsounds.com/notification-sounds/jokingly-notification/download/file-sounds-1337-jokingly.mp3', duration: '1s' },
+  { name: 'Involved', url: 'https://proxy.notificationsounds.com/notification-sounds/involved-notification/download/file-sounds-1331-involved.mp3', duration: '2s' },
+  { name: 'Checked Off', url: 'https://proxy.notificationsounds.com/notification-sounds/message-tone-checked-off/download/file-sounds-1335-checked-off.mp3', duration: '2s' },
+  { name: 'No Problem', url: 'https://proxy.notificationsounds.com/free-jingles-and-logos/no-problem-notification-sound/download/file-sounds-1236-no-problem.mp3', duration: '2s' },
+  { name: 'You would be glad', url: 'https://proxy.notificationsounds.com/notification-sounds/ringtone-you-would-be-glad-to-know/download/file-sounds-1350-you-would-be-glad.mp3', duration: '5s' },
+  { name: 'Smile', url: 'https://proxy.notificationsounds.com/free-jingles-and-logos/smile-ringtone/download/file-sounds-1325-smile.mp3', duration: '2s' },
+]
+
+const playSound = (url) => {
+  const audio = new Audio(url)
+  audio.play().catch(err => console.error('Audio playback failed:', err))
+}
+
 const ColorsView = ({ theme }) => {
   const colorSections = [
     {
@@ -175,6 +193,36 @@ const ColorsView = ({ theme }) => {
             Error
           </span>
         </div>
+      </div>
+
+      {/* Notification Sounds */}
+      <div className={`${theme.panel} rounded-2xl p-6 border ${theme.border} ${theme.cardShadow} mb-6`}>
+        <h3 className={`text-lg font-semibold mb-4 ${theme.text}`}>Fax-Benachrichtigungstöne</h3>
+        <p className={`text-sm ${theme.textMuted} mb-4`}>
+          Klicke auf einen Sound, um ihn zu testen. Diese können als Benachrichtigungston für neue Faxe verwendet werden.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {notificationSounds.map((sound, index) => (
+            <button
+              key={sound.name}
+              onClick={() => playSound(sound.url)}
+              className={`flex items-center gap-3 p-3 rounded-xl border ${theme.border} bg-white hover:bg-gray-50 transition-all text-left cursor-pointer`}
+            >
+              <div className={`w-10 h-10 rounded-full ${theme.primaryBg} flex items-center justify-center text-white flex-shrink-0`}>
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z"/>
+                </svg>
+              </div>
+              <div className="min-w-0">
+                <div className={`font-medium text-sm ${theme.text} truncate`}>{index + 1}. {sound.name}</div>
+                <div className={`text-xs ${theme.textMuted}`}>{sound.duration}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+        <p className={`text-xs ${theme.textMuted} mt-4`}>
+          Sounds von <a href="https://notificationsounds.com" target="_blank" rel="noopener noreferrer" className={theme.accentText}>notificationsounds.com</a> (Creative Commons)
+        </p>
       </div>
 
       {/* Color Swatches */}

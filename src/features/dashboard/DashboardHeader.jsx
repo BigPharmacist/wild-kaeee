@@ -18,6 +18,7 @@ const DashboardHeader = ({
   setActiveView,
   Icons, // eslint-disable-line no-unused-vars -- used as Icons.X etc
   urgentFaxe = [],
+  faxCount = 0,
   onUrgentFaxClick: _onUrgentFaxClick, // eslint-disable-line no-unused-vars
 }) => (
   <header className={`bg-white border-b ${theme.border} px-4 lg:px-6 py-3 flex items-center justify-between sticky top-0 z-40 relative`}>
@@ -36,6 +37,7 @@ const DashboardHeader = ({
           charCount={24}
           interval={12000}
           urgentFaxe={urgentFaxe}
+          faxCount={faxCount}
         />
       </div>
     </div>
