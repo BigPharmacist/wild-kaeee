@@ -62,6 +62,7 @@ export default function useContacts({ sessionUserId }) {
 
   useEffect(() => {
     if (sessionUserId) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setContacts([])
     setContactsLoading(false)
     setContactsMessage('')

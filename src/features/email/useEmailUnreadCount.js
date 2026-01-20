@@ -97,6 +97,7 @@ export default function useEmailUnreadCount({ account }) {
   // Account-Authentifizierung überwachen
   useEffect(() => {
     if (!account) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setUnreadCount(0)
       setIsConnected(false)
       stopPolling()

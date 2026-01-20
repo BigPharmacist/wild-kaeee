@@ -1,6 +1,6 @@
 const ApoView = ({
   theme,
-  Icons,
+  Icons, // eslint-disable-line no-unused-vars -- used as Icons.X etc
   apoYear,
   changeApoYear,
   apoSearch,
@@ -20,7 +20,7 @@ const ApoView = ({
   setSelectedApoMessage,
   markAsRead,
   loadDokumentationen,
-  ReactMarkdown,
+  ReactMarkdown, // eslint-disable-line no-unused-vars -- used as component
   remarkGfm,
 }) => (
   <>

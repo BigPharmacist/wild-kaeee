@@ -11,7 +11,7 @@ export default function ContactDetailModal({
   onEdit,
   onEditInStaff,
   onSelectCardView,
-  CloseIcon,
+  CloseIcon, // eslint-disable-line no-unused-vars -- used as component
 }) {
   if (!selectedContact) return null
 

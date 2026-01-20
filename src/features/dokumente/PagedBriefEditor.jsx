@@ -178,7 +178,7 @@ const PagedBriefEditor = ({ theme, pharmacies, aiSettings }) => {
   }, [pageCount, pageHeightPx])
 
   // Position für Content-Start auf jeder Seite berechnen
-  const getContentTopForPage = (pageNum) => {
+  const _getContentTopForPage = (pageNum) => {  
     if (pageNum === 1) return CONTENT_START_PAGE1_MM * scale
     // Folgeseiten: Position = (vorherige Seiten * Höhe) + Gaps + Content-Start
     const prevPagesHeight = (pageNum - 1) * pageHeightPx + (pageNum - 1) * PAGE_GAP_PX
@@ -315,6 +315,7 @@ const PagedBriefEditor = ({ theme, pharmacies, aiSettings }) => {
       ? `Brief_${briefData.betreff.replace(/[^a-zA-Z0-9äöüÄÖÜß]/g, '_')}.pdf`
       : `Brief_${briefData.datum.replace(/\./g, '-')}.pdf`
     doc.save(fileName)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [briefData, pharmacy, ruecksendeAdresse, editor, pageCount])
 
   const generatePDF = useCallback(async () => {

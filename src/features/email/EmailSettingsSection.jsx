@@ -12,7 +12,7 @@ export default function EmailSettingsSection({
   staff,
   emailPermissions,
   onToggleEmailPermission,
-  CloseIcon,
+  CloseIcon, // eslint-disable-line no-unused-vars -- used as component
   // KI-Assistent
   aiSettings,
   onAiSettingsChange,

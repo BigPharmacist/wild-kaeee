@@ -22,8 +22,8 @@ export default function ContactFormModal({
   onCardFileChange,
   onSelectFormCardView,
   onConfirmEnhanced,
-  PhotoIcon,
-  CloseIcon,
+  PhotoIcon, // eslint-disable-line no-unused-vars -- used as component
+  CloseIcon, // eslint-disable-line no-unused-vars -- used as component
   deleteIcon,
 }) {
   const contactCardInputRef = useRef(null)

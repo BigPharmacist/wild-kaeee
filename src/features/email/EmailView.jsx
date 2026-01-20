@@ -10,34 +10,21 @@ import useEmailCompose from './useEmailCompose'
 import useJmapMail from './useJmapMail'
 import { jmap } from '../../lib/jmap'
 
+// Hilfsfunktion außerhalb der Komponente, um Hooks nicht zu beeinflussen
+const getMailboxIcon = (role) => {
+  switch (role) {
+    case 'inbox': return <Tray size={18} weight="regular" />
+    case 'sent': return <PaperPlaneRight size={18} weight="regular" />
+    case 'drafts': return <File size={18} weight="regular" />
+    case 'trash': return <Trash size={18} weight="regular" />
+    case 'junk':
+    case 'spam': return <Warning size={18} weight="regular" />
+    default: return <Folder size={18} weight="regular" />
+  }
+}
+
 export default function EmailView({ theme, account, hasAccess, onConfigureClick, aiSettings }) {
-  // Berechtigungsprüfung
-  if (!hasAccess) {
-    return (
-      <div className={`${theme.panel} rounded-2xl p-8 border ${theme.border} ${theme.cardShadow}`}>
-        <div className="flex flex-col items-center justify-center py-12">
-          <EnvelopeSimple size={64} className={`${theme.textMuted} mb-4 opacity-50`} />
-          <h3 className="text-lg font-semibold mb-2">Kein Zugriff</h3>
-          <p className={`${theme.textMuted} text-center max-w-md`}>
-            Du hast keine Berechtigung, E-Mails zu sehen. Bitte wende dich an einen Administrator.
-          </p>
-        </div>
-      </div>
-    )
-  }
-
-  const getMailboxIcon = (role) => {
-    switch (role) {
-      case 'inbox': return <Tray size={18} weight="regular" />
-      case 'sent': return <PaperPlaneRight size={18} weight="regular" />
-      case 'drafts': return <File size={18} weight="regular" />
-      case 'trash': return <Trash size={18} weight="regular" />
-      case 'junk':
-      case 'spam': return <Warning size={18} weight="regular" />
-      default: return <Folder size={18} weight="regular" />
-    }
-  }
-
+  // Alle Hooks müssen vor conditional returns aufgerufen werden
   const {
     authLoading,
     authError,
@@ -60,7 +47,7 @@ export default function EmailView({ theme, account, hasAccess, onConfigureClick,
     handleToggleRead,
     setSelectedEmail,
     setEmailDetail,
-    searchQuery,
+    searchQuery: _searchQuery,  
     searchResults,
     searchLoading,
     searchEmails,
@@ -90,8 +77,15 @@ export default function EmailView({ theme, account, hasAccess, onConfigureClick,
   const [searchInput, setSearchInput] = useState('')
   const searchTimeoutRef = useRef(null)
 
+  // Folder-Sidebar (eingeklappt per default)
+  const [folderSidebarExpanded, setFolderSidebarExpanded] = useState(false)
+
+  // Refs
+  const emailListRef = useRef(null)
+
   // Debounced Suche auslösen
   useEffect(() => {
+    if (!hasAccess) return // Früher Abbruch wenn kein Zugriff
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current)
     }
@@ -110,13 +104,7 @@ export default function EmailView({ theme, account, hasAccess, onConfigureClick,
         clearTimeout(searchTimeoutRef.current)
       }
     }
-  }, [searchInput, searchEmails, clearSearch])
-
-  // Folder-Sidebar (eingeklappt per default)
-  const [folderSidebarExpanded, setFolderSidebarExpanded] = useState(false)
-
-  // Refs
-  const emailListRef = useRef(null)
+  }, [searchInput, searchEmails, clearSearch, hasAccess])
 
   // Scroll-Handler für Infinite Scroll
   const handleEmailListScroll = useCallback((e) => {
@@ -128,10 +116,10 @@ export default function EmailView({ theme, account, hasAccess, onConfigureClick,
   }, [loadMoreEmails])
 
   // Zurück zur Liste (Mobile)
-  const handleBackToList = () => {
+  const handleBackToList = useCallback(() => {
     setSelectedEmail(null)
     setEmailDetail(null)
-  }
+  }, [setSelectedEmail, setEmailDetail])
 
   // Kontextmenü-Aktionen: Laden E-Mail-Details wenn nötig
   const handleContextReply = useCallback(async (email) => {
@@ -146,11 +134,11 @@ export default function EmailView({ theme, account, hasAccess, onConfigureClick,
 
   const handleContextPrint = useCallback(async (email) => {
     const detail = await jmap.getEmail(email.id)
-    const printWindow = window.open('', '_blank')
     const from = detail.from?.[0]
     const to = detail.to?.map(t => t.email).join(', ')
     const date = new Date(detail.receivedAt).toLocaleString('de-DE')
 
+    const printWindow = window.open('', '_blank')
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
@@ -183,6 +171,21 @@ export default function EmailView({ theme, account, hasAccess, onConfigureClick,
     printWindow.document.close()
     printWindow.print()
   }, [])
+
+  // Berechtigungsprüfung - NACH allen Hooks
+  if (!hasAccess) {
+    return (
+      <div className={`${theme.panel} rounded-2xl p-8 border ${theme.border} ${theme.cardShadow}`}>
+        <div className="flex flex-col items-center justify-center py-12">
+          <EnvelopeSimple size={64} className={`${theme.textMuted} mb-4 opacity-50`} />
+          <h3 className="text-lg font-semibold mb-2">Kein Zugriff</h3>
+          <p className={`${theme.textMuted} text-center max-w-md`}>
+            Du hast keine Berechtigung, E-Mails zu sehen. Bitte wende dich an einen Administrator.
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   // Kein Account konfiguriert
   if (!account) {

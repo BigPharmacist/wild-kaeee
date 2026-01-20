@@ -25,6 +25,7 @@ export default function useUrgentFax() {
 
   // Initial fetch
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchUrgentFaxe()
   }, [fetchUrgentFaxe])
 

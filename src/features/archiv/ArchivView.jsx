@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'react'
-import { FilePdf, Download, Eye, Upload, X, File, Spinner, MagnifyingGlass, Tag, User, FileText, FunnelSimple } from '@phosphor-icons/react'
+import { FilePdf, Download, Eye, Upload, X, File, Spinner, MagnifyingGlass, Tag, User, FileText, FunnelSimple, Star, FloppyDisk } from '@phosphor-icons/react'
 
 const ArchivView = ({
   theme,
@@ -29,16 +29,25 @@ const ArchivView = ({
   filterByTag,
   filterByCorrespondent,
   filterByType,
+  filterBySavedView: _filterBySavedView, // eslint-disable-line no-unused-vars
   clearFilters,
   getTagsForDocument,
   getCorrespondentForDocument,
   getTypeForDocument,
+  savedViews: _savedViews, // eslint-disable-line no-unused-vars
+  activeSavedView,
+  activeTab,
+  createSavedView,
+  deleteSavedView: _deleteSavedView, // eslint-disable-line no-unused-vars
 }) => {
   const fileInputRef = useRef(null)
   const [localSearch, setLocalSearch] = useState('')
   const [thumbnails, setThumbnails] = useState({})
   const [showFilters, setShowFilters] = useState(false)
   const [dragOver, setDragOver] = useState(false)
+  const [showSaveViewModal, setShowSaveViewModal] = useState(false)
+  const [newViewName, setNewViewName] = useState('')
+  const [savingView, setSavingView] = useState(false)
 
   // Initial laden
   useEffect(() => {
@@ -46,6 +55,7 @@ const ArchivView = ({
       fetchDocuments()
       fetchMetadata()
     })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Thumbnails laden wenn Dokumente sich ändern
@@ -58,6 +68,7 @@ const ArchivView = ({
         }
       }
     })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [documents, loadThumbnail])
 
   // Cleanup Thumbnails
@@ -67,6 +78,7 @@ const ArchivView = ({
         if (url) window.URL.revokeObjectURL(url)
       })
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleFileSelect = async (e) => {
@@ -116,7 +128,33 @@ const ArchivView = ({
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   }
 
-  const hasActiveFilters = searchQuery || selectedTag || selectedCorrespondent || selectedType
+  const hasActiveFilters = searchQuery || selectedTag || selectedCorrespondent || selectedType || activeSavedView
+  const hasFiltersThatCanBeSaved = selectedTag || selectedCorrespondent || selectedType
+
+  // Saved View erstellen
+  const handleSaveView = async () => {
+    if (!newViewName.trim()) return
+    setSavingView(true)
+    const success = await createSavedView(newViewName)
+    setSavingView(false)
+    if (success) {
+      setShowSaveViewModal(false)
+      setNewViewName('')
+    }
+  }
+
+  // Dynamischer Titel basierend auf aktivem Tab
+  const getTitle = () => {
+    if (activeSavedView) {
+      return activeSavedView.name
+    }
+    if (activeTab?.startsWith('type-')) {
+      const typeId = parseInt(activeTab.replace('type-', ''))
+      const docType = documentTypes.find(t => t.id === typeId)
+      return docType?.name || 'Archiv'
+    }
+    return 'Alle Dokumente'
+  }
 
   return (
     <div
@@ -128,7 +166,7 @@ const ArchivView = ({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <h2 className="text-2xl lg:text-3xl font-semibold tracking-tight">
-          Archiv
+          {getTitle()}
         </h2>
 
         <div className="flex items-center gap-2">
@@ -156,6 +194,19 @@ const ArchivView = ({
           >
             <FunnelSimple size={20} />
           </button>
+
+          {/* Ansicht speichern - nur wenn Filter aktiv */}
+          {hasFiltersThatCanBeSaved && !activeSavedView && (
+            <button
+              type="button"
+              onClick={() => setShowSaveViewModal(true)}
+              className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border ${theme.border} ${theme.bgHover} transition-colors`}
+              title="Als Ansicht speichern"
+            >
+              <Star size={20} className="text-amber-500" />
+              <span className="hidden sm:inline text-sm">Speichern</span>
+            </button>
+          )}
 
           {/* Upload-Button */}
           <button
@@ -471,6 +522,97 @@ const ArchivView = ({
                   <span className="ml-2">Vorschau nicht verfügbar</span>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Saved View erstellen Modal */}
+      {showSaveViewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className={`absolute inset-0 ${theme.overlay}`}
+            onClick={() => setShowSaveViewModal(false)}
+          />
+
+          <div className={`relative ${theme.panel} rounded-2xl shadow-2xl w-full max-w-md p-6`}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 rounded-lg bg-amber-100">
+                <Star size={24} className="text-amber-500" />
+              </div>
+              <div>
+                <h3 className={`text-lg font-semibold ${theme.textPrimary}`}>
+                  Ansicht speichern
+                </h3>
+                <p className={`text-sm ${theme.textMuted}`}>
+                  Aktuelle Filter als Schnellzugriff speichern
+                </p>
+              </div>
+            </div>
+
+            {/* Aktive Filter anzeigen */}
+            <div className={`mb-4 p-3 rounded-lg ${theme.bg} border ${theme.border}`}>
+              <p className={`text-xs ${theme.textMuted} mb-2`}>Aktive Filter:</p>
+              <div className="flex flex-wrap gap-2">
+                {selectedTag && (
+                  <span className="px-2 py-1 rounded-full text-xs bg-[#4C8BF5]/10 text-[#4C8BF5] border border-[#4C8BF5]/20">
+                    Tag: {tags.find(t => t.id === parseInt(selectedTag))?.name}
+                  </span>
+                )}
+                {selectedCorrespondent && (
+                  <span className="px-2 py-1 rounded-full text-xs bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                    {correspondents.find(c => c.id === parseInt(selectedCorrespondent))?.name}
+                  </span>
+                )}
+                {selectedType && (
+                  <span className="px-2 py-1 rounded-full text-xs bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                    {documentTypes.find(t => t.id === parseInt(selectedType))?.name}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Name eingeben */}
+            <div className="mb-6">
+              <label className={`block text-sm font-medium ${theme.textSecondary} mb-2`}>
+                Name der Ansicht
+              </label>
+              <input
+                type="text"
+                value={newViewName}
+                onChange={(e) => setNewViewName(e.target.value)}
+                placeholder="z.B. Unbezahlte Rechnungen"
+                className={`w-full px-4 py-2.5 rounded-lg ${theme.input} text-sm`}
+                autoFocus
+                onKeyDown={(e) => e.key === 'Enter' && handleSaveView()}
+              />
+            </div>
+
+            {/* Buttons */}
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSaveViewModal(false)
+                  setNewViewName('')
+                }}
+                className={`flex-1 px-4 py-2.5 rounded-lg border ${theme.border} ${theme.textSecondary} ${theme.bgHover} transition-colors`}
+              >
+                Abbrechen
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveView}
+                disabled={!newViewName.trim() || savingView}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg ${theme.accent} text-white font-medium transition-colors disabled:opacity-50`}
+              >
+                {savingView ? (
+                  <Spinner size={20} className="animate-spin" />
+                ) : (
+                  <FloppyDisk size={20} />
+                )}
+                Speichern
+              </button>
             </div>
           </div>
         </div>

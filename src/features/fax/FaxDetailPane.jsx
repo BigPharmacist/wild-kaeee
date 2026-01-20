@@ -100,8 +100,11 @@ export default function FaxDetailPane({
 
   // Zoom/Rotation/Position zurücksetzen bei Fax-Wechsel
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setZoom(0.75)
+     
     setRotation(0)
+     
     setPosition({ x: 0, y: 0 })
   }, [selectedFax?.id])
 

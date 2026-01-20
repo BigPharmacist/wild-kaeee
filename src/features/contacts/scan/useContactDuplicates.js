@@ -30,7 +30,7 @@ export default function useContactDuplicates({
 
     const phoneToCheck = ocrData.phone?.trim() || ocrData.mobile?.trim()
     if (phoneToCheck) {
-      const normalizedPhone = phoneToCheck.replace(/[\s\-\/]/g, '')
+      const normalizedPhone = phoneToCheck.replace(/[\s\-/]/g, '')
       const { data: phoneMatches } = await supabase
         .from('contacts')
         .select('*')

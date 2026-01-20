@@ -8,8 +8,8 @@ const DashboardHome = ({
   weatherData,
   weatherLocation,
   weatherDescription,
-  WeatherIcon,
-  Icons,
+  WeatherIcon, // eslint-disable-line no-unused-vars -- used as component
+  Icons, // eslint-disable-line no-unused-vars -- used as Icons.X etc
   dashboardEventsLoading,
   dashboardEvents,
   setActiveView,

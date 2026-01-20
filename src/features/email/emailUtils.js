@@ -19,7 +19,7 @@ const sanitizeEmailHtml = (html) => {
     const selectors = ['style', 'script', 'iframe', 'object', 'embed', 'link', 'meta', 'base']
     doc.querySelectorAll(selectors.join(',')).forEach((node) => node.remove())
     return doc.body.innerHTML || ''
-  } catch (error) {
+  } catch (_error) { // eslint-disable-line no-unused-vars
     return html
   }
 }

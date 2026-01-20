@@ -1,6 +1,6 @@
 const PhotosView = ({
   theme,
-  Icons,
+  Icons, // eslint-disable-line no-unused-vars -- used as Icons.X
   secondaryTab,
   photosLoading,
   allPhotos,

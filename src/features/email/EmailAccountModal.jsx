@@ -10,7 +10,7 @@ export default function EmailAccountModal({
   onClose,
   onSave,
   setEmailAccountForm,
-  CloseIcon,
+  CloseIcon, // eslint-disable-line no-unused-vars -- used as component
 }) {
   const signatureRef = useRef(null)
 

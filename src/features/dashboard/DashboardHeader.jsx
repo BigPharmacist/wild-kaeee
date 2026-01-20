@@ -11,14 +11,14 @@ const DashboardHeader = ({
   photoUploading,
   businessCardScanning,
   handleCameraCapture,
-  BusinessCardScanInput,
+  BusinessCardScanInput, // eslint-disable-line no-unused-vars -- used as component
   handleBusinessCardScan,
   pznCameraInputRef,
   handlePznCameraCapture,
   setActiveView,
-  Icons,
+  Icons, // eslint-disable-line no-unused-vars -- used as Icons.X etc
   urgentFaxe = [],
-  onUrgentFaxClick,
+  onUrgentFaxClick: _onUrgentFaxClick, // eslint-disable-line no-unused-vars
 }) => (
   <header className={`bg-white border-b ${theme.border} px-4 lg:px-6 py-3 flex items-center justify-between sticky top-0 z-40 relative`}>
     <div className="flex items-center gap-3">

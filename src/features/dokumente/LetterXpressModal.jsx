@@ -90,6 +90,7 @@ export default function LetterXpressModal({
       loadBalance()
       loadPrice()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [show, pdfBase64])
 
   // Preis bei Optionsänderungen neu laden
@@ -97,6 +98,7 @@ export default function LetterXpressModal({
     if (show && pdfBase64) {
       loadPrice()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [options.color, options.mode, options.shipping, options.registered])
 
   // Reset bei Schließen

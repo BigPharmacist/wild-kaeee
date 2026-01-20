@@ -12,8 +12,8 @@ const SidebarNav = ({
   getActiveSecondaryId,
   handleSecondarySelect,
   unreadCounts,
-  Icons,
-  UnreadBadge,
+  Icons, // eslint-disable-line no-unused-vars -- used as Icons.X etc
+  UnreadBadge, // eslint-disable-line no-unused-vars -- used as component
   currentStaff,
   session,
   handleSignOut,
@@ -120,6 +120,13 @@ const SidebarNav = ({
 
           <nav className="p-2 space-y-1 flex-1">
             {(secondaryNavMap[activeView] || []).map((item) => {
+              // Divider als visueller Trenner
+              if (item.id === 'divider') {
+                return (
+                  <div key="divider" className="border-t border-[#5E647A] my-2" />
+                )
+              }
+
               const isActive = getActiveSecondaryId() === item.id
               const badgeCount = activeView === 'apo'
                 ? unreadCounts[item.id] || 0
@@ -323,6 +330,13 @@ const SidebarNav = ({
         </div>
         <nav className="p-2 overflow-y-auto space-y-1">
           {(secondaryNavMap[activeView] || []).map((item) => {
+            // Divider als visueller Trenner
+            if (item.id === 'divider') {
+              return (
+                <div key="divider" className="border-t border-[#5E647A] my-2" />
+              )
+            }
+
             const isActive = getActiveSecondaryId() === item.id
             const badgeCount = activeView === 'apo'
               ? unreadCounts[item.id] || 0

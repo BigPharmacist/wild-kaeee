@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { supabase, supabaseUrl } from './lib/supabase'
-import { House, Camera, Pill, CalendarDots, CalendarBlank, ChatCircle, GearSix, EnvelopeSimple, Printer, Palette, Sparkle, DotsThree, Files } from '@phosphor-icons/react'
+import { House, Camera, Pill, CalendarDots, CalendarBlank, ChatCircle, GearSix, EnvelopeSimple, Printer, Palette, Sparkle, DotsThree, Files, Archive } from '@phosphor-icons/react'
 import { EmailAccountModal, EmailSettingsSection, EmailView, useEmailSettings, useEmailUnreadCount } from './features/email'
 import { FaxView, useFaxCounts, useUrgentFax } from './features/fax'
 import { ContactDetailModal, ContactFormModal, ContactsSettingsSection, useContacts } from './features/contacts'
@@ -42,6 +42,7 @@ function App() {
   const [settingsTab, setSettingsTab] = useState(() => localStorage.getItem('nav_settingsTab') || 'pharmacies')
   const [chatTab, setChatTab] = useState(() => localStorage.getItem('nav_chatTab') || 'group')
   const [dokumenteTab, setDokumenteTab] = useState(() => localStorage.getItem('nav_dokumenteTab') || 'briefe')
+  const [archivTab, setArchivTab] = useState(() => localStorage.getItem('nav_archivTab') || 'alle')
   const {
     pharmacies,
     pharmaciesLoading,
@@ -131,8 +132,8 @@ function App() {
   )
   const {
     unreadCount: emailUnreadCount,
-    markAsRead: markEmailAsRead,
-    refresh: refreshEmailCount,
+    markAsRead: _markEmailAsRead,  
+    refresh: _refreshEmailCount,  
   } = useEmailUnreadCount({ account: selectedEmailAccountObj })
   const {
     contacts,
@@ -408,7 +409,7 @@ function App() {
     setWeatherInput,
     weatherDescription,
     WeatherIcon,
-    fetchWeather,
+    fetchWeather: _fetchWeather,  
     openWeatherModal,
     closeWeatherModal,
   } = useWeather({ pharmacies })
@@ -466,7 +467,7 @@ function App() {
     setBrightness,
     setContrast,
     setPhotoSaving,
-    setAllPhotos,
+    setAllPhotos: _setAllPhotos,  
     fetchLatestPhoto,
     handleCameraCapture,
     fetchAllPhotos,
@@ -510,8 +511,8 @@ function App() {
   const [unreadCounts, setUnreadCounts] = useState({ amk: 0, recall: 0, lav: 0 })
   const {
     count: faxCount,
-    decrementCount: decrementFaxCount,
-    refresh: refreshFaxCount,
+    decrementCount: _decrementFaxCount,  
+    refresh: _refreshFaxCount,  
   } = useFaxCounts()
   const { urgentFaxe } = useUrgentFax()
   const [pendingFaxId, setPendingFaxId] = useState(null)
@@ -563,10 +564,15 @@ function App() {
     filterByTag: archivFilterByTag,
     filterByCorrespondent: archivFilterByCorrespondent,
     filterByType: archivFilterByType,
+    filterBySavedView: archivFilterBySavedView,
     clearFilters: archivClearFilters,
+    createSavedView: archivCreateSavedView,
+    deleteSavedView: archivDeleteSavedView,
     getTagsForDocument: getArchivTagsForDocument,
     getCorrespondentForDocument: getArchivCorrespondentForDocument,
     getTypeForDocument: getArchivTypeForDocument,
+    savedViews: archivSavedViews,
+    activeSavedView: archivActiveSavedView,
   } = useArchiv()
   const {
     calendars,
@@ -597,10 +603,10 @@ function App() {
     permissionsLoading,
     dashboardEvents,
     dashboardEventsLoading,
-    fetchCalendars,
-    fetchCalendarEvents,
+    fetchCalendars: _fetchCalendars,  
+    fetchCalendarEvents: _fetchCalendarEvents,  
     fetchCalendarPermissions,
-    fetchDashboardEvents,
+    fetchDashboardEvents: _fetchDashboardEvents,  
     createCalendar,
     updateCalendar,
     createEvent,
@@ -612,7 +618,7 @@ function App() {
     closeEventModal,
     openCalendarModal,
     closeCalendarModal,
-    currentCalendarPermission,
+    currentCalendarPermission: _currentCalendarPermission,  
     canWriteCurrentCalendar,
     getEventColor,
   } = useCalendar({ session, activeView })
@@ -677,6 +683,7 @@ function App() {
     { id: 'chat', icon: () => <ChatCircle size={20} weight="regular" />, label: 'Chat' },
     { id: 'post', icon: () => <Icons.PostHorn />, label: 'Post' },
     { id: 'dokumente', icon: () => <Files size={20} weight="regular" />, label: 'Dokumente' },
+    { id: 'archiv', icon: () => <Archive size={20} weight="regular" />, label: 'Archiv' },
     { id: 'settings', icon: () => <GearSix size={20} weight="regular" />, label: 'Einstellungen' },
   ]
 
@@ -712,9 +719,24 @@ function App() {
       { id: 'vertraege', label: 'Verträge' },
       { id: 'sonstiges', label: 'Sonstiges' },
     ],
+    archiv: [
+      { id: 'alle', label: 'Alle Dokumente' },
+      // Dokumenttypen dynamisch hinzufügen
+      ...archivDocumentTypes.map(dt => ({
+        id: `type-${dt.id}`,
+        label: dt.name,
+      })),
+      // Saved Views als Trenner und Liste
+      ...(archivSavedViews.length > 0 ? [
+        { id: 'divider', label: '─────────', disabled: true },
+        ...archivSavedViews.map(sv => ({
+          id: `view-${sv.id}`,
+          label: `⭐ ${sv.name}`,
+        })),
+      ] : []),
+    ],
     misc: [
       { id: 'uploads', label: 'Uploads' },
-      { id: 'library', label: 'Archiv' },
       { id: 'ocr', label: 'OCR' },
       { id: 'visitenkarten', label: 'Visitenkarten' },
       { id: 'colors', label: 'Farben' },
@@ -728,7 +750,7 @@ function App() {
       ...(currentStaff?.is_admin ? [{ id: 'tracking', label: 'Tracking' }] : []),
       ...(currentStaff?.is_admin ? [{ id: 'admin', label: 'Admin' }] : []),
     ],
-  }), [currentStaff?.is_admin, staff, session?.user?.id])
+  }), [currentStaff?.is_admin, staff, session?.user?.id, archivDocumentTypes, archivSavedViews])
 
   useEffect(() => {
     // Beim ersten Mount den gespeicherten Wert behalten
@@ -741,6 +763,17 @@ function App() {
     if (nextItems.length) {
       setSecondaryTab(nextItems[0].id)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeView])
+
+  // Archiv-Metadaten laden wenn Archiv-Ansicht aktiv wird
+  useEffect(() => {
+    if (activeView === 'archiv') {
+      fetchPaperlessConfig().then(() => {
+        fetchArchivMetadata()
+      })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeView])
 
   // Navigation in localStorage speichern
@@ -767,6 +800,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem('nav_dokumenteTab', dokumenteTab)
   }, [dokumenteTab])
+
+  useEffect(() => {
+    localStorage.setItem('nav_archivTab', archivTab)
+  }, [archivTab])
 
   // Browser-Tab-Titel mit Fax-Count aktualisieren
   useEffect(() => {
@@ -809,6 +846,7 @@ function App() {
     if (activeView === 'apo') return apoTab
     if (activeView === 'chat') return chatTab
     if (activeView === 'dokumente') return dokumenteTab
+    if (activeView === 'archiv') return archivTab
     return secondaryTab
   }
 
@@ -821,6 +859,20 @@ function App() {
       setChatTab(itemId)
     } else if (activeView === 'dokumente') {
       setDokumenteTab(itemId)
+    } else if (activeView === 'archiv') {
+      // Divider ignorieren
+      if (itemId === 'divider') return
+      setArchivTab(itemId)
+      // Filter anwenden
+      if (itemId === 'alle') {
+        archivClearFilters()
+      } else if (itemId.startsWith('type-')) {
+        const typeId = itemId.replace('type-', '')
+        archivFilterByType(typeId)
+      } else if (itemId.startsWith('view-')) {
+        const viewId = itemId.replace('view-', '')
+        archivFilterBySavedView(viewId)
+      }
     } else {
       setSecondaryTab(itemId)
     }
@@ -854,7 +906,7 @@ function App() {
       })
       doc.addImage(base64, 'JPEG', margin, y, 60, 28)
       y += 38
-    } catch (e) {
+    } catch (_e) { // eslint-disable-line no-unused-vars
       y += 10
     }
 
@@ -997,7 +1049,7 @@ function App() {
           try {
             doc.addImage(dok.unterschrift_data, 'PNG', margin + boxPadding, boxY, 75, 30)
             boxY += 34
-          } catch (e) {
+          } catch (_e) { // eslint-disable-line no-unused-vars
             // Fehler beim Laden der Unterschrift ignorieren
           }
         }
@@ -1064,7 +1116,7 @@ function App() {
       })
       doc.addImage(base64, 'JPEG', margin, y, 60, 28)
       y += 38
-    } catch (e) {
+    } catch (_e) { // eslint-disable-line no-unused-vars
       y += 10
     }
 
@@ -1280,7 +1332,7 @@ function App() {
           try {
             doc.addImage(dok.unterschrift_data, 'PNG', margin + boxPadding, boxY, 75, 30)
             boxY += 34
-          } catch (e) {
+          } catch (_e) { // eslint-disable-line no-unused-vars
             // Fehler beim Laden der Unterschrift ignorieren
           }
         }
@@ -1314,7 +1366,7 @@ function App() {
               doc.text(pzn, photoX + 30, boxY + 50, { align: 'center' })
 
               photoX += 65
-            } catch (e) {
+            } catch (_e) { // eslint-disable-line no-unused-vars
               // Fehler beim Laden des Fotos ignorieren
             }
           }
@@ -1405,7 +1457,7 @@ function App() {
   }
 
   // Bild automatisch drehen basierend auf EXIF-Orientation
-  const autoRotateImage = async (file) => {
+  const _autoRotateImage = async (file) => {  
     const orientation = await getExifOrientation(file)
     if (orientation === 1) return file // Keine Drehung nötig
 
@@ -1877,7 +1929,7 @@ function App() {
 
   const openCreateModal = () => {
     openPharmacyCreateModal()
-    setWeatherModalOpen(false)
+    closeWeatherModal()
   }
 
   const fetchAmkMessages = async (year) => {
@@ -2223,12 +2275,14 @@ function App() {
       fetchMistralApiKey()
       fetchGoogleApiKey()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session])
 
   useEffect(() => {
     if (session && activeView === 'photos' && secondaryTab === 'visitenkarten') {
       fetchBusinessCards()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, activeView, secondaryTab])
 
   useEffect(() => {
@@ -2249,6 +2303,7 @@ function App() {
       fetchUnreadCounts(apoYear)
       fetchReadMessageIds()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.id, apoYear])
 
   // PZN-Fotos laden bei Message-Wechsel (nur für Rückrufe)
@@ -2271,6 +2326,7 @@ function App() {
     if (session && activeView === 'rechnungen' && rechnungen.length === 0 && !rechnungenLoading) {
       fetchRechnungen()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeView, session])
 
   const handleSignIn = async (e) => {
@@ -2339,7 +2395,6 @@ function App() {
     setMessage('')
     setSuccessMessage('')
     setAuthView('login')
-    setSecondaryOpen(false)
   }
 
   // Password reset view (even if logged in via invite link)
@@ -2482,7 +2537,7 @@ function App() {
                 />
               )}
 
-              {activeView === 'misc' && secondaryTab === 'library' && (
+              {activeView === 'archiv' && (
                 <ArchivView
                   theme={theme}
                   documents={archivDocuments}
@@ -2511,10 +2566,16 @@ function App() {
                   filterByTag={archivFilterByTag}
                   filterByCorrespondent={archivFilterByCorrespondent}
                   filterByType={archivFilterByType}
+                  filterBySavedView={archivFilterBySavedView}
                   clearFilters={archivClearFilters}
                   getTagsForDocument={getArchivTagsForDocument}
                   getCorrespondentForDocument={getArchivCorrespondentForDocument}
                   getTypeForDocument={getArchivTypeForDocument}
+                  savedViews={archivSavedViews}
+                  activeSavedView={archivActiveSavedView}
+                  activeTab={archivTab}
+                  createSavedView={archivCreateSavedView}
+                  deleteSavedView={archivDeleteSavedView}
                 />
               )}
 

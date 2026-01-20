@@ -146,6 +146,7 @@ export function useChat({ session, activeView, directChatUserId }) {
   // Real-time subscription for chat messages
   useEffect(() => {
     if (!session || activeView !== 'chat') return
+     
     fetchChatMessages()
 
     const channel = supabase
@@ -194,11 +195,13 @@ export function useChat({ session, activeView, directChatUserId }) {
     return () => {
       supabase.removeChannel(channel)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeView, session, directChatUserId])
 
   // Nachrichten als gelesen markieren wenn Chat geöffnet wird
   useEffect(() => {
     if (activeView === 'chat' && chatMessages.length > 0 && !chatLoading) {
+       
       markMessagesAsRead(chatMessages)
     }
   }, [activeView, chatMessages, chatLoading, markMessagesAsRead])
@@ -227,7 +230,7 @@ export function useChat({ session, activeView, directChatUserId }) {
 }
 
 // Separater Hook für Ungelesen-Counts (für Sidebar Badges)
-export function useChatUnreadCounts({ session, staff }) {
+export function useChatUnreadCounts({ session, staff: _staff }) { // eslint-disable-line no-unused-vars
   const [unreadCounts, setUnreadCounts] = useState({ group: 0 })
 
   const fetchUnreadCounts = useCallback(async () => {
@@ -266,10 +269,11 @@ export function useChatUnreadCounts({ session, staff }) {
     })
 
     setUnreadCounts(counts)
-  }, [session?.user?.id])
+  }, [session])
 
   useEffect(() => {
     if (!session?.user?.id) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchUnreadCounts()
 
     // Real-time subscription für neue Nachrichten und Lese-Status

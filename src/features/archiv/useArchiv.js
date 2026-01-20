@@ -15,6 +15,8 @@ export function useArchiv() {
   const [tags, setTags] = useState([])
   const [correspondents, setCorrespondents] = useState([])
   const [documentTypes, setDocumentTypes] = useState([])
+  const [savedViews, setSavedViews] = useState([])
+  const [activeSavedView, setActiveSavedView] = useState(null)
 
   // Filter
   const [searchQuery, setSearchQuery] = useState('')
@@ -79,7 +81,7 @@ export function useArchiv() {
     setLoading(true)
     setError(null)
     try {
-      let endpoint = '/documents/?ordering=-created'
+      let endpoint = '/documents/?ordering=-created&page_size=10000'
 
       if (query) {
         endpoint += `&query=${encodeURIComponent(query)}`
@@ -139,10 +141,81 @@ export function useArchiv() {
     }
   }, [paperlessApi])
 
+  // Saved Views laden
+  const fetchSavedViews = useCallback(async () => {
+    try {
+      const response = await paperlessApi('/saved_views/')
+      const data = await response.json()
+      setSavedViews(data.results || [])
+    } catch (err) {
+      console.error('Fehler beim Laden der Saved Views:', err)
+    }
+  }, [paperlessApi])
+
   // Alle Metadaten laden
   const fetchMetadata = useCallback(async () => {
-    await Promise.all([fetchTags(), fetchCorrespondents(), fetchDocumentTypes()])
-  }, [fetchTags, fetchCorrespondents, fetchDocumentTypes])
+    await Promise.all([fetchTags(), fetchCorrespondents(), fetchDocumentTypes(), fetchSavedViews()])
+  }, [fetchTags, fetchCorrespondents, fetchDocumentTypes, fetchSavedViews])
+
+  // Saved View erstellen
+  const createSavedView = useCallback(async (name) => {
+    if (!name?.trim()) {
+      setError('Bitte gib einen Namen für die Ansicht ein')
+      return false
+    }
+
+    try {
+      const payload = {
+        name: name.trim(),
+        show_on_dashboard: false,
+        show_in_sidebar: true,
+        sort_field: 'created',
+        sort_reverse: true,
+      }
+
+      // Aktive Filter übernehmen
+      if (selectedTag) {
+        payload.filter_has_tags = [parseInt(selectedTag)]
+      }
+      if (selectedCorrespondent) {
+        payload.filter_correspondent = parseInt(selectedCorrespondent)
+      }
+      if (selectedType) {
+        payload.filter_document_type = parseInt(selectedType)
+      }
+
+      await paperlessApi('/saved_views/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      })
+
+      // Saved Views neu laden
+      await fetchSavedViews()
+      return true
+    } catch (err) {
+      console.error('Fehler beim Erstellen der Saved View:', err)
+      setError(err.message)
+      return false
+    }
+  }, [paperlessApi, fetchSavedViews, selectedTag, selectedCorrespondent, selectedType])
+
+  // Saved View löschen
+  const deleteSavedView = useCallback(async (viewId) => {
+    try {
+      await paperlessApi(`/saved_views/${viewId}/`, {
+        method: 'DELETE',
+      })
+      await fetchSavedViews()
+      return true
+    } catch (err) {
+      console.error('Fehler beim Löschen der Saved View:', err)
+      setError(err.message)
+      return false
+    }
+  }, [paperlessApi, fetchSavedViews])
 
   // Dokument hochladen
   const uploadDocument = useCallback(async (file, title = null, tagIds = [], correspondentId = null, documentTypeId = null) => {
@@ -272,8 +345,59 @@ export function useArchiv() {
     setSelectedTag(null)
     setSelectedCorrespondent(null)
     setSelectedType(null)
+    setActiveSavedView(null)
     fetchDocuments('', null, null, null)
   }, [fetchDocuments])
+
+  // Nach Saved View filtern
+  const filterBySavedView = useCallback(async (viewId) => {
+    if (!viewId) {
+      setActiveSavedView(null)
+      fetchDocuments('', null, null, null)
+      return
+    }
+
+    const view = savedViews.find(v => v.id === parseInt(viewId))
+    if (!view) return
+
+    setActiveSavedView(view)
+    setLoading(true)
+    setError(null)
+
+    try {
+      // Saved View Filter-Parameter in Query umwandeln
+      let endpoint = '/documents/?ordering=-created&page_size=10000'
+
+      if (view.filter_correspondent) {
+        endpoint += `&correspondent__id=${view.filter_correspondent}`
+      }
+      if (view.filter_document_type) {
+        endpoint += `&document_type__id=${view.filter_document_type}`
+      }
+      if (view.filter_has_tags) {
+        view.filter_has_tags.forEach(tagId => {
+          endpoint += `&tags__id=${tagId}`
+        })
+      }
+      if (view.filter_has_correspondent) {
+        endpoint += `&correspondent__isnull=false`
+      }
+      if (view.filter_has_document_type) {
+        endpoint += `&document_type__isnull=false`
+      }
+
+      const response = await paperlessApi(endpoint)
+      const data = await response.json()
+      setDocuments(data.results || [])
+    } catch (err) {
+      console.error('Fehler beim Laden der Saved View:', err)
+      setError(err.message)
+      setDocuments([])
+    } finally {
+      setLoading(false)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedViews, paperlessApi])
 
   // Helper: Tag-Namen für Dokument
   const getTagsForDocument = useCallback((doc) => {
@@ -299,6 +423,7 @@ export function useArchiv() {
     tags,
     correspondents,
     documentTypes,
+    savedViews,
 
     // Status
     loading,
@@ -313,6 +438,7 @@ export function useArchiv() {
     selectedTag,
     selectedCorrespondent,
     selectedType,
+    activeSavedView,
 
     // Aktionen
     fetchDocuments,
@@ -329,7 +455,10 @@ export function useArchiv() {
     filterByTag,
     filterByCorrespondent,
     filterByType,
+    filterBySavedView,
     clearFilters,
+    createSavedView,
+    deleteSavedView,
 
     // Helper
     getTagsForDocument,

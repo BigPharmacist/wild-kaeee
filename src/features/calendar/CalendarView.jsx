@@ -7,7 +7,7 @@ const CalendarView = ({
   setCalendarViewMode,
   calendarViewDate,
   setCalendarViewDate,
-  Icons,
+  Icons, // eslint-disable-line no-unused-vars -- used as Icons.X etc
   currentStaff,
   openCalendarModal,
   setPermissionsModalOpen,

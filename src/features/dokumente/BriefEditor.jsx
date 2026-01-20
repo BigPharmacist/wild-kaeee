@@ -1,23 +1,25 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useMemo } from 'react'
 import { jsPDF } from 'jspdf'
 import { PaperPlaneTilt } from '@phosphor-icons/react'
 import LetterXpressModal from './LetterXpressModal'
 import useBriefAi from './useBriefAi'
 import { AiAssistantPanel } from '../../shared/ui'
 
+const DEFAULT_PHARMACY = {
+  name: 'Apotheke am Damm',
+  street: 'Am Damm 17',
+  postal_code: '55232',
+  city: 'Alzey',
+  phone: '06731-548846',
+  email: 'info@apothekeamdamm.de',
+  owner: 'Matthias Blüm',
+  vat_id: 'DE814983365',
+  trade_register: 'HRA 31710',
+  registry_court: 'Amtsgericht Mainz',
+}
+
 const BriefEditor = ({ theme, pharmacies, aiSettings }) => {
-  const pharmacy = pharmacies?.[0] || {
-    name: 'Apotheke am Damm',
-    street: 'Am Damm 17',
-    postal_code: '55232',
-    city: 'Alzey',
-    phone: '06731-548846',
-    email: 'info@apothekeamdamm.de',
-    owner: 'Matthias Blüm',
-    vat_id: 'DE814983365',
-    trade_register: 'HRA 31710',
-    registry_court: 'Amtsgericht Mainz',
-  }
+  const pharmacy = useMemo(() => pharmacies?.[0] || DEFAULT_PHARMACY, [pharmacies])
 
   const [briefData, setBriefData] = useState({
     empfaenger: '',

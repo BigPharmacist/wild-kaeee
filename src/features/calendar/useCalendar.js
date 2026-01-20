@@ -438,22 +438,28 @@ export default function useCalendar({ session, activeView }) {
   // useEffect: Dashboard Events laden
   useEffect(() => {
     if (session && activeView === 'dashboard') {
+       
       fetchDashboardEvents()
     }
+     
   }, [session, activeView])
 
   // useEffect: Kalender laden
   useEffect(() => {
     if (session && activeView === 'calendar') {
+       
       fetchCalendars()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, activeView])
 
   // useEffect: Events laden bei Kalender/Datum-Wechsel
   useEffect(() => {
     if (session && activeView === 'calendar' && selectedCalendarId) {
+       
       fetchCalendarEvents(selectedCalendarId)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCalendarId, calendarViewDate, calendarViewMode])
 
   // useEffect: Realtime-Subscription für Events
@@ -474,6 +480,7 @@ export default function useCalendar({ session, activeView }) {
     return () => {
       supabase.removeChannel(channel)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeView, session, selectedCalendarId])
 
   return {

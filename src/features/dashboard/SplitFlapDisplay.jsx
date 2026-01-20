@@ -6,15 +6,29 @@ const SplitFlapChar = ({ targetChar, delay = 0 }) => {
   const [currentChar, setCurrentChar] = useState(' ')
   const [isFlipping, setIsFlipping] = useState(false)
   const charIndex = useRef(0)
+  const intervalRef = useRef(null)
+  const timeoutRef = useRef(null)
 
   useEffect(() => {
     const target = (targetChar || ' ').toUpperCase()
     const targetIndex = CHARS.indexOf(target) >= 0 ? CHARS.indexOf(target) : 0
 
-    if (CHARS[charIndex.current] === target) return
+    // Aufräumen falls noch laufend
+    if (intervalRef.current) clearInterval(intervalRef.current)
+    if (timeoutRef.current) clearTimeout(timeoutRef.current)
 
-    const timeout = setTimeout(() => {
-      const flipInterval = setInterval(() => {
+    // Wenn Tab nicht sichtbar oder bereits am Ziel: direkt setzen
+    if (document.hidden || CHARS[charIndex.current] === target) {
+      charIndex.current = targetIndex
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCurrentChar(target)
+       
+      setIsFlipping(false)
+      return
+    }
+
+    timeoutRef.current = setTimeout(() => {
+      intervalRef.current = setInterval(() => {
         charIndex.current = (charIndex.current + 1) % CHARS.length
         setCurrentChar(CHARS[charIndex.current])
         setIsFlipping(true)
@@ -22,15 +36,45 @@ const SplitFlapChar = ({ targetChar, delay = 0 }) => {
         setTimeout(() => setIsFlipping(false), 50)
 
         if (charIndex.current === targetIndex) {
-          clearInterval(flipInterval)
+          clearInterval(intervalRef.current)
+          intervalRef.current = null
         }
       }, 40)
-
-      return () => clearInterval(flipInterval)
     }, delay)
 
-    return () => clearTimeout(timeout)
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current)
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    }
   }, [targetChar, delay])
+
+  // Bei Tab-Wechsel: sofort zum Ziel springen
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        const target = (targetChar || ' ').toUpperCase()
+        const targetIndex = CHARS.indexOf(target) >= 0 ? CHARS.indexOf(target) : 0
+
+        // Laufende Animationen stoppen
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current)
+          intervalRef.current = null
+        }
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current)
+          timeoutRef.current = null
+        }
+
+        // Direkt zum Ziel
+        charIndex.current = targetIndex
+        setCurrentChar(target)
+        setIsFlipping(false)
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [targetChar])
 
   return (
     <div className="relative w-[1.1em] h-[1.6em] mx-[1px]">

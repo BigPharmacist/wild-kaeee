@@ -316,7 +316,7 @@ class JMAPClient {
     ])
 
     // Fehler in JMAP-Antwort prüfen
-    for (const [method, result, id] of responses) {
+    for (const [method, result, _id] of responses) {  
       if (method === 'error') {
         throw new Error(result.description || result.type || 'JMAP Fehler')
       }
@@ -334,7 +334,7 @@ class JMAPClient {
   /**
    * E-Mail verschieben (z.B. in Papierkorb)
    */
-  async moveEmail(emailId, toMailboxId, fromMailboxId) {
+  async moveEmail(emailId, toMailboxId, _fromMailboxId) { // eslint-disable-line no-unused-vars
     const update = {
       mailboxIds: { [toMailboxId]: true }
     }

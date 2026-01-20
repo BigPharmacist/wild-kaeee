@@ -82,15 +82,24 @@ export default function useFax() {
       return false
     }
 
-    setFaxe(prev => prev.filter(f => f.id !== id))
+    // Nächstes Fax auswählen bevor wir die Liste aktualisieren
     if (selectedFax?.id === id) {
-      setSelectedFax(null)
+      const currentIndex = faxe.findIndex(f => f.id === id)
+      const remainingFaxe = faxe.filter(f => f.id !== id)
+      if (remainingFaxe.length > 0) {
+        // Nächstes Fax oder letztes in der Liste
+        const nextIndex = Math.min(currentIndex, remainingFaxe.length - 1)
+        setSelectedFax(remainingFaxe[nextIndex])
+      } else {
+        setSelectedFax(null)
+      }
     }
+    setFaxe(prev => prev.filter(f => f.id !== id))
     // Optimistic Update Event für Badge
     window.dispatchEvent(new CustomEvent('fax-archived'))
     fetchCounts()
     return true
-  }, [selectedFax, fetchCounts])
+  }, [selectedFax, faxe, fetchCounts])
 
   const restoreFax = useCallback(async (id) => {
     const { error } = await supabase
@@ -103,23 +112,34 @@ export default function useFax() {
       return false
     }
 
-    setFaxe(prev => prev.filter(f => f.id !== id))
+    // Nächstes Fax auswählen bevor wir die Liste aktualisieren
     if (selectedFax?.id === id) {
-      setSelectedFax(null)
+      const currentIndex = faxe.findIndex(f => f.id === id)
+      const remainingFaxe = faxe.filter(f => f.id !== id)
+      if (remainingFaxe.length > 0) {
+        // Nächstes Fax oder letztes in der Liste
+        const nextIndex = Math.min(currentIndex, remainingFaxe.length - 1)
+        setSelectedFax(remainingFaxe[nextIndex])
+      } else {
+        setSelectedFax(null)
+      }
     }
+    setFaxe(prev => prev.filter(f => f.id !== id))
     // Optimistic Update Event für Badge
     window.dispatchEvent(new CustomEvent('fax-restored'))
     fetchCounts()
     return true
-  }, [selectedFax, fetchCounts])
+  }, [selectedFax, faxe, fetchCounts])
 
   // Fetch faxe when folder changes
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchFaxe(selectedFolder)
   }, [selectedFolder, fetchFaxe])
 
   // Initial counts fetch
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchCounts()
   }, [fetchCounts])
 

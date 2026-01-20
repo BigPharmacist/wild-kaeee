@@ -19,7 +19,7 @@ const SettingsView = ({
   isExited,
   staffViewMode,
   setStaffViewMode,
-  EmailSettingsSection,
+  EmailSettingsSection, // eslint-disable-line no-unused-vars -- used as component
   currentStaff,
   emailAccounts,
   selectedEmailAccount,
@@ -42,7 +42,7 @@ const SettingsView = ({
   enhanceLoading,
   enhancePreview,
   enhanceResultPreview,
-  ContactsSettingsSection,
+  ContactsSettingsSection, // eslint-disable-line no-unused-vars -- used as component
   contacts,
   filteredContacts,
   contactSearch,
@@ -56,7 +56,7 @@ const SettingsView = ({
   openContactModal,
   openContactDetail,
   toggleTrackingEnabled,
-  CourierMap,
+  CourierMap: _CourierMap, // eslint-disable-line no-unused-vars
   courierLocations,
   locationsLoading,
   fetchCourierLocations,

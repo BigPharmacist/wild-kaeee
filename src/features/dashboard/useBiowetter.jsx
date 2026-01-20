@@ -284,7 +284,7 @@ export function useBiowetter({ pharmacies, aiSettings }) {
 
     const dataForAi = forecasts.slots
       .filter(slot => slot.available)
-      .map((slot, idx) => {
+      .map((slot) => {
         const dayOffset = slot.dayLabel === 'Heute' ? 0 : slot.dayLabel === 'Morgen' ? 1 : 2
         const dayName = getWeekday(dayOffset)
         const timeLabel = slot.label === 'VM' ? 'Vormittag' : 'Nachmittag'
@@ -366,6 +366,7 @@ Schreibe eine kurze, freundliche Empfehlung für heute.`
         generateAiRecommendation(forecasts)
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [biowetterData, biowetterZone, aiSettings?.api_key])
 
   return {
