@@ -328,7 +328,7 @@ const ArchivView = ({
               clearFilters()
               setLocalSearch('')
             }}
-            className={`text-xs ${theme.textMuted} hover:text-[#C94431]`}
+            className={`text-xs ${theme.textMuted} hover:text-[#E11D48]`}
           >
             <X size={14} />
           </button>

@@ -184,7 +184,7 @@ export default function useCalendar({ session, activeView }) {
         return {
           ...event,
           calendarName: cal?.name || '',
-          calendarColor: cal?.color || '#17616E',
+          calendarColor: cal?.color || '#0D9488',
         }
       })
       setDashboardEvents(enrichedEvents)
@@ -432,7 +432,7 @@ export default function useCalendar({ session, activeView }) {
   // Event-Farbe basierend auf Kalender
   const getEventColor = (event) => {
     const cal = calendars.find((c) => c.id === event.calendar_id)
-    return cal?.color || '#17616E'
+    return cal?.color || '#0D9488'
   }
 
   // useEffect: Dashboard Events laden

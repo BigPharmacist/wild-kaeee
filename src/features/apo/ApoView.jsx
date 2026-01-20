@@ -99,7 +99,7 @@ const ApoView = ({
                           markAsRead('amk', msg.id)
                           loadDokumentationen(msg.id, 'amk')
                         }}
-                        className={`text-left ${theme.panel} rounded-2xl border ${theme.border} p-5 ${theme.cardShadow} ${theme.cardHoverShadow} hover:border-[#FD8916] transition-all flex flex-col h-full ${isUnread ? 'ring-2 ring-blue-400' : ''}`}
+                        className={`text-left ${theme.panel} rounded-2xl border ${theme.border} p-5 ${theme.cardShadow} ${theme.cardHoverShadow} hover:border-[#F59E0B] transition-all flex flex-col h-full ${isUnread ? 'ring-2 ring-blue-400' : ''}`}
                       >
                         <div className="flex items-center gap-2 mb-3">
                           <span className="w-2 h-2 rounded-full bg-amber-500" />
@@ -170,7 +170,7 @@ const ApoView = ({
                           markAsRead('recall', msg.id)
                           loadDokumentationen(msg.id, 'recall')
                         }}
-                        className={`text-left ${theme.panel} rounded-2xl border ${theme.border} p-5 ${theme.cardShadow} ${theme.cardHoverShadow} hover:border-[#FD8916] transition-all flex flex-col h-full ${isUnread ? 'ring-2 ring-blue-400' : ''}`}
+                        className={`text-left ${theme.panel} rounded-2xl border ${theme.border} p-5 ${theme.cardShadow} ${theme.cardHoverShadow} hover:border-[#F59E0B] transition-all flex flex-col h-full ${isUnread ? 'ring-2 ring-blue-400' : ''}`}
                       >
                         <div className="flex items-center gap-2 mb-3">
                           <span className="w-2 h-2 rounded-full bg-red-500" />
@@ -246,7 +246,7 @@ const ApoView = ({
                           setSelectedApoMessage({ ...ausgabe, type: 'lav' })
                           markAsRead('lav', ausgabe.id)
                         }}
-                        className={`text-left ${theme.panel} rounded-2xl border ${theme.border} p-5 ${theme.cardShadow} ${theme.cardHoverShadow} hover:border-[#FD8916] transition-all flex flex-col h-full ${isUnread ? 'ring-2 ring-blue-400' : ''}`}
+                        className={`text-left ${theme.panel} rounded-2xl border ${theme.border} p-5 ${theme.cardShadow} ${theme.cardHoverShadow} hover:border-[#F59E0B] transition-all flex flex-col h-full ${isUnread ? 'ring-2 ring-blue-400' : ''}`}
                       >
                         <div className="flex items-center gap-2 mb-3">
                           <span className="w-2 h-2 rounded-full bg-blue-500" />

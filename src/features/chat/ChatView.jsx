@@ -76,9 +76,9 @@ const ChatView = ({
             const ReadStatus = () => {
               if (!isOwn) return null
               return wasRead ? (
-                <Checks size={14} weight="bold" className="text-[#17616E]" title="Gelesen" />
+                <Checks size={14} weight="bold" className="text-[#0D9488]" title="Gelesen" />
               ) : (
-                <Check size={14} weight="bold" className="text-[#7697A0]" title="Gesendet" />
+                <Check size={14} weight="bold" className="text-[#64748B]" title="Gesendet" />
               )
             }
 
@@ -112,7 +112,7 @@ const ChatView = ({
                           {timeLabel && <span>{timeLabel}</span>}
                           <ReadStatus />
                         </div>
-                        <div className={`inline-block rounded-2xl px-4 py-2 border ${entry.deleted_at ? `${theme.panel} ${theme.border}` : 'bg-[#FD8916]/15 border-[#FD8916]/30 text-[#173B61]'}`}>
+                        <div className={`inline-block rounded-2xl px-4 py-2 border ${entry.deleted_at ? `${theme.panel} ${theme.border}` : 'bg-[#F59E0B]/15 border-[#F59E0B]/30 text-[#1E293B]'}`}>
                           {entry.deleted_at ? (
                             <p className={`text-sm italic ${theme.textMuted}`}>Nachricht gelöscht</p>
                           ) : (

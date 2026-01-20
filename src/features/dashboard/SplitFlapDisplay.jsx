@@ -79,11 +79,11 @@ const SplitFlapChar = ({ targetChar, delay = 0 }) => {
   return (
     <div className="relative w-[1.1em] h-[1.6em] mx-[1px]">
       {/* Hintergrund */}
-      <div className="absolute inset-0 bg-[#3C4255] rounded-[2px] shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]" />
+      <div className="absolute inset-0 bg-[#1E293B] rounded-[2px] shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]" />
 
       {/* Obere Hälfte */}
       <div
-        className={`absolute top-0 left-0 right-0 h-1/2 bg-[#4F5469] rounded-t-[2px] overflow-hidden flex items-end justify-center ${
+        className={`absolute top-0 left-0 right-0 h-1/2 bg-[#334155] rounded-t-[2px] overflow-hidden flex items-end justify-center ${
           isFlipping ? 'origin-bottom' : ''
         }`}
         style={{
@@ -92,7 +92,7 @@ const SplitFlapChar = ({ targetChar, delay = 0 }) => {
         }}
       >
         <span
-          className="text-[#ffd900] font-bold leading-none translate-y-[55%]"
+          className="text-[1.3em] text-[#ffd900] font-bold leading-none translate-y-[55%]"
           style={{
             fontFamily: "'Helvetica Neue', Arial, sans-serif",
             textShadow: '0 0 3px rgba(255,217,0,0.3)'
@@ -103,7 +103,7 @@ const SplitFlapChar = ({ targetChar, delay = 0 }) => {
       </div>
 
       {/* Trennlinie */}
-      <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-[#3C4255] z-10" />
+      <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-[#1E293B] z-10" />
 
       {/* Untere Hälfte */}
       <div
@@ -116,7 +116,7 @@ const SplitFlapChar = ({ targetChar, delay = 0 }) => {
         }}
       >
         <span
-          className="text-[#ffd900] font-bold leading-none -translate-y-[45%]"
+          className="text-[1.3em] text-[#ffd900] font-bold leading-none -translate-y-[45%]"
           style={{
             fontFamily: "'Helvetica Neue', Arial, sans-serif",
             textShadow: '0 0 3px rgba(255,217,0,0.3)'
@@ -132,7 +132,7 @@ const SplitFlapChar = ({ targetChar, delay = 0 }) => {
   )
 }
 
-const SplitFlapDisplay = ({ messages = [], charCount = 20, interval = 5000, urgentFaxe = [], faxCount = 0 }) => {
+const SplitFlapDisplay = ({ messages = [], charCount = 20, interval = 30000, urgentFaxe = [], faxCount = 0 }) => {
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0)
   const [displayText, setDisplayText] = useState('')
 
@@ -199,8 +199,8 @@ const SplitFlapDisplay = ({ messages = [], charCount = 20, interval = 5000, urge
 
   return (
     <div
-      className="flex items-center bg-[#3C4255] px-2 py-1.5 rounded-md shadow-[0_2px_8px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.05)]"
-      style={{ fontSize: '14px' }}
+      className="flex items-center bg-[#1E293B] px-2 py-0.5 rounded-md shadow-[0_2px_8px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.05)]"
+      style={{ fontSize: '18px' }}
     >
       {displayText.split('').map((char, index) => (
         <SplitFlapChar

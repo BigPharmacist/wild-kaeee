@@ -124,11 +124,11 @@ const ColorsView = ({ theme }) => {
             <h4 className={`font-semibold ${theme.text}`}>Standard Card</h4>
             <p className={`text-sm ${theme.textMuted} mt-1`}>Mit Hover-Effekt</p>
           </div>
-          <div className={`${theme.panel} rounded-xl p-4 border-l-4 border-l-[#FD8916] border ${theme.border} ${theme.cardShadow}`}>
+          <div className={`${theme.panel} rounded-xl p-4 border-l-4 border-l-[#F59E0B] border ${theme.border} ${theme.cardShadow}`}>
             <h4 className={`font-semibold ${theme.text}`}>Orange Card</h4>
             <p className={`text-sm ${theme.textMuted} mt-1`}>Mit Orange Rand</p>
           </div>
-          <div className={`${theme.panel} rounded-xl p-4 border-l-4 border-l-[#17616E] border ${theme.border} ${theme.cardShadow}`}>
+          <div className={`${theme.panel} rounded-xl p-4 border-l-4 border-l-[#0D9488] border ${theme.border} ${theme.cardShadow}`}>
             <h4 className={`font-semibold ${theme.text}`}>Teal Card</h4>
             <p className={`text-sm ${theme.textMuted} mt-1`}>Mit Teal Rand</p>
           </div>
@@ -167,7 +167,7 @@ const ColorsView = ({ theme }) => {
           <span className={`px-3 py-2 rounded-lg text-sm font-medium ${theme.text} ${theme.navHover}`}>
             Hover
           </span>
-          <span className={`px-3 py-2 rounded-lg text-sm font-medium border-l-4 border-l-[#FD8916] ${theme.sidebarBg} text-white`}>
+          <span className={`px-3 py-2 rounded-lg text-sm font-medium border-l-4 border-l-[#F59E0B] ${theme.sidebarBg} text-white`}>
             Sidebar Active
           </span>
         </div>
@@ -177,19 +177,19 @@ const ColorsView = ({ theme }) => {
       <div className={`${theme.panel} rounded-2xl p-6 border ${theme.border} ${theme.cardShadow} mb-6`}>
         <h3 className={`text-lg font-semibold mb-4 ${theme.text}`}>Badges</h3>
         <div className="flex flex-wrap gap-2">
-          <span className="text-xs uppercase tracking-wide px-2 py-1 rounded-full bg-[#FD8916]/15 text-[#FD8916] border border-[#FD8916]/20">
+          <span className="text-xs uppercase tracking-wide px-2 py-1 rounded-full bg-[#F59E0B]/15 text-[#F59E0B] border border-[#F59E0B]/20">
             Orange
           </span>
-          <span className="text-xs uppercase tracking-wide px-2 py-1 rounded-full bg-[#17616E]/15 text-[#17616E] border border-[#17616E]/20">
+          <span className="text-xs uppercase tracking-wide px-2 py-1 rounded-full bg-[#0D9488]/15 text-[#0D9488] border border-[#0D9488]/20">
             Teal
           </span>
-          <span className="text-xs uppercase tracking-wide px-2 py-1 rounded-full bg-[#173B61]/15 text-[#173B61] border border-[#173B61]/20">
+          <span className="text-xs uppercase tracking-wide px-2 py-1 rounded-full bg-[#1E293B]/15 text-[#1E293B] border border-[#1E293B]/20">
             Navy
           </span>
-          <span className="text-xs uppercase tracking-wide px-2 py-1 rounded-full bg-[#FFEBB0] text-[#173B61] border border-[#FD8916]/20">
+          <span className="text-xs uppercase tracking-wide px-2 py-1 rounded-full bg-[#FEF3C7] text-[#1E293B] border border-[#F59E0B]/20">
             Creme
           </span>
-          <span className="text-xs uppercase tracking-wide px-2 py-1 rounded-full bg-[#C94431]/15 text-[#C94431] border border-[#C94431]/20">
+          <span className="text-xs uppercase tracking-wide px-2 py-1 rounded-full bg-[#E11D48]/15 text-[#E11D48] border border-[#E11D48]/20">
             Error
           </span>
         </div>
@@ -252,36 +252,36 @@ const ColorsView = ({ theme }) => {
             <h4 className={`text-sm font-medium mb-3 ${theme.textSecondary}`}>Hex-Referenz</h4>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-[#3C4255]" />
-                <span className={theme.textMuted}>#3C4255 Sidebar</span>
+                <div className="w-4 h-4 rounded bg-[#1E293B]" />
+                <span className={theme.textMuted}>#1E293B Sidebar</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-[#4F5469]" />
-                <span className={theme.textMuted}>#4F5469 Secondary Sidebar</span>
+                <div className="w-4 h-4 rounded bg-[#334155]" />
+                <span className={theme.textMuted}>#334155 Secondary Sidebar</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-[#7697A0]" />
-                <span className={theme.textMuted}>#7697A0 Blau-Grau</span>
+                <div className="w-4 h-4 rounded bg-[#64748B]" />
+                <span className={theme.textMuted}>#64748B Blau-Grau</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-[#FD8916]" />
-                <span className={theme.textMuted}>#FD8916 Orange (Primary)</span>
+                <div className="w-4 h-4 rounded bg-[#F59E0B]" />
+                <span className={theme.textMuted}>#F59E0B Orange (Primary)</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-[#FFEBB0]" />
-                <span className={theme.textMuted}>#FFEBB0 Creme-Gelb</span>
+                <div className="w-4 h-4 rounded bg-[#FEF3C7]" />
+                <span className={theme.textMuted}>#FEF3C7 Creme-Gelb</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-[#C94431]" />
-                <span className={theme.textMuted}>#C94431 Error Red</span>
+                <div className="w-4 h-4 rounded bg-[#E11D48]" />
+                <span className={theme.textMuted}>#E11D48 Error Red</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-[#173B61]" />
-                <span className={theme.textMuted}>#173B61 Navy</span>
+                <div className="w-4 h-4 rounded bg-[#1E293B]" />
+                <span className={theme.textMuted}>#1E293B Navy</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-[#17616E]" />
-                <span className={theme.textMuted}>#17616E Teal</span>
+                <div className="w-4 h-4 rounded bg-[#0D9488]" />
+                <span className={theme.textMuted}>#0D9488 Teal</span>
               </div>
             </div>
           </div>

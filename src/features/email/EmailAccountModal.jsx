@@ -198,7 +198,7 @@ export default function EmailAccountModal({
               ref={signatureRef}
               contentEditable
               onInput={handleInput}
-              className={`w-full px-3 py-2 border rounded-b-xl rounded-t-none ${theme.input} ${theme.text} text-sm min-h-[100px] max-h-[150px] overflow-y-auto focus:outline-none focus:ring-1 focus:ring-[#FD8916] [&_blockquote]:border-l-4 [&_blockquote]:border-gray-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-gray-600 [&_a]:text-blue-500 [&_a]:underline`}
+              className={`w-full px-3 py-2 border rounded-b-xl rounded-t-none ${theme.input} ${theme.text} text-sm min-h-[100px] max-h-[150px] overflow-y-auto focus:outline-none focus:ring-1 focus:ring-[#F59E0B] [&_blockquote]:border-l-4 [&_blockquote]:border-gray-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-gray-600 [&_a]:text-blue-500 [&_a]:underline`}
               data-placeholder="z.B. Mit freundlichen Grüßen..."
               style={{ whiteSpace: 'pre-wrap' }}
             />

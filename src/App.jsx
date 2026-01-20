@@ -516,7 +516,6 @@ function App() {
   } = useFaxCounts()
   const { urgentFaxe } = useUrgentFax()
   const [pendingFaxId, setPendingFaxId] = useState(null)
-  const [newFaxModal, setNewFaxModal] = useState(null) // { id, absender, fax_received_at }
   const [faxPdfPopup, setFaxPdfPopup] = useState(null) // { id, pdfUrl, absender }
   const [readMessageIds, setReadMessageIds] = useState({ amk: new Set(), recall: new Set(), lav: new Set() })
   const [planData, setPlanData] = useState(null)
@@ -626,55 +625,55 @@ function App() {
   } = useCalendar({ session, activeView })
 
   const theme = {
-    // Backgrounds - Creme-Gelb Basis
-    bgApp: 'bg-[#FFFDF8]',
-    bg: 'bg-[#FFFDF8]',
+    // Backgrounds - Leicht bläuliches Weiß
+    bgApp: 'bg-[#F8FAFC]',
+    bg: 'bg-[#F8FAFC]',
     surface: 'bg-white',
     panel: 'bg-white',
-    bgHover: 'hover:bg-[#FFEBB0]/30',
+    bgHover: 'hover:bg-[#FEF3C7]/30',
     bgCard: 'bg-white',
-    // Text - Navy & Blau-Grau
-    textPrimary: 'text-[#173B61]',
-    text: 'text-[#173B61]',
-    textSecondary: 'text-[#7697A0]',
-    textMuted: 'text-[#7697A0]/70',
+    // Text - Navy & Slate-Grau
+    textPrimary: 'text-[#1E293B]',
+    text: 'text-[#1E293B]',
+    textSecondary: 'text-[#64748B]',
+    textMuted: 'text-[#94A3B8]',
     // Borders
-    border: 'border-[#7697A0]/30',
-    divider: 'border-[#173B61]/20',
-    // Navigation - Creme-Gelb aktiv
-    navActive: 'bg-[#FFEBB0] text-[#173B61] border border-[#FD8916]/30',
-    navHover: 'hover:bg-[#FFEBB0]/50 hover:text-[#173B61]',
-    // Orange (Primary) - CTA, wichtige Buttons
-    accent: 'bg-[#FD8916] hover:bg-[#E57A14]',
-    accentText: 'text-[#FD8916]',
-    primary: 'text-[#FD8916]',
-    primaryBg: 'bg-[#FD8916]',
-    primaryHover: 'hover:bg-[#E57A14]',
+    border: 'border-[#CBD5E1]',
+    divider: 'border-[#1E293B]/20',
+    // Navigation - Amber aktiv
+    navActive: 'bg-[#FEF3C7] text-[#1E293B] border border-[#F59E0B]/30',
+    navHover: 'hover:bg-[#FEF3C7]/50 hover:text-[#1E293B]',
+    // Amber (Primary) - CTA, wichtige Buttons
+    accent: 'bg-[#F59E0B] hover:bg-[#D97706]',
+    accentText: 'text-[#F59E0B]',
+    primary: 'text-[#F59E0B]',
+    primaryBg: 'bg-[#F59E0B]',
+    primaryHover: 'hover:bg-[#D97706]',
     // Teal (Secondary)
-    secondary: 'text-[#17616E]',
-    secondaryAccent: 'bg-[#17616E] hover:bg-[#145560]',
-    // Sidebar - Original Dark Slate
-    sidebarBg: 'bg-[#3C4255]',
-    sidebarHover: 'hover:bg-[#4F5469]',
-    sidebarActive: 'border-[#FD8916] bg-transparent',
-    sidebarText: 'text-[#E5E7EB]',
-    sidebarTextActive: 'text-[#E5E7EB]',
-    secondarySidebarBg: 'bg-[#4F5469]',
-    secondaryActive: 'border-l-4 border-[#FD8916] bg-[#3C4255] text-[#FFEBB0]',
+    secondary: 'text-[#0D9488]',
+    secondaryAccent: 'bg-[#0D9488] hover:bg-[#0F766E]',
+    // Sidebar - Dunkles Navy-Slate
+    sidebarBg: 'bg-[#1E293B]',
+    sidebarHover: 'hover:bg-[#334155]',
+    sidebarActive: 'border-[#F59E0B] bg-transparent',
+    sidebarText: 'text-[#E2E8F0]',
+    sidebarTextActive: 'text-[#E2E8F0]',
+    secondarySidebarBg: 'bg-[#334155]',
+    secondaryActive: 'border-l-4 border-[#F59E0B] bg-[#1E293B] text-[#FEF3C7]',
     // Inputs
-    input: 'bg-white border-[#7697A0]/40 focus:border-[#17616E] focus:ring-1 focus:ring-[#17616E]',
-    inputPlaceholder: 'placeholder-[#7697A0]',
+    input: 'bg-white border-[#CBD5E1] focus:border-[#0D9488] focus:ring-1 focus:ring-[#0D9488]',
+    inputPlaceholder: 'placeholder-[#94A3B8]',
     // Shadows
-    cardShadow: 'shadow-[0_4px_12px_rgba(23,59,97,0.08)]',
-    cardHoverShadow: 'hover:shadow-[0_8px_20px_rgba(23,59,97,0.12)]',
-    overlay: 'bg-[#173B61]/40',
+    cardShadow: 'shadow-[0_4px_12px_rgba(30,41,59,0.08)]',
+    cardHoverShadow: 'hover:shadow-[0_8px_20px_rgba(30,41,59,0.12)]',
+    overlay: 'bg-[#1E293B]/40',
     // Status Colors
-    success: 'text-[#17616E]',
-    successBg: 'bg-[#17616E] hover:bg-[#145560]',
-    warning: 'text-[#FD8916]',
-    warningBg: 'bg-[#FD8916] hover:bg-[#E57A14]',
-    danger: 'text-[#C94431] hover:text-[#A83828] hover:bg-[#FDE8E5]',
-    dangerBg: 'bg-[#C94431] hover:bg-[#A83828]',
+    success: 'text-[#0D9488]',
+    successBg: 'bg-[#0D9488] hover:bg-[#0F766E]',
+    warning: 'text-[#F59E0B]',
+    warningBg: 'bg-[#F59E0B] hover:bg-[#D97706]',
+    danger: 'text-[#E11D48] hover:text-[#BE123C] hover:bg-[#FEE2E2]',
+    dangerBg: 'bg-[#E11D48] hover:bg-[#BE123C]',
   }
 
   const navItems = [
@@ -851,19 +850,14 @@ function App() {
     }
   }, [faxCount])
 
-  // Neues Fax Modal anzeigen
+  // Browser-Notification Klick -> zur Fax-View navigieren
   useEffect(() => {
-    const handleNewFax = (event) => {
-      const fax = event.detail
-      setNewFaxModal({
-        id: fax.id,
-        absender: fax.absender || 'Unbekannt',
-        fax_received_at: fax.fax_received_at
-      })
+    const handleNavigateToFax = () => {
+      setActiveView('fax')
     }
 
-    window.addEventListener('new-fax-received', handleNewFax)
-    return () => window.removeEventListener('new-fax-received', handleNewFax)
+    window.addEventListener('navigate-to-fax', handleNavigateToFax)
+    return () => window.removeEventListener('navigate-to-fax', handleNavigateToFax)
   }, [])
 
   // Mobile Nav: Nach 3 Sekunden automatisch schließen wenn primärer Punkt gewählt
@@ -1655,7 +1649,7 @@ function App() {
     const canvas = signatureCanvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
-    ctx.strokeStyle = '#173B61'
+    ctx.strokeStyle = '#1E293B'
     ctx.lineWidth = 2
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
@@ -2477,7 +2471,7 @@ function App() {
   // Dashboard view
   if (session) {
     return (
-      <div className={`min-h-screen ${theme.bgApp} ${theme.textPrimary} flex flex-col relative overflow-hidden`}>
+      <div className={`h-screen ${theme.bgApp} ${theme.textPrimary} flex flex-col relative overflow-hidden`}>
         <DashboardHeader
           theme={theme}
           mobileNavOpen={mobileNavOpen}
@@ -2500,7 +2494,7 @@ function App() {
           onUrgentFaxClick={handleUrgentFaxClick}
         />
 
-        <div className="flex flex-1 overflow-hidden relative">
+        <div className="flex flex-1 overflow-hidden relative min-h-0">
           <SidebarNav
             theme={theme}
             mobileNavOpen={mobileNavOpen}
@@ -2521,7 +2515,7 @@ function App() {
           />
 
           {/* Main Content */}
-          <main className="flex-1 p-4 lg:p-8 overflow-auto">
+          <main className="flex-1 p-4 lg:p-8 overflow-auto min-h-0">
             <div className={activeView === 'chat' || activeView === 'post' ? 'w-full' : 'max-w-5xl'}>
               {activeView === 'dashboard' && (
                 <>
@@ -2829,14 +2823,14 @@ function App() {
 
                   {rechnungenLoading ? (
                     <div className="flex items-center justify-center py-12">
-                      <svg className="w-8 h-8 animate-spin text-[#FD8916]" fill="none" viewBox="0 0 24 24">
+                      <svg className="w-8 h-8 animate-spin text-[#F59E0B]" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                       </svg>
                     </div>
                   ) : rechnungen.length === 0 ? (
                     <div className={`${theme.panel} rounded-2xl p-8 border ${theme.border} ${theme.cardShadow} text-center`}>
-                      <Icons.FileText className="w-12 h-12 mx-auto mb-4 text-[#7697A0]" />
+                      <Icons.FileText className="w-12 h-12 mx-auto mb-4 text-[#64748B]" />
                       <p className={theme.textMuted}>Keine Rechnungen vorhanden.</p>
                     </div>
                   ) : (
@@ -2906,11 +2900,11 @@ function App() {
                                     <button
                                       key={r.id}
                                       onClick={() => openPdfModal(r)}
-                                      className="w-full text-left px-3 py-2 rounded-lg bg-[#17616E]/10 hover:bg-[#17616E]/20 transition-colors border-l-4 border-[#17616E]"
+                                      className="w-full text-left px-3 py-2 rounded-lg bg-[#0D9488]/10 hover:bg-[#0D9488]/20 transition-colors border-l-4 border-[#0D9488]"
                                     >
                                       <div className="flex justify-between items-start">
-                                        <p className="text-sm font-medium text-[#17616E]">{r.rechnungsnummer}</p>
-                                        <span className="text-xs text-[#17616E]/70">{new Date(r.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr</span>
+                                        <p className="text-sm font-medium text-[#0D9488]">{r.rechnungsnummer}</p>
+                                        <span className="text-xs text-[#0D9488]/70">{new Date(r.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr</span>
                                       </div>
                                       <p className={`text-xs ${theme.textMuted}`}>{r.dateiname}</p>
                                     </button>
@@ -2927,11 +2921,11 @@ function App() {
                                     <button
                                       key={r.id}
                                       onClick={() => openPdfModal(r)}
-                                      className="w-full text-left px-3 py-2 rounded-lg bg-[#FFEBB0]/50 hover:bg-[#FFEBB0] transition-colors border-l-4 border-[#FD8916]"
+                                      className="w-full text-left px-3 py-2 rounded-lg bg-[#FEF3C7]/50 hover:bg-[#FEF3C7] transition-colors border-l-4 border-[#F59E0B]"
                                     >
                                       <div className="flex justify-between items-start">
-                                        <p className="text-sm font-medium text-[#E57A14]">{r.rechnungsnummer}</p>
-                                        <span className="text-xs text-[#FD8916]">{new Date(r.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr</span>
+                                        <p className="text-sm font-medium text-[#D97706]">{r.rechnungsnummer}</p>
+                                        <span className="text-xs text-[#F59E0B]">{new Date(r.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr</span>
                                       </div>
                                       <p className={`text-xs ${theme.textMuted}`}>{r.dateiname}</p>
                                     </button>
@@ -2948,11 +2942,11 @@ function App() {
                                     <button
                                       key={r.id}
                                       onClick={() => openPdfModal(r)}
-                                      className="w-full text-left px-3 py-2 rounded-lg bg-[#173B61]/10 hover:bg-[#173B61]/20 transition-colors border-l-4 border-[#173B61]"
+                                      className="w-full text-left px-3 py-2 rounded-lg bg-[#1E293B]/10 hover:bg-[#1E293B]/20 transition-colors border-l-4 border-[#1E293B]"
                                     >
                                       <div className="flex justify-between items-start">
-                                        <p className="text-sm font-medium text-[#173B61]">{r.rechnungsnummer}</p>
-                                        <span className="text-xs text-[#173B61]/70">{new Date(r.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr</span>
+                                        <p className="text-sm font-medium text-[#1E293B]">{r.rechnungsnummer}</p>
+                                        <span className="text-xs text-[#1E293B]/70">{new Date(r.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr</span>
                                       </div>
                                       <p className={`text-xs ${theme.textMuted}`}>{r.dateiname}</p>
                                     </button>
@@ -2976,9 +2970,23 @@ function App() {
                 <>
                   {secondaryTab === 'email' && (
                     <>
-                      <h2 className="text-2xl lg:text-3xl font-semibold mb-6 tracking-tight">
-                        Email
-                      </h2>
+                      <div className="mb-2">
+                        <label className={`text-xs ${theme.textMuted}`}>Kontoauswahl</label>
+                        <select
+                          value={selectedEmailAccount || ''}
+                          onChange={(e) => handleSelectEmailAccount(e.target.value)}
+                          className={`ml-2 text-sm font-medium bg-transparent border ${theme.border} rounded px-2 py-0.5 cursor-pointer ${theme.text} focus:outline-none focus:ring-1 focus:ring-[#0D9488]`}
+                        >
+                          {emailAccounts.length === 0 && (
+                            <option value="">Kein Konto</option>
+                          )}
+                          {emailAccounts.map(acc => (
+                            <option key={acc.id} value={acc.id}>
+                              {acc.name || acc.email}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                       <EmailView
                         theme={theme}
                         account={emailAccounts.find(a => a.id === selectedEmailAccount)}
@@ -3531,7 +3539,7 @@ function App() {
                       type="checkbox"
                       checked={staffForm.isAdmin}
                       onChange={(e) => handleStaffInput('isAdmin', e.target.checked)}
-                      className="accent-[#FD8916]"
+                      className="accent-[#F59E0B]"
                     />
                     Admin
                   </label>
@@ -3846,7 +3854,7 @@ function App() {
                       max="150"
                       value={brightness}
                       onChange={(e) => setBrightness(Number(e.target.value))}
-                      className="w-full accent-[#FD8916]"
+                      className="w-full accent-[#F59E0B]"
                     />
                   </div>
                   <div>
@@ -3859,7 +3867,7 @@ function App() {
                       max="150"
                       value={contrast}
                       onChange={(e) => setContrast(Number(e.target.value))}
-                      className="w-full accent-[#FD8916]"
+                      className="w-full accent-[#F59E0B]"
                     />
                   </div>
 
@@ -4406,7 +4414,7 @@ function App() {
                         setShowSignatureCanvas(true)
                         setTimeout(initSignatureCanvas, 50)
                       }}
-                      className={`w-full px-4 py-3 rounded-xl border-2 border-dashed ${theme.border} ${theme.textMuted} hover:border-[#FD8916] hover:text-[#FD8916] transition-colors`}
+                      className={`w-full px-4 py-3 rounded-xl border-2 border-dashed ${theme.border} ${theme.textMuted} hover:border-[#F59E0B] hover:text-[#F59E0B] transition-colors`}
                     >
                       Unterschreiben
                     </button>
@@ -4697,7 +4705,7 @@ function App() {
                       className="w-10 h-10 rounded-lg cursor-pointer border-0"
                     />
                     <div className="flex gap-2">
-                      {['#17616E', '#FD8916', '#FFEBB0', '#C94431', '#173B61', '#7697A0'].map((color) => (
+                      {['#0D9488', '#F59E0B', '#FEF3C7', '#E11D48', '#1E293B', '#64748B'].map((color) => (
                         <button
                           key={color}
                           type="button"
@@ -4973,48 +4981,6 @@ function App() {
           </div>
         )}
 
-        {/* Neues Fax Modal */}
-        {newFaxModal && (
-          <div className={`fixed inset-0 ${theme.overlay} flex items-center justify-center z-50 p-4`}>
-            <div className={`${theme.panel} rounded-2xl border ${theme.border} ${theme.cardShadow} w-full max-w-md`}>
-              <div className={`flex items-center gap-4 p-6`}>
-                <div className="w-14 h-14 rounded-full bg-[#4C8BF5]/10 flex items-center justify-center flex-shrink-0">
-                  <Printer size={28} className="text-[#4C8BF5]" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className={`text-lg font-semibold ${theme.text}`}>Neues Fax eingetroffen</h3>
-                  <p className={`text-sm ${theme.textSecondary} mt-1`}>
-                    {newFaxModal.absender !== 'Unbekannt' ? `Von: ${newFaxModal.absender}` : 'Absender unbekannt'}
-                  </p>
-                  {newFaxModal.fax_received_at && (
-                    <p className={`text-xs ${theme.textMuted} mt-1`}>
-                      {new Date(newFaxModal.fax_received_at).toLocaleString('de-DE')}
-                    </p>
-                  )}
-                </div>
-              </div>
-              <div className={`flex gap-3 p-4 border-t ${theme.border}`}>
-                <button
-                  type="button"
-                  onClick={() => setNewFaxModal(null)}
-                  className={`flex-1 px-4 py-2.5 rounded-lg border ${theme.border} ${theme.text} font-medium ${theme.bgHover}`}
-                >
-                  Später
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveView('fax')
-                    setNewFaxModal(null)
-                  }}
-                  className={`flex-1 px-4 py-2.5 rounded-lg ${theme.accent} text-white font-medium`}
-                >
-                  Zum Fax
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Fax-PDF Popup */}
         {faxPdfPopup && (

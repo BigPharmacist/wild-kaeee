@@ -185,7 +185,7 @@ export default function LetterXpressModal({
         {/* Header */}
         <div className={`flex items-center justify-between px-4 py-3 border-b ${theme.border}`}>
           <div className="flex items-center gap-2">
-            <Envelope className="w-5 h-5 text-[#17616E]" weight="bold" />
+            <Envelope className="w-5 h-5 text-[#0D9488]" weight="bold" />
             <h3 className="text-sm font-semibold">Brief versenden</h3>
           </div>
           <button

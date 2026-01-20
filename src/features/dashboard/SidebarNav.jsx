@@ -52,9 +52,9 @@ const SidebarNav = ({
       `}
     >
       <div className="h-full flex flex-col">
-        <div className="px-4 pt-4 pb-3 border-b border-[#3C4255] flex items-center justify-between">
+        <div className="px-4 pt-4 pb-3 border-b border-[#1E293B] flex items-center justify-between">
           <div>
-            <p className="text-xs uppercase tracking-[0.08em] text-[#7697A0]">Navigation</p>
+            <p className="text-xs uppercase tracking-[0.08em] text-[#64748B]">Navigation</p>
             <h2 className="text-sm font-semibold text-[#E5E7EB] mt-1">
               {navItems.find((item) => item.id === activeView)?.label || 'Menü'}
             </h2>
@@ -62,14 +62,14 @@ const SidebarNav = ({
           <button
             type="button"
             onClick={() => setMobileNavOpen(false)}
-            className="p-2 rounded-[6px] text-[#E5E7EB] hover:bg-[#4F5469]"
+            className="p-2 rounded-[6px] text-[#E5E7EB] hover:bg-[#334155]"
             title="Menü schließen"
           >
             <Icons.X />
           </button>
         </div>
         <div className="flex-1 overflow-y-auto">
-          <nav className="p-2 space-y-1 border-b border-[#3C4255]">
+          <nav className="p-2 space-y-1 border-b border-[#1E293B]">
             {navItems.map((item) => {
               const totalApoUnread = item.id === 'apo' ? unreadCounts.amk + unreadCounts.recall + unreadCounts.lav : 0
               const totalPostUnread = item.id === 'post' ? (unreadCounts.fax || 0) + (unreadCounts.email || 0) : 0
@@ -82,7 +82,7 @@ const SidebarNav = ({
                   key={item.id}
                   type="button"
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-[6px] text-sm font-medium transition-colors ${
-                    activeView === item.id ? 'bg-[#4F5469] text-white' : 'text-[#E5E7EB] hover:bg-[#4F5469]'
+                    activeView === item.id ? 'bg-[#334155] text-white' : 'text-[#E5E7EB] hover:bg-[#334155]'
                   }`}
                   onClick={() => setActiveView(item.id)}
                 >
@@ -109,7 +109,7 @@ const SidebarNav = ({
             <button
               type="button"
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-[6px] text-sm font-medium transition-colors ${
-                activeView === miscNavItem.id ? 'bg-[#4F5469] text-white' : 'text-[#E5E7EB] hover:bg-[#4F5469]'
+                activeView === miscNavItem.id ? 'bg-[#334155] text-white' : 'text-[#E5E7EB] hover:bg-[#334155]'
               }`}
               onClick={() => setActiveView(miscNavItem.id)}
             >
@@ -142,7 +142,7 @@ const SidebarNav = ({
                   className={`w-full flex items-center text-left px-3 py-2.5 rounded-[6px] text-sm font-medium border-l-4 transition-colors ${
                     isActive
                       ? theme.secondaryActive
-                      : 'border-transparent text-[#E5E7EB] hover:bg-[#4F5469] hover:text-white'
+                      : 'border-transparent text-[#E5E7EB] hover:bg-[#334155] hover:text-white'
                   }`}
                   onClick={() => {
                     handleSecondarySelect(item.id)
@@ -157,16 +157,16 @@ const SidebarNav = ({
           </nav>
 
           {/* Avatar mit Logout für Mobile */}
-          <div className="p-4 border-t border-[#4F5469]">
+          <div className="p-4 border-t border-[#334155]">
             <div className="flex items-center gap-3">
               {currentStaff?.avatar_url ? (
                 <img
                   src={currentStaff.avatar_url}
                   alt={session?.user?.email}
-                  className="h-10 w-10 rounded-full object-cover border-2 border-[#4F5469]"
+                  className="h-10 w-10 rounded-full object-cover border-2 border-[#334155]"
                 />
               ) : (
-                <div className="h-10 w-10 rounded-full border-2 border-[#4F5469] flex items-center justify-center text-sm text-[#E5E7EB] bg-[#4F5469]">
+                <div className="h-10 w-10 rounded-full border-2 border-[#334155] flex items-center justify-center text-sm text-[#E5E7EB] bg-[#334155]">
                   {session?.user?.email?.[0]?.toUpperCase() || '?'}
                 </div>
               )}
@@ -176,7 +176,7 @@ const SidebarNav = ({
                     {currentStaff.first_name} {currentStaff.last_name || ''}
                   </p>
                 )}
-                <p className="text-xs text-[#7697A0] truncate">
+                <p className="text-xs text-[#64748B] truncate">
                   {session?.user?.email}
                 </p>
               </div>
@@ -186,7 +186,7 @@ const SidebarNav = ({
                 setMobileNavOpen(false)
                 handleSignOut()
               }}
-              className="mt-3 w-full px-3 py-2 text-left text-sm text-[#E5533D] flex items-center gap-2 rounded-[6px] hover:bg-[#4F5469] transition-colors"
+              className="mt-3 w-full px-3 py-2 text-left text-sm text-[#E5533D] flex items-center gap-2 rounded-[6px] hover:bg-[#334155] transition-colors"
             >
               <Icons.Logout />
               Abmelden
@@ -196,7 +196,7 @@ const SidebarNav = ({
       </div>
     </aside>
 
-    <aside className={`hidden lg:flex flex-shrink-0 ${theme.sidebarBg} w-12 min-w-[3rem] max-w-[3rem] overflow-visible`}>
+    <aside className={`hidden lg:flex flex-shrink-0 ${theme.sidebarBg} w-12 min-w-[3rem] max-w-[3rem] overflow-visible h-full`}>
       <div className="h-full flex flex-col">
         <nav className="py-3 space-y-1 flex flex-col items-center flex-1 pl-1">
           {navItems.map((item) => {
@@ -209,7 +209,7 @@ const SidebarNav = ({
             return (
               <div key={item.id} className="relative group">
                 {activeView === item.id && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] bg-[#FD8916] rounded-r" />
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] bg-[#F59E0B] rounded-r" />
                 )}
                 <button
                   type="button"
@@ -222,10 +222,10 @@ const SidebarNav = ({
                 >
                   <item.icon />
                   {hasUnread && (
-                    <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#3C4255]" />
+                    <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#1E293B]" />
                   )}
                 </button>
-                <span className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-[#173B61] text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                <span className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-[#1E293B] text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
                   {item.label}{totalApoUnread > 0 && ` (${totalApoUnread})`}{totalPostUnread > 0 && ` (${totalPostUnread})`}{totalChatUnread > 0 && ` (${totalChatUnread})`}
                 </span>
               </div>
@@ -234,10 +234,10 @@ const SidebarNav = ({
         </nav>
 
         {/* Sonstiges-Icon */}
-        <div className="py-2 flex justify-center border-t border-[#4F5469] pl-1">
+        <div className="py-2 flex justify-center border-t border-[#334155] pl-1">
           <div className="relative group">
             {activeView === miscNavItem.id && (
-              <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] bg-[#FD8916] rounded-r" />
+              <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] bg-[#F59E0B] rounded-r" />
             )}
             <button
               type="button"
@@ -248,14 +248,14 @@ const SidebarNav = ({
             >
               <miscNavItem.icon />
             </button>
-            <span className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-[#173B61] text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+            <span className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-[#1E293B] text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
               {miscNavItem.label}
             </span>
           </div>
         </div>
 
         {/* Avatar mit Logout-Dropdown */}
-        <div className="py-3 flex justify-center border-t border-[#4F5469] pl-1" ref={logoutMenuRef}>
+        <div className="py-3 flex justify-center border-t border-[#334155] pl-1" ref={logoutMenuRef}>
           <div className="relative group">
             <button
               onClick={() => setShowLogoutMenu(!showLogoutMenu)}
@@ -266,10 +266,10 @@ const SidebarNav = ({
                 <img
                   src={currentStaff.avatar_url}
                   alt={session?.user?.email}
-                  className={`h-9 w-9 rounded-full object-cover border-2 ${showLogoutMenu ? 'border-[#4C8BF5]' : 'border-[#4F5469]'} transition-colors`}
+                  className={`h-9 w-9 rounded-full object-cover border-2 ${showLogoutMenu ? 'border-[#4C8BF5]' : 'border-[#334155]'} transition-colors`}
                 />
               ) : (
-                <div className={`h-9 w-9 rounded-full border-2 ${showLogoutMenu ? 'border-[#4C8BF5]' : 'border-[#4F5469]'} flex items-center justify-center text-xs text-[#E5E7EB] bg-[#4F5469] transition-colors`}>
+                <div className={`h-9 w-9 rounded-full border-2 ${showLogoutMenu ? 'border-[#4C8BF5]' : 'border-[#334155]'} flex items-center justify-center text-xs text-[#E5E7EB] bg-[#334155] transition-colors`}>
                   {session?.user?.email?.[0]?.toUpperCase() || '?'}
                 </div>
               )}
@@ -277,7 +277,7 @@ const SidebarNav = ({
 
             {/* Tooltip */}
             {!showLogoutMenu && (
-              <span className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-[#173B61] text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+              <span className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-[#1E293B] text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
                 {currentStaff?.first_name ? `${currentStaff.first_name} ${currentStaff.last_name || ''}` : session?.user?.email}
               </span>
             )}
@@ -300,7 +300,7 @@ const SidebarNav = ({
                     setShowLogoutMenu(false)
                     handleSignOut()
                   }}
-                  className="w-full px-4 py-2 text-left text-sm text-[#E5533D] hover:text-[#C94431] flex items-center gap-2 hover:bg-[#FDE8E5] transition-colors"
+                  className="w-full px-4 py-2 text-left text-sm text-[#E5533D] hover:text-[#E11D48] flex items-center gap-2 hover:bg-[#FDE8E5] transition-colors"
                 >
                   <Icons.Logout />
                   Abmelden
@@ -316,12 +316,12 @@ const SidebarNav = ({
       className={`
         ${theme.secondarySidebarBg} border-r ${theme.border} flex-shrink-0 z-40
         hidden lg:flex lg:relative inset-y-0 left-0 top-0
-        w-48
+        w-48 h-full
       `}
     >
       <div className="h-full flex flex-col">
-        <div className="px-4 pt-4 pb-3 border-b border-[#3C4255]">
-          <p className="text-xs uppercase tracking-[0.08em] text-[#7697A0]">
+        <div className="px-4 pt-4 pb-3 border-b border-[#1E293B]">
+          <p className="text-xs uppercase tracking-[0.08em] text-[#64748B]">
             Navigation
           </p>
           <h2 className="text-sm font-semibold text-[#E5E7EB] mt-1">
@@ -352,7 +352,7 @@ const SidebarNav = ({
                 className={`w-full flex items-center text-left px-3 py-2.5 rounded-[6px] text-sm font-medium border-l-4 transition-colors ${
                   isActive
                     ? theme.secondaryActive
-                    : 'border-transparent text-[#E5E7EB] hover:bg-[#3C4255] hover:text-white'
+                    : 'border-transparent text-[#E5E7EB] hover:bg-[#1E293B] hover:text-white'
                 }`}
                 title={item.label}
                 onClick={() => {

@@ -313,7 +313,7 @@ Inhalt: ${originalEmail.preview || originalEmail.textBody || ''}`
               <button
                 type="button"
                 onClick={() => setShowCcBcc(true)}
-                className={`text-xs ${theme.textMuted} hover:text-[#FD8916] ml-2`}
+                className={`text-xs ${theme.textMuted} hover:text-[#F59E0B] ml-2`}
               >
                 Cc/Bcc
               </button>

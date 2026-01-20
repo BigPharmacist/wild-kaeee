@@ -88,11 +88,11 @@ const dotColors = {
   'keine': 'bg-[#27AE60]',                 // Success Green
   'geringe Gefährdung': 'bg-[#F2C94C]',   // Warning Yellow
   'hohe Gefährdung': 'bg-[#E5533D]',      // Error Red
-  'extreme Gefährdung': 'bg-[#C94431]',   // Error Red (darker)
+  'extreme Gefährdung': 'bg-[#E11D48]',   // Error Red (darker)
   // Thermische Reize - Wärme
   'schwache Wärmereize': 'bg-[#F2C94C]',  // Warning Yellow
   'mäßige Wärmereize': 'bg-[#E5533D]',    // Error Red
-  'starke Wärmereize': 'bg-[#C94431]',    // Error Red (darker)
+  'starke Wärmereize': 'bg-[#E11D48]',    // Error Red (darker)
   'extreme Wärmereize': 'bg-[#A3362A]',   // Error Red (darkest)
   // Thermische Reize - Kälte
   'schwache Kältereize': 'bg-[#7DD3D8]',  // Teal light

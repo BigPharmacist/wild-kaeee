@@ -200,33 +200,31 @@ id (uuid), owner_id (uuid), first_name, last_name, company, position, email, pho
 ### Farbpalette
 
 #### Sidebar (fest)
-- **Primary Sidebar:** Dark Slate `#3C4255`
-- **Secondary Sidebar:** Muted Slate `#4F5469`
+- **Primary Sidebar:** Navy-Slate `#1E293B`
+- **Secondary Sidebar:** Slate `#334155`
 
-#### Actions
-- **Action Blue:** `#4C8BF5` - Primary Buttons, Links
-- **Action Blue Hover:** `#3A74D8`
+#### Primary (Accent)
+- **Amber:** `#F59E0B` - CTA-Buttons, wichtige Aktionen
+- **Amber Hover:** `#D97706`
 
 #### Status-Farben
-- **Success Green:** `#27AE60` (Hover: `#1F8F4F`)
-- **Warning Yellow:** `#F2C94C` (Hover: `#D6AE3C`)
-- **Error Red:** `#E5533D` (Hover: `#C94431`)
-
-#### Akzent
-- **Accent Teal:** `#2EC4B6` - Highlights, Badges, sekundäre Aktionen
+- **Success/Teal:** `#0D9488` (Hover: `#0F766E`)
+- **Warning:** `#F59E0B` (Hover: `#D97706`)
+- **Error Red:** `#E11D48` (Hover: `#BE123C`)
 
 #### Hintergründe
-- **App Background:** `#F4F6FA`
+- **App Background:** `#F8FAFC` (leicht bläuliches Weiß)
 - **Cards/Panels:** `#FFFFFF`
+- **Active/Hover:** `#FEF3C7` (helles Amber)
 
 #### Text
-- **Text Primary:** `#1F2937`
-- **Text Secondary:** `#6B7280`
-- **Text Muted:** `#B5B9C8`
+- **Text Primary:** `#1E293B`
+- **Text Secondary:** `#64748B`
+- **Text Muted:** `#94A3B8`
 
 #### Borders
-- **Border (hell):** `#E5E7EB`
-- **Divider (dunkel):** `#5E647A`
+- **Border (hell):** `#CBD5E1`
+- **Divider (dunkel):** `#1E293B/20`
 
 ### Theme-Objekt (Light Mode)
 
@@ -234,69 +232,68 @@ Das Theme wird in `App.jsx` als Objekt definiert und via Template Literals angew
 
 ```javascript
 const theme = {
-  // Backgrounds
-  bgApp: 'bg-[#F4F6FA]',           // App-Hintergrund
-  bg: 'bg-[#F4F6FA]',              // Allgemeiner Hintergrund
-  surface: 'bg-white',              // Karten, Panels
-  panel: 'bg-white',                // Formulare
-  bgHover: 'hover:bg-[#F4F6FA]',   // Hover-Zustand
-  bgCard: 'bg-white',               // Karten
+  // Backgrounds - Leicht bläuliches Weiß
+  bgApp: 'bg-[#F8FAFC]',
+  bg: 'bg-[#F8FAFC]',
+  surface: 'bg-white',
+  panel: 'bg-white',
+  bgHover: 'hover:bg-[#FEF3C7]/30',
+  bgCard: 'bg-white',
 
-  // Text
-  textPrimary: 'text-[#1F2937]',   // Haupttext (Dark Gray)
-  text: 'text-[#1F2937]',          // Alias
-  textSecondary: 'text-[#6B7280]', // Labels, Untertitel
-  textMuted: 'text-[#B5B9C8]',     // Placeholders, deaktiviert
+  // Text - Navy & Slate-Grau
+  textPrimary: 'text-[#1E293B]',
+  text: 'text-[#1E293B]',
+  textSecondary: 'text-[#64748B]',
+  textMuted: 'text-[#94A3B8]',
 
   // Borders
-  border: 'border-[#E5E7EB]',      // Standard-Rahmen
-  divider: 'border-[#5E647A]',     // Für dunkle Bereiche
+  border: 'border-[#CBD5E1]',
+  divider: 'border-[#1E293B]/20',
 
-  // Navigation (Content Area)
-  navActive: 'bg-[#E8F0FE] text-[#1F2937] border border-[#C2D9FC]',
-  navHover: 'hover:bg-[#F4F6FA] hover:text-[#1F2937]',
+  // Navigation - Amber aktiv
+  navActive: 'bg-[#FEF3C7] text-[#1E293B] border border-[#F59E0B]/30',
+  navHover: 'hover:bg-[#FEF3C7]/50 hover:text-[#1E293B]',
 
-  // Accent (Action Blue)
-  accent: 'bg-[#4C8BF5] hover:bg-[#3A74D8]',
-  accentText: 'text-[#4C8BF5]',
-  primary: 'text-[#4C8BF5]',
-  primaryBg: 'bg-[#4C8BF5]',
-  primaryHover: 'hover:bg-[#3A74D8]',
+  // Amber (Primary) - CTA, wichtige Buttons
+  accent: 'bg-[#F59E0B] hover:bg-[#D97706]',
+  accentText: 'text-[#F59E0B]',
+  primary: 'text-[#F59E0B]',
+  primaryBg: 'bg-[#F59E0B]',
+  primaryHover: 'hover:bg-[#D97706]',
 
-  // Secondary (Teal)
-  secondary: 'text-[#2EC4B6]',
-  secondaryBg: 'bg-[#2EC4B6]',
-  secondaryHover: 'hover:bg-[#25A89C]',
+  // Teal (Secondary)
+  secondary: 'text-[#0D9488]',
+  secondaryAccent: 'bg-[#0D9488] hover:bg-[#0F766E]',
 
-  // Sidebar (Schmal, nur Icons)
-  sidebarBg: 'bg-[#3C4255]',
-  sidebarHover: 'hover:bg-[#4F5469]',
-  sidebarActive: 'border-l-[3px] border-white bg-transparent',
-  sidebarText: 'text-[#E5E7EB]',
-  sidebarTextActive: 'text-[#E5E7EB]',
+  // Sidebar - Dunkles Navy-Slate
+  sidebarBg: 'bg-[#1E293B]',
+  sidebarHover: 'hover:bg-[#334155]',
+  sidebarActive: 'border-[#F59E0B] bg-transparent',
+  sidebarText: 'text-[#E2E8F0]',
+  sidebarTextActive: 'text-[#E2E8F0]',
 
-  // Secondary Sidebar (Dunkel)
-  secondarySidebarBg: 'bg-[#4F5469]',
-  secondaryActive: 'border-l-4 border-[#4C8BF5] bg-[#3C4255] text-[#E5E7EB]',
+  // Secondary Sidebar
+  secondarySidebarBg: 'bg-[#334155]',
+  secondaryActive: 'border-l-4 border-[#F59E0B] bg-[#1E293B] text-[#FEF3C7]',
 
   // Inputs
-  input: 'bg-white border-[#E5E7EB] focus:border-[#4C8BF5] focus:ring-1 focus:ring-[#4C8BF5]',
-  inputPlaceholder: 'placeholder-[#B5B9C8]',
+  input: 'bg-white border-[#CBD5E1] focus:border-[#0D9488] focus:ring-1 focus:ring-[#0D9488]',
+  inputPlaceholder: 'placeholder-[#94A3B8]',
 
   // Shadows
-  cardShadow: 'shadow-[0_4px_12px_rgba(0,0,0,0.05)]',
-  cardHoverShadow: 'hover:shadow-[0_8px_20px_rgba(0,0,0,0.08)]',
+  cardShadow: 'shadow-[0_4px_12px_rgba(30,41,59,0.08)]',
+  cardHoverShadow: 'hover:shadow-[0_8px_20px_rgba(30,41,59,0.12)]',
 
   // Overlay
-  overlay: 'bg-[#1F2937]/30',
+  overlay: 'bg-[#1E293B]/40',
 
   // Status Colors
-  success: 'text-[#27AE60]',
-  successBg: 'bg-[#27AE60] hover:bg-[#1F8F4F]',
-  warning: 'text-[#F2C94C]',
-  warningBg: 'bg-[#F2C94C] hover:bg-[#D6AE3C]',
-  danger: 'text-[#E5533D] hover:text-[#C94431] hover:bg-[#FDE8E5]',
-  dangerBg: 'bg-[#E5533D] hover:bg-[#C94431]',
+  success: 'text-[#0D9488]',
+  successBg: 'bg-[#0D9488] hover:bg-[#0F766E]',
+  warning: 'text-[#F59E0B]',
+  warningBg: 'bg-[#F59E0B] hover:bg-[#D97706]',
+  danger: 'text-[#E11D48] hover:text-[#BE123C] hover:bg-[#FEE2E2]',
+  dangerBg: 'bg-[#E11D48] hover:bg-[#BE123C]',
 }
 ```
 

@@ -83,22 +83,19 @@ const DashboardHome = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {weatherData.daily?.slice(0, 3).map((day, index) => {
                 const dayLabel = index === 0 ? 'Heute' : index === 1 ? 'Morgen' : new Date(day.date).toLocaleDateString('de-DE', { weekday: 'short' })
                 return (
-                  <div key={day.date} className={`bg-[#FFEBB0] rounded-xl p-3 text-center`}>
-                    <p className={`text-xs font-medium ${theme.textSecondary} mb-2`}>{dayLabel}</p>
-                    <div className={`flex justify-center mb-2 ${theme.textSecondary}`}>
-                      <WeatherIcon code={day.weatherCode ?? weatherData.weatherCode} className="w-8 h-8" />
+                  <div key={day.date} className={`bg-[#FEF3C7] rounded-lg px-2 py-1.5 text-center`}>
+                    <p className={`text-xs font-medium ${theme.textSecondary}`}>{dayLabel}</p>
+                    <div className={`flex justify-center ${theme.textSecondary}`}>
+                      <WeatherIcon code={day.weatherCode ?? weatherData.weatherCode} className="w-6 h-6" />
                     </div>
-                    <p className={`text-base font-semibold ${theme.text}`}>
-                      {Math.round(day.max ?? 0)}°
+                    <p className={`text-sm font-semibold ${theme.text} leading-tight`}>
+                      {Math.round(day.max ?? 0)}° / {Math.round(day.min ?? 0)}°
                     </p>
-                    <p className={`text-sm ${theme.textMuted}`}>
-                      {Math.round(day.min ?? 0)}°
-                    </p>
-                    <div className={`flex items-center justify-center gap-1 mt-1 text-xs ${theme.textMuted}`}>
+                    <div className={`flex items-center justify-center gap-0.5 text-xs ${theme.textMuted}`}>
                       <Icons.Droplet className="w-3 h-3" />
                       <span>{day.precipitationProbability ?? 0}%</span>
                     </div>

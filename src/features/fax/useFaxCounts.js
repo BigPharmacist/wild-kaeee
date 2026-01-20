@@ -6,7 +6,29 @@ const FAX_NOTIFICATION_SOUND = 'https://proxy.notificationsounds.com/message-ton
 
 const playNotificationSound = () => {
   const audio = new Audio(FAX_NOTIFICATION_SOUND)
-  audio.play().catch(() => {}) // Ignoriere Autoplay-Fehler, Modal ist wichtiger
+  audio.play().catch(() => {})
+}
+
+// Browser-Benachrichtigung anzeigen
+const showBrowserNotification = (fax) => {
+  if (!('Notification' in window)) return
+
+  if (Notification.permission === 'granted') {
+    const notification = new Notification('Neues Fax eingetroffen', {
+      body: `Absender: ${fax.absender || 'Unbekannt'}`,
+      icon: '/favicon.ico',
+      tag: 'new-fax'
+    })
+
+    // Klick auf Notification -> Fax öffnen
+    notification.onclick = () => {
+      window.focus()
+      window.dispatchEvent(new CustomEvent('navigate-to-fax', { detail: fax.id }))
+      notification.close()
+    }
+  } else if (Notification.permission !== 'denied') {
+    Notification.requestPermission()
+  }
 }
 
 /**
@@ -43,7 +65,7 @@ export default function useFaxCounts() {
 
         if (newestFax && newestFax.id !== lastFaxIdRef.current) {
           lastFaxIdRef.current = newestFax.id
-          window.dispatchEvent(new CustomEvent('new-fax-received', { detail: newestFax }))
+          showBrowserNotification(newestFax)
           playNotificationSound()
         }
       }
@@ -95,8 +117,8 @@ export default function useFaxCounts() {
         // Neues Fax - prüfen ob Status 'neu'
         if (payload.new?.status === 'neu') {
           setFaxCount(prev => prev + 1)
-          // Modal-Event dispatchen
-          window.dispatchEvent(new CustomEvent('new-fax-received', { detail: payload.new }))
+          // Browser-Benachrichtigung anzeigen
+          showBrowserNotification(payload.new)
           // Sound versuchen (funktioniert nur nach Benutzerinteraktion)
           playNotificationSound()
         }

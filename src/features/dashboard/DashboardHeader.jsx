@@ -25,7 +25,7 @@ const DashboardHeader = ({
     <div className="flex items-center gap-3">
       <button
         onClick={() => setMobileNavOpen(!mobileNavOpen)}
-        className={`lg:hidden p-2 rounded-[6px] ${theme.textSecondary} hover:bg-[#FFEBB0]`}
+        className={`lg:hidden p-2 rounded-[6px] ${theme.textSecondary} hover:bg-[#FEF3C7]`}
         title={mobileNavOpen ? 'Menü schließen' : 'Menü öffnen'}
       >
         {mobileNavOpen ? <Icons.X /> : <Icons.Menu />}
@@ -35,7 +35,7 @@ const DashboardHeader = ({
       <div className="hidden lg:block absolute left-[17rem]">
         <SplitFlapDisplay
           charCount={24}
-          interval={12000}
+          interval={30000}
           urgentFaxe={urgentFaxe}
           faxCount={faxCount}
         />
@@ -51,7 +51,7 @@ const DashboardHeader = ({
             cameraInputRef.current?.click()
           }
         }}
-        className={`p-2 rounded-[6px] hover:bg-[#FFEBB0] ${theme.textSecondary} transition-colors ${(photoUploading || businessCardScanning) ? 'opacity-50' : ''}`}
+        className={`p-2 rounded-[6px] hover:bg-[#FEF3C7] ${theme.textSecondary} transition-colors ${(photoUploading || businessCardScanning) ? 'opacity-50' : ''}`}
         title={(activeView === 'settings' && settingsTab === 'contacts') ? 'Visitenkarte scannen' : 'Foto aufnehmen'}
         disabled={photoUploading || businessCardScanning}
       >
@@ -87,7 +87,7 @@ const DashboardHeader = ({
 
       <button
         onClick={() => setActiveView('rechnungen')}
-        className={`p-2 rounded-[6px] hover:bg-[#FFEBB0] ${activeView === 'rechnungen' ? theme.accentText : theme.textSecondary} transition-colors`}
+        className={`p-2 rounded-[6px] hover:bg-[#FEF3C7] ${activeView === 'rechnungen' ? theme.accentText : theme.textSecondary} transition-colors`}
         title="GH-Rechnungen"
       >
         <Icons.FileText />
