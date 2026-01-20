@@ -13,8 +13,6 @@ const DashboardHome = ({
   dashboardEventsLoading,
   dashboardEvents,
   setActiveView,
-  photoUploading,
-  latestPhoto,
   pollenData,
   pollenLoading,
   pollenError,
@@ -216,32 +214,6 @@ const DashboardHome = ({
         })()}
       </div>
 
-      <div className={`${theme.panel} rounded-2xl p-4 border ${theme.border} ${theme.cardShadow} flex flex-col gap-3`}>
-        <h3 className={`text-lg font-medium ${theme.text}`}>Letztes Foto</h3>
-        {photoUploading && (
-          <p className={`text-xs ${theme.textMuted}`}>Foto wird hochgeladen...</p>
-        )}
-        {!photoUploading && latestPhoto && (
-          <div className="space-y-2">
-            <img
-              src={latestPhoto.url}
-              alt="Letztes Foto"
-              className="w-full h-40 object-cover rounded-xl"
-            />
-            <p className={`text-xs ${theme.textMuted}`}>
-              {latestPhoto.createdAt
-                ? new Date(latestPhoto.createdAt).toLocaleString('de-DE')
-                : latestPhoto.name}
-            </p>
-          </div>
-        )}
-        {!photoUploading && !latestPhoto && (
-          <p className={theme.textMuted}>
-            Noch kein Foto vorhanden. Nutze das Kamera-Symbol oben.
-          </p>
-        )}
-      </div>
-
       <div className={`${theme.panel} rounded-2xl p-5 border ${theme.border} ${theme.cardShadow}`}>
         <div className="flex items-center justify-between mb-4">
           <h3 className={`text-lg font-medium ${theme.text}`}>Pollenflug</h3>
@@ -305,7 +277,7 @@ const DashboardHome = ({
       </div>
 
       <div
-        className={`${theme.panel} rounded-2xl p-5 border ${theme.border} ${theme.cardShadow} cursor-pointer hover:border-[#4C8BF5] transition-colors`}
+        className={`${theme.panel} rounded-2xl p-5 border ${theme.border} ${theme.cardShadow} cursor-pointer hover:border-[#4C8BF5] transition-colors overflow-hidden`}
         onClick={openBiowetterModal}
       >
         <div className="flex items-center justify-between mb-4">
@@ -363,9 +335,9 @@ const DashboardHome = ({
               {hasAnyEffects ? (
                 <>
                   {/* Tabelle mit durchgängigen Trennlinien */}
-                  <div className="flex">
+                  <div className="flex min-w-0 overflow-hidden">
                     {/* Labels-Spalte */}
-                    <div className="flex-1 mr-2">
+                    <div className="flex-1 min-w-0 mr-2">
                       <div className="h-5" /> {/* Platz für Tage-Header */}
                       <div className="h-4 mb-1" /> {/* Platz für VM/NM-Header */}
                       <div className="space-y-1">
@@ -380,7 +352,7 @@ const DashboardHome = ({
                     {days.map((day, dayIdx) => (
                       <div
                         key={day.label}
-                        className={`${dayIdx > 0 ? 'border-l border-[#E5E7EB] pl-1 ml-1' : ''}`}
+                        className={`flex-shrink-0 ${dayIdx > 0 ? 'border-l border-[#E5E7EB] pl-1 ml-1' : ''}`}
                       >
                         {/* Tages-Header */}
                         <div className="h-5 flex justify-center items-center">

@@ -4,14 +4,22 @@ import {
   ArrowsOutSimple,
   ArrowUUpLeft,
   ArrowUUpRight,
+  CalendarCheck,
   CaretLeft,
   DownloadSimple,
   MagnifyingGlassMinus,
   MagnifyingGlassPlus,
   Printer,
   Trash,
+  User,
+  Buildings,
+  Clock,
+  Calendar,
+  Tag,
+  SpinnerGap,
 } from '@phosphor-icons/react'
 import { supabaseUrl } from '../../lib/supabase'
+import useBesuchstermine from './useBesuchstermine'
 
 const priorityColors = {
   ROT: 'bg-red-500 text-white',
@@ -61,6 +69,50 @@ export default function FaxDetailPane({
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
   const containerRef = useRef(null)
+
+  // Besuchstermine Hook
+  const {
+    loading: terminLoading,
+    createTerminFromBesuch,
+    getTerminForFax,
+  } = useBesuchstermine()
+
+  const [linkedTermin, setLinkedTermin] = useState(null)
+  const [terminCreating, setTerminCreating] = useState(false)
+
+  // Hat das Fax Besuchsdaten?
+  const hasBesuchsdaten = selectedFax?.besuche && selectedFax.besuche.length > 0
+  const besuch = hasBesuchsdaten ? selectedFax.besuche[0] : null
+
+  // Automatisch Termin laden oder erstellen wenn Fax mit Besuchsdaten angezeigt wird
+  useEffect(() => {
+    const loadOrCreateTermin = async () => {
+      if (!selectedFax?.id) {
+        setLinkedTermin(null)
+        return
+      }
+
+      // Prüfen ob bereits ein Termin existiert
+      const existingTermin = await getTerminForFax(selectedFax.id)
+
+      if (existingTermin) {
+        setLinkedTermin(existingTermin)
+        return
+      }
+
+      // Wenn Besuchsdaten vorhanden, automatisch Termin erstellen
+      if (hasBesuchsdaten) {
+        setTerminCreating(true)
+        const result = await createTerminFromBesuch(selectedFax)
+        if (result.success && result.termin) {
+          setLinkedTermin(result.termin)
+        }
+        setTerminCreating(false)
+      }
+    }
+
+    loadOrCreateTermin()
+  }, [selectedFax?.id, selectedFax?.besuche, hasBesuchsdaten, getTerminForFax, createTerminFromBesuch])
 
   const handleZoomIn = () => setZoom(z => Math.min(z + 0.25, 3))
   const handleZoomOut = () => setZoom(z => Math.max(z - 0.25, 0.5))
@@ -215,6 +267,85 @@ export default function FaxDetailPane({
               </div>
             </div>
           </div>
+
+          {/* Besuchsankündigung Anzeige */}
+          {hasBesuchsdaten && (
+            <div className={`mx-4 mt-3 p-3 rounded-xl border ${theme.border} ${theme.surface}`}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className={`text-xs font-medium ${theme.textMuted} mb-2 uppercase tracking-wide`}>
+                    Besuchsankündigung
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                    {besuch.firma && (
+                      <div className="flex items-center gap-2">
+                        <Buildings size={16} className={theme.textMuted} />
+                        <span className={theme.text}>{besuch.firma}</span>
+                      </div>
+                    )}
+                    {besuch.name && (
+                      <div className="flex items-center gap-2">
+                        <User size={16} className={theme.textMuted} />
+                        <span className={theme.text}>{besuch.name}</span>
+                      </div>
+                    )}
+                    {besuch.datum && (
+                      <div className="flex items-center gap-2">
+                        <Calendar size={16} className={theme.textMuted} />
+                        <span className={theme.text}>{besuch.datum}</span>
+                      </div>
+                    )}
+                    {besuch.uhrzeit && (
+                      <div className="flex items-center gap-2">
+                        <Clock size={16} className={theme.textMuted} />
+                        <span className={theme.text}>{besuch.uhrzeit} Uhr</span>
+                      </div>
+                    )}
+                    {besuch.thema && (
+                      <div className="flex items-center gap-2 sm:col-span-2">
+                        <Tag size={16} className={theme.textMuted} />
+                        <span className={`${theme.text} truncate`}>{besuch.thema}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Termin-Status */}
+                <div className="flex-shrink-0">
+                  {terminCreating ? (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 text-amber-700 border border-amber-200">
+                      <SpinnerGap size={18} className="animate-spin" />
+                      <span className="text-sm font-medium">Termin wird erstellt...</span>
+                    </div>
+                  ) : linkedTermin ? (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      <CalendarCheck size={18} />
+                      <span className="text-sm font-medium">Im Kalender</span>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+
+              {/* Verknüpfter Termin Details */}
+              {linkedTermin && (
+                <div className={`mt-2 pt-2 border-t ${theme.border} text-xs ${theme.textMuted}`}>
+                  Termin: {linkedTermin.title} am{' '}
+                  {new Date(linkedTermin.start_time).toLocaleDateString('de-DE', {
+                    weekday: 'short',
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                  })}{' '}
+                  um{' '}
+                  {new Date(linkedTermin.start_time).toLocaleTimeString('de-DE', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}{' '}
+                  Uhr
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Content */}
           <div className="flex-1 flex flex-col overflow-hidden">

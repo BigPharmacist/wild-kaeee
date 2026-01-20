@@ -169,7 +169,16 @@ export default function useJmapMail({ account }) {
       setIsAuthenticated(true)
 
       const boxes = await jmap.getMailboxes()
-      setMailboxes(boxes)
+
+      // Sortierung: Inbox oben, dann Sent, Drafts, Trash, Spam, Rest alphabetisch
+      const roleOrder = ['inbox', 'sent', 'drafts', 'trash', 'junk', 'spam', 'archive']
+      const sortedBoxes = [...boxes].sort((a, b) => {
+        const aIndex = roleOrder.indexOf(a.role) >= 0 ? roleOrder.indexOf(a.role) : 99
+        const bIndex = roleOrder.indexOf(b.role) >= 0 ? roleOrder.indexOf(b.role) : 99
+        if (aIndex !== bIndex) return aIndex - bIndex
+        return (a.name || '').localeCompare(b.name || '', 'de')
+      })
+      setMailboxes(sortedBoxes)
 
       const inbox = boxes.find(m => m.role === 'inbox')
       if (inbox) {

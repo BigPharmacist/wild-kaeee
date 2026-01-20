@@ -260,19 +260,35 @@ Inhalt: ${originalEmail.preview || originalEmail.textBody || ''}`
             {composeMode === 'reply' ? 'Antworten' : composeMode === 'forward' ? 'Weiterleiten' : 'Neue E-Mail'}
           </span>
 
-          <button
-            type="button"
-            onClick={onSend}
-            disabled={sending || !composeData.to.trim()}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg ${theme.primaryBg} text-white font-medium text-sm ${theme.primaryHover} disabled:opacity-50 disabled:cursor-not-allowed`}
-          >
-            {sending ? (
-              <CircleNotch size={16} className="animate-spin" />
-            ) : (
-              <PaperPlaneTilt size={16} />
-            )}
-            <span className="hidden sm:inline">Senden</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border ${theme.border} ${theme.text} font-medium text-sm ${theme.bgHover}`}
+              title="Anhang hinzufügen"
+            >
+              <Paperclip size={16} />
+              <span className="hidden sm:inline">Anhang</span>
+              {attachments.length > 0 && (
+                <span className="ml-0.5 px-1.5 py-0.5 text-xs bg-[#4C8BF5] text-white rounded-full">
+                  {attachments.length}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={onSend}
+              disabled={sending || !composeData.to.trim()}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg ${theme.primaryBg} text-white font-medium text-sm ${theme.primaryHover} disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              {sending ? (
+                <CircleNotch size={16} className="animate-spin" />
+              ) : (
+                <PaperPlaneTilt size={16} />
+              )}
+              <span className="hidden sm:inline">Senden</span>
+            </button>
+          </div>
         </div>
 
         {/* Felder - Inline-Style */}

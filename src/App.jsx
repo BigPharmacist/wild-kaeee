@@ -516,6 +516,7 @@ function App() {
   } = useFaxCounts()
   const { urgentFaxe } = useUrgentFax()
   const [pendingFaxId, setPendingFaxId] = useState(null)
+  const [faxPdfPopup, setFaxPdfPopup] = useState(null) // { id, pdfUrl, absender }
   const [readMessageIds, setReadMessageIds] = useState({ amk: new Set(), recall: new Set(), lav: new Set() })
   const [planData, setPlanData] = useState(null)
   const [planLoading, setPlanLoading] = useState(false)
@@ -751,6 +752,40 @@ function App() {
       ...(currentStaff?.is_admin ? [{ id: 'admin', label: 'Admin' }] : []),
     ],
   }), [currentStaff?.is_admin, staff, session?.user?.id, archivDocumentTypes, archivSavedViews])
+
+  // Fax-PDF Popup öffnen (für Kalender-Links)
+  const openFaxPdfPopup = async (faxId) => {
+    try {
+      const { data: fax, error } = await supabase
+        .from('faxe')
+        .select('id, absender, storage_url, storage_path')
+        .eq('id', faxId)
+        .single()
+
+      if (error || !fax) {
+        console.error('Fax nicht gefunden:', error)
+        return
+      }
+
+      // PDF-URL konstruieren
+      let pdfUrl = null
+      if (fax.storage_url) {
+        const match = fax.storage_url.match(/\/storage\/v1\/object\/public\/(.+)$/)
+        if (match) {
+          pdfUrl = `${supabaseUrl}/storage/v1/object/public/${match[1]}`
+        }
+      }
+      if (!pdfUrl && fax.storage_path) {
+        pdfUrl = `${supabaseUrl}/storage/v1/object/public/${fax.storage_path}`
+      }
+
+      if (pdfUrl) {
+        setFaxPdfPopup({ id: fax.id, pdfUrl, absender: fax.absender })
+      }
+    } catch (err) {
+      console.error('Fehler beim Laden des Fax:', err)
+    }
+  }
 
   useEffect(() => {
     // Beim ersten Mount den gespeicherten Wert behalten
@@ -2498,8 +2533,6 @@ function App() {
                     dashboardEventsLoading={dashboardEventsLoading}
                     dashboardEvents={dashboardEvents}
                     setActiveView={setActiveView}
-                    photoUploading={photoUploading}
-                    latestPhoto={latestPhoto}
                     pollenData={pollenData}
                     pollenLoading={pollenLoading}
                     pollenError={pollenError}
@@ -4515,13 +4548,37 @@ function App() {
 
                 <div>
                   <label className={`block text-sm font-medium mb-1.5 ${theme.textSecondary}`}>Beschreibung</label>
-                  <textarea
-                    value={eventForm.description}
-                    onChange={(e) => setEventForm((prev) => ({ ...prev, description: e.target.value }))}
-                    rows={3}
-                    className={`w-full px-4 py-2.5 rounded-xl border ${theme.input} ${theme.inputPlaceholder} resize-none ${theme.text}`}
-                    placeholder="Optional"
-                  />
+                  {/* Prüfen ob Fax-Link vorhanden */}
+                  {eventForm.description && eventForm.description.includes('[fax:') ? (
+                    <div className={`w-full px-4 py-2.5 rounded-xl border ${theme.border} ${theme.surface} ${theme.text} text-sm`}>
+                      {/* Text vor dem Link */}
+                      {eventForm.description.split('[fax:')[0].trim() && (
+                        <p className="mb-2 whitespace-pre-wrap">{eventForm.description.split('[fax:')[0].trim()}</p>
+                      )}
+                      {/* Fax-Link als Button */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const match = eventForm.description.match(/\[fax:([a-f0-9-]+)\]/)
+                          if (match) {
+                            openFaxPdfPopup(match[1])
+                          }
+                        }}
+                        className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors"
+                      >
+                        <Printer size={18} />
+                        <span className="font-medium">Fax-Ankündigung anzeigen</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <textarea
+                      value={eventForm.description}
+                      onChange={(e) => setEventForm((prev) => ({ ...prev, description: e.target.value }))}
+                      rows={3}
+                      className={`w-full px-4 py-2.5 rounded-xl border ${theme.input} ${theme.inputPlaceholder} resize-none ${theme.text}`}
+                      placeholder="Optional"
+                    />
+                  )}
                 </div>
 
                 {eventError && (
@@ -4885,6 +4942,37 @@ function App() {
                 >
                   Schließen
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Fax-PDF Popup */}
+        {faxPdfPopup && (
+          <div className={`fixed inset-0 ${theme.overlay} flex items-center justify-center z-50 p-4`}>
+            <div className={`${theme.panel} rounded-2xl border ${theme.border} ${theme.cardShadow} w-full max-w-4xl h-[85vh] flex flex-col`}>
+              <div className={`flex items-center justify-between p-4 border-b ${theme.border}`}>
+                <div className="flex items-center gap-3">
+                  <Printer size={24} className={theme.accentText} />
+                  <div>
+                    <h3 className={`text-lg font-semibold ${theme.text}`}>Fax-Ankündigung</h3>
+                    <p className={`text-sm ${theme.textMuted}`}>{faxPdfPopup.absender || 'Unbekannter Absender'}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setFaxPdfPopup(null)}
+                  className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
+                >
+                  <Icons.X />
+                </button>
+              </div>
+              <div className="flex-1 min-h-0 bg-gray-100">
+                <iframe
+                  src={faxPdfPopup.pdfUrl}
+                  className="w-full h-full border-0"
+                  title="Fax PDF"
+                />
               </div>
             </div>
           </div>
