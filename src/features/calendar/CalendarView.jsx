@@ -153,12 +153,10 @@ const CalendarView = ({
 }) => {
   const today = new Date()
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-  const debugEnabled = typeof window !== 'undefined' && window.localStorage?.getItem('calendarDebug') === '1'
-  const [debugInfo, setDebugInfo] = useState(null)
 
   // For infinite scroll: offset range from current month
   const [monthRange, setMonthRange] = useState({ start: -2, end: 3 })
-  const monthRangeRef = useRef(monthRange) // Ref für Debug-Anzeige ohne Dependency
+  const monthRangeRef = useRef(monthRange)
   const scrollContainerRef = useRef(null)
   const currentMonthRef = useRef(null)
   const topSentinelRef = useRef(null)
@@ -242,16 +240,6 @@ const CalendarView = ({
         const scrollTop = isWindow ? window.scrollY : scrollParent.scrollTop
         const scrollHeight = isWindow ? document.documentElement.scrollHeight : scrollParent.scrollHeight
         const clientHeight = isWindow ? window.innerHeight : scrollParent.clientHeight
-        if (debugEnabled) {
-          setDebugInfo({
-            scrollTop,
-            scrollHeight,
-            clientHeight,
-            rangeStart: monthRangeRef.current.start,
-            rangeEnd: monthRangeRef.current.end,
-            isWindow,
-          })
-        }
 
         // Laden am unteren Ende
         if (scrollTop + clientHeight >= scrollHeight - 800 && canLoad()) {
@@ -273,7 +261,7 @@ const CalendarView = ({
     scrollParent.addEventListener('scroll', handleScroll, { passive: true })
     handleScroll()
     return () => scrollParent.removeEventListener('scroll', handleScroll)
-  }, [calendarViewMode, debugEnabled, calendarsLoading, eventsLoading]) // Auch Loading-States, damit Ref verfügbar ist
+  }, [calendarViewMode, calendarsLoading, eventsLoading])
 
   // Scroll-Position kompensieren nach dem Laden von Monaten am Anfang
   useEffect(() => {
@@ -456,13 +444,6 @@ const CalendarView = ({
         <div className={`${theme.panel} rounded-2xl p-4 border ${theme.border} ${theme.cardShadow}`}>
           {calendarViewMode === 'month' && (
             <div ref={scrollContainerRef} className="relative">
-              {debugEnabled && debugInfo && (
-                <div className="sticky top-0 z-30 mb-2 rounded-lg border border-amber-400/60 bg-amber-50 px-2 py-1 text-[11px] text-amber-900">
-                  scrollTop {Math.round(debugInfo.scrollTop)} | client {Math.round(debugInfo.clientHeight)} | height{' '}
-                  {Math.round(debugInfo.scrollHeight)} | range {debugInfo.rangeStart}..{debugInfo.rangeEnd} | root{' '}
-                  {debugInfo.isWindow ? 'window' : 'container'}
-                </div>
-              )}
               <button
                 type="button"
                 onClick={() => setShowWeekends(!showWeekends)}
