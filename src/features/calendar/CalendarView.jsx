@@ -80,13 +80,13 @@ const MonthGrid = ({
               className={`
                 min-h-24 p-1 rounded-lg border transition-colors
                 ${day.isCurrentMonth ? theme.panel : `${theme.panel} opacity-40`}
-                ${day.isToday ? 'border-[#F59E0B] border-2 bg-[#FDE68A] ring-4 ring-[#F59E0B]/40 shadow-lg shadow-[#F59E0B]/25' : theme.border}
-                ${canWriteCurrentCalendar() ? 'cursor-pointer ' + theme.bgHover : ''}
+                ${day.isToday ? 'border-[#1E293B] border-2 bg-[#334155] ring-4 ring-[#1E293B]/30 shadow-lg shadow-[#1E293B]/25' : theme.border}
+                ${canWriteCurrentCalendar ? 'cursor-pointer ' + (day.isToday ? 'hover:bg-[#475569]' : theme.bgHover) : ''}
               `}
             >
               <div
                 className={`text-xs font-medium mb-1 ${
-                  day.isToday ? theme.accentText : day.isCurrentMonth ? theme.text : theme.textMuted
+                  day.isToday ? 'text-white' : day.isCurrentMonth ? theme.text : theme.textMuted
                 }`}
               >
                 {day.date.getDate()}
@@ -505,9 +505,9 @@ const CalendarView = ({
                   {workDays.map((day, idx) => (
                     <div
                       key={day.dateStr}
-                      className={`min-h-48 p-2 rounded-lg border ${day.isToday ? 'border-[#F59E0B] border-2 bg-[#FDE68A] ring-4 ring-[#F59E0B]/40 shadow-lg shadow-[#F59E0B]/25' : theme.border} ${theme.panel}`}
+                      className={`min-h-48 p-2 rounded-lg border ${day.isToday ? 'border-[#1E293B] border-2 bg-[#334155] ring-4 ring-[#1E293B]/30 shadow-lg shadow-[#1E293B]/25' : theme.border} ${theme.panel}`}
                     >
-                      <div className={`text-xs font-medium mb-2 ${day.isToday ? theme.accentText : theme.textSecondary}`}>
+                      <div className={`text-xs font-medium mb-2 ${day.isToday ? 'text-white' : theme.textSecondary}`}>
                         {weekDays[idx]} {day.date.getDate()}
                       </div>
                       <div className="space-y-1">
