@@ -1,3 +1,132 @@
+import { useState, useEffect, useRef, useCallback } from 'react'
+
+// Helper: Generate weeks for a given month
+const generateMonthWeeks = (year, month, todayStr, calendarEvents) => {
+  const firstDay = new Date(year, month, 1)
+  const startOffset = (firstDay.getDay() + 6) % 7
+  const startDate = new Date(firstDay)
+  startDate.setDate(startDate.getDate() - startOffset)
+
+  const weeks = []
+  const currentDate = new Date(startDate)
+
+  for (let w = 0; w < 6; w++) {
+    const week = []
+    for (let d = 0; d < 7; d++) {
+      const dayDate = new Date(currentDate)
+      const dateStr = `${dayDate.getFullYear()}-${String(dayDate.getMonth() + 1).padStart(2, '0')}-${String(dayDate.getDate()).padStart(2, '0')}`
+      const isCurrentMonth = dayDate.getMonth() === month
+      const isToday = dateStr === todayStr
+      const isWeekend = d >= 5
+
+      const dayEvents = calendarEvents.filter((e) => {
+        const eventDate = e.start_time.substring(0, 10)
+        return eventDate === dateStr
+      })
+
+      week.push({ date: dayDate, dateStr, isCurrentMonth, isToday, events: dayEvents, isWeekend })
+      currentDate.setDate(currentDate.getDate() + 1)
+    }
+    weeks.push(week)
+  }
+
+  return weeks
+}
+
+// Single Month Component
+const MonthGrid = ({
+  year,
+  month,
+  todayStr,
+  calendarEvents,
+  showWeekends,
+  theme,
+  canWriteCurrentCalendar,
+  openEventModal,
+  getEventColor,
+  monthRef,
+  isCurrentMonth,
+}) => {
+  const weeks = generateMonthWeeks(year, month, todayStr, calendarEvents)
+  const weekDays = showWeekends ? ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'] : ['Mo', 'Di', 'Mi', 'Do', 'Fr']
+  const gridCols = showWeekends ? 'grid-cols-7' : 'grid-cols-5'
+  const monthName = new Date(year, month, 1).toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })
+
+  return (
+    <div ref={monthRef} className="mb-8" data-month={`${year}-${month}`}>
+      <div className={`sticky top-0 z-10 py-2 mb-2 ${theme.panel} border-b ${theme.border}`}>
+        <h3 className={`text-lg font-semibold ${theme.text} ${isCurrentMonth ? theme.accentText : ''}`}>
+          {monthName}
+        </h3>
+      </div>
+
+      <div className={`grid ${gridCols} gap-1 mb-2`}>
+        {weekDays.map((day, idx) => (
+          <div
+            key={day}
+            className={`text-xs font-medium text-center py-2 ${showWeekends && idx >= 5 ? theme.textMuted : theme.textSecondary}`}
+          >
+            {day}
+          </div>
+        ))}
+      </div>
+
+      {weeks.map((week, wIdx) => (
+        <div key={wIdx} className={`grid ${gridCols} gap-1`}>
+          {week.filter((day) => showWeekends || !day.isWeekend).map((day) => (
+            <div
+              key={day.dateStr}
+              onClick={() => canWriteCurrentCalendar() && openEventModal(null, day.date)}
+              className={`
+                min-h-24 p-1 rounded-lg border transition-colors
+                ${day.isCurrentMonth ? theme.panel : `${theme.panel} opacity-40`}
+                ${day.isToday ? 'border-[#F59E0B] border-2 bg-[#FDE68A] ring-4 ring-[#F59E0B]/40 shadow-lg shadow-[#F59E0B]/25' : theme.border}
+                ${canWriteCurrentCalendar() ? 'cursor-pointer ' + theme.bgHover : ''}
+              `}
+            >
+              <div
+                className={`text-xs font-medium mb-1 ${
+                  day.isToday ? theme.accentText : day.isCurrentMonth ? theme.text : theme.textMuted
+                }`}
+              >
+                {day.date.getDate()}
+              </div>
+
+              <div className="space-y-0.5">
+                {day.events.slice(0, 3).map((event) => (
+                  <div
+                    key={event.id}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      openEventModal(event)
+                    }}
+                    className="text-[10px] px-1.5 py-0.5 rounded truncate text-white cursor-pointer hover:opacity-80"
+                    style={{ backgroundColor: getEventColor(event) }}
+                    title={event.title}
+                  >
+                    {!event.all_day && (
+                      <span className="opacity-75 mr-1">
+                        {new Date(event.start_time).toLocaleTimeString('de-DE', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </span>
+                    )}
+                    {event.title}
+                  </div>
+                ))}
+                {day.events.length > 3 && (
+                  <div className={`text-[10px] ${theme.textMuted}`}>+{day.events.length - 3} weitere</div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 const CalendarView = ({
   theme,
   calendars,
@@ -21,179 +150,323 @@ const CalendarView = ({
   canWriteCurrentCalendar,
   openEventModal,
   getEventColor,
-}) => (
-  <>
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-      <div className="flex items-center gap-3">
-        <h2 className="text-2xl lg:text-3xl font-semibold tracking-tight">Kalender</h2>
+}) => {
+  const today = new Date()
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  const debugEnabled = typeof window !== 'undefined' && window.localStorage?.getItem('calendarDebug') === '1'
+  const [debugInfo, setDebugInfo] = useState(null)
 
-        {calendars.length > 0 && (
-          <select
-            value={selectedCalendarId || ''}
-            onChange={(e) => setSelectedCalendarId(e.target.value)}
-            className={`px-3 py-2 rounded-lg border ${theme.input} ${theme.text} text-sm`}
-          >
-            <option value="all">Alle Kalender</option>
-            {calendars.map((cal) => (
-              <option key={cal.id} value={cal.id}>
-                {cal.name}
-              </option>
-            ))}
-          </select>
-        )}
-      </div>
+  // For infinite scroll: offset range from current month
+  const [monthRange, setMonthRange] = useState({ start: -2, end: 3 })
+  const monthRangeRef = useRef(monthRange) // Ref für Debug-Anzeige ohne Dependency
+  const scrollContainerRef = useRef(null)
+  const currentMonthRef = useRef(null)
+  const topSentinelRef = useRef(null)
+  const bottomSentinelRef = useRef(null)
+  const hasScrolledToToday = useRef(false)
+  const topTriggeredRef = useRef(false)
+  const bottomTriggeredRef = useRef(false)
+  const scrollParentRef = useRef(null)
+  const loadCooldownRef = useRef(0)
+  const prevScrollHeightRef = useRef(0) // Für Scroll-Kompensation beim Laden nach oben
+  const isLoadingTopRef = useRef(false) // Flag für Scroll-Kompensation
 
-      <div className="flex items-center gap-2 flex-wrap">
-        <div className={`flex rounded-lg border ${theme.border} overflow-hidden`}>
-          {['month', 'week', 'day'].map((mode) => (
-            <button
-              key={mode}
-              type="button"
-              onClick={() => setCalendarViewMode(mode)}
-              className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                calendarViewMode === mode
-                  ? 'bg-[#F59E0B] text-white'
-                  : `${theme.panel} ${theme.textMuted} ${theme.bgHover}`
-              }`}
+  // Sync monthRange to ref for access in scroll handler
+  useEffect(() => {
+    monthRangeRef.current = monthRange
+  }, [monthRange])
+
+  // Generate list of months to render
+  const getMonthsToRender = useCallback(() => {
+    const months = []
+    for (let offset = monthRange.start; offset <= monthRange.end; offset++) {
+      const d = new Date(today.getFullYear(), today.getMonth() + offset, 1)
+      months.push({ year: d.getFullYear(), month: d.getMonth(), offset })
+    }
+    return months
+  }, [monthRange.start, monthRange.end]) // eslint-disable-line react-hooks/exhaustive-deps -- today is stable within session
+
+  // Scroll to current month on initial load
+  useEffect(() => {
+    if (calendarViewMode === 'month' && currentMonthRef.current && !hasScrolledToToday.current) {
+      setTimeout(() => {
+        currentMonthRef.current?.scrollIntoView({ behavior: 'instant', block: 'start' })
+        hasScrolledToToday.current = true
+      }, 100)
+    }
+  }, [calendarViewMode, calendarsLoading, eventsLoading])
+
+  const getScrollParent = (node) => {
+    let current = node
+    while (current && current !== document.body) {
+      const style = window.getComputedStyle(current)
+      const overflowY = style.overflowY
+      const overflow = style.overflow
+      if (overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay' || overflow === 'auto' || overflow === 'scroll') return current
+      current = current.parentElement
+    }
+    return window
+  }
+
+  // Scroll-based infinite loading (works with scrollable containers)
+  useEffect(() => {
+    if (calendarViewMode !== 'month') return
+    if (!scrollContainerRef.current) return
+
+    // Robustere scrollParent-Erkennung: Immer zuerst nach <main> mit overflow suchen
+    const explicitMain = scrollContainerRef.current.closest('main')
+    let scrollParent
+    if (explicitMain) {
+      const mainStyle = window.getComputedStyle(explicitMain)
+      const hasOverflow = mainStyle.overflow === 'auto' || mainStyle.overflow === 'scroll' ||
+                          mainStyle.overflowY === 'auto' || mainStyle.overflowY === 'scroll'
+      scrollParent = hasOverflow ? explicitMain : getScrollParent(scrollContainerRef.current)
+    } else {
+      scrollParent = getScrollParent(scrollContainerRef.current)
+    }
+    scrollParentRef.current = scrollParent
+
+    const canLoad = () => {
+      const now = Date.now()
+      if (now - loadCooldownRef.current < 200) return false
+      loadCooldownRef.current = now
+      return true
+    }
+
+    let ticking = false
+    const handleScroll = () => {
+      if (ticking) return
+      ticking = true
+      requestAnimationFrame(() => {
+        const isWindow = scrollParent === window
+        const scrollTop = isWindow ? window.scrollY : scrollParent.scrollTop
+        const scrollHeight = isWindow ? document.documentElement.scrollHeight : scrollParent.scrollHeight
+        const clientHeight = isWindow ? window.innerHeight : scrollParent.clientHeight
+        if (debugEnabled) {
+          setDebugInfo({
+            scrollTop,
+            scrollHeight,
+            clientHeight,
+            rangeStart: monthRangeRef.current.start,
+            rangeEnd: monthRangeRef.current.end,
+            isWindow,
+          })
+        }
+
+        // Laden am unteren Ende
+        if (scrollTop + clientHeight >= scrollHeight - 800 && canLoad()) {
+          setMonthRange((prev) => ({ ...prev, end: prev.end + 3 }))
+        }
+
+        // Laden am oberen Ende mit Scroll-Kompensation
+        if (scrollTop <= 800 && canLoad()) {
+          // Speichere aktuelle scrollHeight vor dem Laden
+          prevScrollHeightRef.current = scrollHeight
+          isLoadingTopRef.current = true
+          setMonthRange((prev) => ({ ...prev, start: prev.start - 3 }))
+        }
+
+        ticking = false
+      })
+    }
+
+    scrollParent.addEventListener('scroll', handleScroll, { passive: true })
+    handleScroll()
+    return () => scrollParent.removeEventListener('scroll', handleScroll)
+  }, [calendarViewMode, debugEnabled, calendarsLoading, eventsLoading]) // Auch Loading-States, damit Ref verfügbar ist
+
+  // Scroll-Position kompensieren nach dem Laden von Monaten am Anfang
+  useEffect(() => {
+    if (!isLoadingTopRef.current) return
+    if (!scrollParentRef.current) return
+
+    // Warte einen Frame, damit React die neuen Monate gerendert hat
+    requestAnimationFrame(() => {
+      const scrollParent = scrollParentRef.current
+      if (!scrollParent) return
+
+      const isWindow = scrollParent === window
+      const newScrollHeight = isWindow ? document.documentElement.scrollHeight : scrollParent.scrollHeight
+      const heightDiff = newScrollHeight - prevScrollHeightRef.current
+
+      if (heightDiff > 0) {
+        // Scroll-Position um die Höhe der neuen Monate nach unten verschieben
+        if (isWindow) {
+          window.scrollBy(0, heightDiff)
+        } else {
+          scrollParent.scrollTop += heightDiff
+        }
+      }
+
+      isLoadingTopRef.current = false
+      prevScrollHeightRef.current = 0
+    })
+  }, [monthRange.start]) // Nur wenn start sich ändert (= neue Monate oben)
+
+  // Scroll to today handler
+  const scrollToToday = () => {
+    if (calendarViewMode === 'month') {
+      // Reset range to include current month
+      setMonthRange({ start: -2, end: 3 })
+      setTimeout(() => {
+        currentMonthRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 50)
+    } else {
+      setCalendarViewDate(new Date())
+    }
+  }
+
+  return (
+    <>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-3">
+          <h2 className="text-2xl lg:text-3xl font-semibold tracking-tight">Kalender</h2>
+
+          {calendars.length > 0 && (
+            <select
+              value={selectedCalendarId || ''}
+              onChange={(e) => setSelectedCalendarId(e.target.value)}
+              className={`px-3 py-2 rounded-lg border ${theme.input} ${theme.text} text-sm`}
             >
-              {mode === 'month' ? 'Monat' : mode === 'week' ? 'Woche' : 'Tag'}
-            </button>
-          ))}
+              <option value="all">Alle Kalender</option>
+              {calendars.map((cal) => (
+                <option key={cal.id} value={cal.id}>
+                  {cal.name}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            const d = new Date(calendarViewDate)
-            if (calendarViewMode === 'month') d.setMonth(d.getMonth() - 1)
-            else if (calendarViewMode === 'week') d.setDate(d.getDate() - 7)
-            else d.setDate(d.getDate() - 1)
-            setCalendarViewDate(d)
-          }}
-          className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
-          title="Zurück"
-        >
-          <Icons.ChevronLeft />
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className={`flex rounded-lg border ${theme.border} overflow-hidden`}>
+            {['month', 'week', 'day'].map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setCalendarViewMode(mode)}
+                className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                  calendarViewMode === mode
+                    ? 'bg-[#F59E0B] text-white'
+                    : `${theme.panel} ${theme.textMuted} ${theme.bgHover}`
+                }`}
+              >
+                {mode === 'month' ? 'Monat' : mode === 'week' ? 'Woche' : 'Tag'}
+              </button>
+            ))}
+          </div>
 
-        <button
-          type="button"
-          onClick={() => setCalendarViewDate(new Date())}
-          className={`px-3 py-1.5 text-xs font-medium rounded-lg ${theme.bgHover} ${theme.textMuted}`}
-        >
-          Heute
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            const d = new Date(calendarViewDate)
-            if (calendarViewMode === 'month') d.setMonth(d.getMonth() + 1)
-            else if (calendarViewMode === 'week') d.setDate(d.getDate() + 7)
-            else d.setDate(d.getDate() + 1)
-            setCalendarViewDate(d)
-          }}
-          className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
-          title="Vor"
-        >
-          <Icons.ChevronRight />
-        </button>
-
-        {currentStaff?.is_admin && (
-          <>
-            <button
-              type="button"
-              onClick={() => openCalendarModal()}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg ${theme.accent} text-white`}
-            >
-              + Kalender
-            </button>
-            {selectedCalendarId && selectedCalendarId !== 'all' && (
+          {calendarViewMode !== 'month' && (
+            <>
               <button
                 type="button"
                 onClick={() => {
-                  setPermissionsModalOpen(true)
-                  fetchCalendarPermissions(selectedCalendarId)
+                  const d = new Date(calendarViewDate)
+                  if (calendarViewMode === 'week') d.setDate(d.getDate() - 7)
+                  else d.setDate(d.getDate() - 1)
+                  setCalendarViewDate(d)
                 }}
                 className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
-                title="Berechtigungen verwalten"
+                title="Zurück"
               >
-                <Icons.Settings />
+                <Icons.ChevronLeft />
               </button>
-            )}
-          </>
-        )}
+            </>
+          )}
+
+          <button
+            type="button"
+            onClick={scrollToToday}
+            className={`px-3 py-1.5 text-xs font-medium rounded-lg ${theme.bgHover} ${theme.textMuted}`}
+          >
+            Heute
+          </button>
+
+          {calendarViewMode !== 'month' && (
+            <button
+              type="button"
+              onClick={() => {
+                const d = new Date(calendarViewDate)
+                if (calendarViewMode === 'week') d.setDate(d.getDate() + 7)
+                else d.setDate(d.getDate() + 1)
+                setCalendarViewDate(d)
+              }}
+              className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
+              title="Vor"
+            >
+              <Icons.ChevronRight />
+            </button>
+          )}
+
+          {currentStaff?.is_admin && (
+            <>
+              <button
+                type="button"
+                onClick={() => openCalendarModal()}
+                className={`px-3 py-1.5 text-xs font-medium rounded-lg ${theme.accent} text-white`}
+              >
+                + Kalender
+              </button>
+              {selectedCalendarId && selectedCalendarId !== 'all' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPermissionsModalOpen(true)
+                    fetchCalendarPermissions(selectedCalendarId)
+                  }}
+                  className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
+                  title="Berechtigungen verwalten"
+                >
+                  <Icons.Settings />
+                </button>
+              )}
+            </>
+          )}
+        </div>
       </div>
-    </div>
 
-    <div className="mb-4">
-      <h3 className={`text-lg font-medium ${theme.text}`}>
-        {calendarViewDate.toLocaleDateString('de-DE', {
-          month: 'long',
-          year: 'numeric',
-          ...(calendarViewMode === 'day' && { day: 'numeric', weekday: 'long' }),
-        })}
-      </h3>
-    </div>
+      {calendarViewMode !== 'month' && (
+        <div className="mb-4">
+          <h3 className={`text-lg font-medium ${theme.text}`}>
+            {calendarViewDate.toLocaleDateString('de-DE', {
+              month: 'long',
+              year: 'numeric',
+              ...(calendarViewMode === 'day' && { day: 'numeric', weekday: 'long' }),
+            })}
+          </h3>
+        </div>
+      )}
 
-    {calendarsLoading || eventsLoading ? (
-      <div className={`${theme.panel} rounded-2xl p-6 border ${theme.border} ${theme.cardShadow}`}>
-        <p className={theme.textMuted}>{calendarsLoading ? 'Kalender werden geladen...' : 'Termine werden geladen...'}</p>
-      </div>
-    ) : calendarsError ? (
-      <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3">
-        <p className="text-rose-400 text-sm">{calendarsError}</p>
-      </div>
-    ) : calendars.length === 0 ? (
-      <div className={`${theme.panel} rounded-2xl p-6 border ${theme.border} ${theme.cardShadow}`}>
-        <p className={theme.textMuted}>
-          Keine Kalender verfügbar.
-          {currentStaff?.is_admin && ' Erstelle einen neuen Kalender.'}
-        </p>
-      </div>
-    ) : (
-      <div className={`${theme.panel} rounded-2xl p-4 border ${theme.border} ${theme.cardShadow}`}>
-        {calendarViewMode === 'month' && (() => {
-          const today = new Date()
-          const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-
-          const firstDay = new Date(calendarViewDate.getFullYear(), calendarViewDate.getMonth(), 1)
-          const startOffset = (firstDay.getDay() + 6) % 7
-          const startDate = new Date(firstDay)
-          startDate.setDate(startDate.getDate() - startOffset)
-
-          const weeks = []
-          const currentDate = new Date(startDate)
-
-          for (let w = 0; w < 6; w++) {
-            const week = []
-            for (let d = 0; d < 7; d++) {
-              const dayDate = new Date(currentDate)
-              const dateStr = `${dayDate.getFullYear()}-${String(dayDate.getMonth() + 1).padStart(2, '0')}-${String(dayDate.getDate()).padStart(2, '0')}`
-              const isCurrentMonth = dayDate.getMonth() === calendarViewDate.getMonth()
-              const isToday = dateStr === todayStr
-              const isWeekend = d >= 5
-
-              const dayEvents = calendarEvents.filter((e) => {
-                const eventDate = e.start_time.substring(0, 10)
-                return eventDate === dateStr
-              })
-
-              week.push({ date: dayDate, dateStr, isCurrentMonth, isToday, events: dayEvents, isWeekend })
-              currentDate.setDate(currentDate.getDate() + 1)
-            }
-            weeks.push(week)
-          }
-
-          const weekDays = showWeekends ? ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'] : ['Mo', 'Di', 'Mi', 'Do', 'Fr']
-          const gridCols = showWeekends ? 'grid-cols-7' : 'grid-cols-5'
-
-          return (
-            <div className="space-y-1 relative">
+      {calendarsLoading || eventsLoading ? (
+        <div className={`${theme.panel} rounded-2xl p-6 border ${theme.border} ${theme.cardShadow}`}>
+          <p className={theme.textMuted}>{calendarsLoading ? 'Kalender werden geladen...' : 'Termine werden geladen...'}</p>
+        </div>
+      ) : calendarsError ? (
+        <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3">
+          <p className="text-rose-400 text-sm">{calendarsError}</p>
+        </div>
+      ) : calendars.length === 0 ? (
+        <div className={`${theme.panel} rounded-2xl p-6 border ${theme.border} ${theme.cardShadow}`}>
+          <p className={theme.textMuted}>
+            Keine Kalender verfügbar.
+            {currentStaff?.is_admin && ' Erstelle einen neuen Kalender.'}
+          </p>
+        </div>
+      ) : (
+        <div className={`${theme.panel} rounded-2xl p-4 border ${theme.border} ${theme.cardShadow}`}>
+          {calendarViewMode === 'month' && (
+            <div ref={scrollContainerRef} className="relative">
+              {debugEnabled && debugInfo && (
+                <div className="sticky top-0 z-30 mb-2 rounded-lg border border-amber-400/60 bg-amber-50 px-2 py-1 text-[11px] text-amber-900">
+                  scrollTop {Math.round(debugInfo.scrollTop)} | client {Math.round(debugInfo.clientHeight)} | height{' '}
+                  {Math.round(debugInfo.scrollHeight)} | range {debugInfo.rangeStart}..{debugInfo.rangeEnd} | root{' '}
+                  {debugInfo.isWindow ? 'window' : 'container'}
+                </div>
+              )}
               <button
                 type="button"
                 onClick={() => setShowWeekends(!showWeekends)}
-                className={`absolute -right-1 top-0 p-1.5 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
+                className={`absolute right-0 top-0 z-20 p-1.5 rounded-lg ${theme.bgHover} ${theme.textMuted} ${theme.panel}`}
                 title={showWeekends ? 'Wochenende ausblenden' : 'Wochenende einblenden'}
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -205,225 +478,181 @@ const CalendarView = ({
                 </svg>
               </button>
 
-              <div className={`grid ${gridCols} gap-1 mb-2`}>
-                {weekDays.map((day, idx) => (
-                  <div
-                    key={day}
-                    className={`text-xs font-medium text-center py-2 ${showWeekends && idx >= 5 ? theme.textMuted : theme.textSecondary}`}
-                  >
-                    {day}
-                  </div>
-                ))}
-              </div>
+              {/* Top sentinel for loading previous months */}
+              <div ref={topSentinelRef} className="h-1" />
 
-              {weeks.map((week, wIdx) => (
-                <div key={wIdx} className={`grid ${gridCols} gap-1`}>
-                  {week.filter((day) => showWeekends || !day.isWeekend).map((day) => (
-                    <div
-                      key={day.dateStr}
-                      onClick={() => canWriteCurrentCalendar() && openEventModal(null, day.date)}
-                      className={`
-                        min-h-24 p-1 rounded-lg border transition-colors
-                        ${day.isCurrentMonth ? theme.panel : `${theme.panel} opacity-40`}
-                        ${day.isToday ? 'border-[#F59E0B] border-2 bg-[#FDE68A] ring-4 ring-[#F59E0B]/40 shadow-lg shadow-[#F59E0B]/25' : theme.border}
-                        ${canWriteCurrentCalendar() ? 'cursor-pointer ' + theme.bgHover : ''}
-                      `}
-                    >
-                      <div
-                        className={`text-xs font-medium mb-1 ${
-                          day.isToday ? theme.accentText : day.isCurrentMonth ? theme.text : theme.textMuted
-                        }`}
-                      >
-                        {day.date.getDate()}
-                      </div>
+              {getMonthsToRender().map(({ year, month, offset }) => (
+                <MonthGrid
+                  key={`${year}-${month}`}
+                  year={year}
+                  month={month}
+                  todayStr={todayStr}
+                  calendarEvents={calendarEvents}
+                  showWeekends={showWeekends}
+                  theme={theme}
+                  canWriteCurrentCalendar={canWriteCurrentCalendar}
+                  openEventModal={openEventModal}
+                  getEventColor={getEventColor}
+                  monthRef={offset === 0 ? currentMonthRef : null}
+                  isCurrentMonth={offset === 0}
+                />
+              ))}
 
-                      <div className="space-y-0.5">
-                        {day.events.slice(0, 3).map((event) => (
+              {/* Bottom sentinel for loading future months */}
+              <div ref={bottomSentinelRef} className="h-1" />
+            </div>
+          )}
+
+          {calendarViewMode === 'week' && (() => {
+            const startOfWeek = new Date(calendarViewDate)
+            startOfWeek.setDate(calendarViewDate.getDate() - ((calendarViewDate.getDay() + 6) % 7))
+
+            const days = []
+            for (let i = 0; i < 7; i++) {
+              const d = new Date(startOfWeek)
+              d.setDate(startOfWeek.getDate() + i)
+              const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+              const dayEvents = calendarEvents.filter((e) => e.start_time.substring(0, 10) === dateStr)
+              days.push({ date: d, dateStr, isToday: dateStr === todayStr, events: dayEvents })
+            }
+
+            const weekDays = ['Mo', 'Di', 'Mi', 'Do', 'Fr']
+            const weekendDays = ['Sa', 'So']
+            const workDays = days.slice(0, 5)
+            const weekend = days.slice(5, 7)
+            const weekendEvents = [...weekend[0].events, ...weekend[1].events]
+
+            return (
+              <div className="space-y-3">
+                {weekendEvents.length > 0 && (
+                  <div className={`p-3 rounded-xl border ${theme.border} ${theme.panel}`}>
+                    <div className={`text-xs font-medium mb-2 ${theme.textSecondary}`}>
+                      Wochenende ({weekend[0].date.getDate()}.–{weekend[1].date.getDate()}.)
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {weekend.map((day, idx) => (
+                        day.events.map((event) => (
                           <div
                             key={event.id}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              openEventModal(event)
-                            }}
-                            className="text-[10px] px-1.5 py-0.5 rounded truncate text-white cursor-pointer hover:opacity-80"
+                            onClick={() => openEventModal(event)}
+                            className="text-[11px] px-2 py-1 rounded-lg text-white cursor-pointer hover:opacity-80 flex items-center gap-1.5"
                             style={{ backgroundColor: getEventColor(event) }}
-                            title={event.title}
                           >
+                            <span className="opacity-75 font-medium">{weekendDays[idx]}</span>
                             {!event.all_day && (
-                              <span className="opacity-75 mr-1">
-                                {new Date(event.start_time).toLocaleTimeString('de-DE', {
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })}
+                              <span className="opacity-75">
+                                {new Date(event.start_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
                               </span>
                             )}
-                            {event.title}
+                            <span className="truncate max-w-32">{event.title}</span>
+                          </div>
+                        ))
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-5 gap-2">
+                  {workDays.map((day, idx) => (
+                    <div
+                      key={day.dateStr}
+                      className={`min-h-48 p-2 rounded-lg border ${day.isToday ? 'border-[#F59E0B] border-2 bg-[#FDE68A] ring-4 ring-[#F59E0B]/40 shadow-lg shadow-[#F59E0B]/25' : theme.border} ${theme.panel}`}
+                    >
+                      <div className={`text-xs font-medium mb-2 ${day.isToday ? theme.accentText : theme.textSecondary}`}>
+                        {weekDays[idx]} {day.date.getDate()}
+                      </div>
+                      <div className="space-y-1">
+                        {day.events.map((event) => (
+                          <div
+                            key={event.id}
+                            onClick={() => openEventModal(event)}
+                            className="text-[10px] px-1.5 py-1 rounded text-white cursor-pointer hover:opacity-80"
+                            style={{ backgroundColor: getEventColor(event) }}
+                          >
+                            {!event.all_day && (
+                              <div className="opacity-75">
+                                {new Date(event.start_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                            )}
+                            <div className="truncate">{event.title}</div>
                           </div>
                         ))}
-                        {day.events.length > 3 && (
-                          <div className={`text-[10px] ${theme.textMuted}`}>+{day.events.length - 3} weitere</div>
-                        )}
                       </div>
+                      {canWriteCurrentCalendar() && (
+                        <button
+                          type="button"
+                          onClick={() => openEventModal(null, day.date)}
+                          className={`mt-2 w-full text-[10px] py-1 rounded ${theme.bgHover} ${theme.textMuted}`}
+                        >
+                          + Termin
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
-              ))}
-            </div>
-          )
-        })()}
-
-        {calendarViewMode === 'week' && (() => {
-          const today = new Date()
-          const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-
-          const startOfWeek = new Date(calendarViewDate)
-          startOfWeek.setDate(calendarViewDate.getDate() - ((calendarViewDate.getDay() + 6) % 7))
-
-          const days = []
-          for (let i = 0; i < 7; i++) {
-            const d = new Date(startOfWeek)
-            d.setDate(startOfWeek.getDate() + i)
-            const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-            const dayEvents = calendarEvents.filter((e) => e.start_time.substring(0, 10) === dateStr)
-            days.push({ date: d, dateStr, isToday: dateStr === todayStr, events: dayEvents })
-          }
-
-          const weekDays = ['Mo', 'Di', 'Mi', 'Do', 'Fr']
-          const weekendDays = ['Sa', 'So']
-          const workDays = days.slice(0, 5)
-          const weekend = days.slice(5, 7)
-          const weekendEvents = [...weekend[0].events, ...weekend[1].events]
-
-          return (
-            <div className="space-y-3">
-              {weekendEvents.length > 0 && (
-                <div className={`p-3 rounded-xl border ${theme.border} ${theme.panel}`}>
-                  <div className={`text-xs font-medium mb-2 ${theme.textSecondary}`}>
-                    Wochenende ({weekend[0].date.getDate()}.–{weekend[1].date.getDate()}.)
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {weekend.map((day, idx) => (
-                      day.events.map((event) => (
-                        <div
-                          key={event.id}
-                          onClick={() => openEventModal(event)}
-                          className="text-[11px] px-2 py-1 rounded-lg text-white cursor-pointer hover:opacity-80 flex items-center gap-1.5"
-                          style={{ backgroundColor: getEventColor(event) }}
-                        >
-                          <span className="opacity-75 font-medium">{weekendDays[idx]}</span>
-                          {!event.all_day && (
-                            <span className="opacity-75">
-                              {new Date(event.start_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          )}
-                          <span className="truncate max-w-32">{event.title}</span>
-                        </div>
-                      ))
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="grid grid-cols-5 gap-2">
-                {workDays.map((day, idx) => (
-                  <div
-                    key={day.dateStr}
-                    className={`min-h-48 p-2 rounded-lg border ${day.isToday ? 'border-[#F59E0B] border-2 bg-[#FDE68A] ring-4 ring-[#F59E0B]/40 shadow-lg shadow-[#F59E0B]/25' : theme.border} ${theme.panel}`}
-                  >
-                    <div className={`text-xs font-medium mb-2 ${day.isToday ? theme.accentText : theme.textSecondary}`}>
-                      {weekDays[idx]} {day.date.getDate()}
-                    </div>
-                    <div className="space-y-1">
-                      {day.events.map((event) => (
-                        <div
-                          key={event.id}
-                          onClick={() => openEventModal(event)}
-                          className="text-[10px] px-1.5 py-1 rounded text-white cursor-pointer hover:opacity-80"
-                          style={{ backgroundColor: getEventColor(event) }}
-                        >
-                          {!event.all_day && (
-                            <div className="opacity-75">
-                              {new Date(event.start_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
-                            </div>
-                          )}
-                          <div className="truncate">{event.title}</div>
-                        </div>
-                      ))}
-                    </div>
-                    {canWriteCurrentCalendar() && (
-                      <button
-                        type="button"
-                        onClick={() => openEventModal(null, day.date)}
-                        className={`mt-2 w-full text-[10px] py-1 rounded ${theme.bgHover} ${theme.textMuted}`}
-                      >
-                        + Termin
-                      </button>
-                    )}
-                  </div>
-                ))}
               </div>
-            </div>
-          )
-        })()}
+            )
+          })()}
 
-        {calendarViewMode === 'day' && (() => {
-          const dateStr = `${calendarViewDate.getFullYear()}-${String(calendarViewDate.getMonth() + 1).padStart(2, '0')}-${String(calendarViewDate.getDate()).padStart(2, '0')}`
-          const dayEvents = calendarEvents.filter((e) => e.start_time.substring(0, 10) === dateStr)
+          {calendarViewMode === 'day' && (() => {
+            const dateStr = `${calendarViewDate.getFullYear()}-${String(calendarViewDate.getMonth() + 1).padStart(2, '0')}-${String(calendarViewDate.getDate()).padStart(2, '0')}`
+            const dayEvents = calendarEvents.filter((e) => e.start_time.substring(0, 10) === dateStr)
 
-          return (
-            <div className="space-y-2">
-              {dayEvents.length === 0 ? (
-                <p className={theme.textMuted}>Keine Termine an diesem Tag.</p>
-              ) : (
-                dayEvents.map((event) => (
-                  <div
-                    key={event.id}
-                    onClick={() => openEventModal(event)}
-                    className={`p-3 rounded-xl border ${theme.border} cursor-pointer ${theme.bgHover}`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="w-1 h-12 rounded" style={{ backgroundColor: getEventColor(event) }} />
-                      <div>
-                        <p className={`font-medium ${theme.text}`}>{event.title}</p>
-                        <p className={`text-xs ${theme.textMuted}`}>
-                          {event.all_day
-                            ? 'Ganztägig'
-                            : `${new Date(event.start_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} - ${new Date(event.end_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`}
-                        </p>
-                        {event.location && <p className={`text-xs ${theme.textMuted}`}>{event.location}</p>}
+            return (
+              <div className="space-y-2">
+                {dayEvents.length === 0 ? (
+                  <p className={theme.textMuted}>Keine Termine an diesem Tag.</p>
+                ) : (
+                  dayEvents.map((event) => (
+                    <div
+                      key={event.id}
+                      onClick={() => openEventModal(event)}
+                      className={`p-3 rounded-xl border ${theme.border} cursor-pointer ${theme.bgHover}`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="w-1 h-12 rounded" style={{ backgroundColor: getEventColor(event) }} />
+                        <div>
+                          <p className={`font-medium ${theme.text}`}>{event.title}</p>
+                          <p className={`text-xs ${theme.textMuted}`}>
+                            {event.all_day
+                              ? 'Ganztägig'
+                              : `${new Date(event.start_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} - ${new Date(event.end_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`}
+                          </p>
+                          {event.location && <p className={`text-xs ${theme.textMuted}`}>{event.location}</p>}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))
-              )}
-              {canWriteCurrentCalendar() && (
-                <button
-                  type="button"
-                  onClick={() => openEventModal(null, calendarViewDate)}
-                  className={`w-full py-2 rounded-xl border ${theme.border} ${theme.bgHover} ${theme.textMuted} text-sm`}
-                >
-                  + Neuer Termin
-                </button>
-              )}
-            </div>
-          )
-        })()}
-      </div>
-    )}
+                  ))
+                )}
+                {canWriteCurrentCalendar() && (
+                  <button
+                    type="button"
+                    onClick={() => openEventModal(null, calendarViewDate)}
+                    className={`w-full py-2 rounded-xl border ${theme.border} ${theme.bgHover} ${theme.textMuted} text-sm`}
+                  >
+                    + Neuer Termin
+                  </button>
+                )}
+              </div>
+            )
+          })()}
+        </div>
+      )}
 
-    {canWriteCurrentCalendar() && calendars.length > 0 && (
-      <button
-        type="button"
-        onClick={() => openEventModal()}
-        className={`fixed bottom-6 right-6 p-4 rounded-full ${theme.accent} text-white shadow-lg hover:scale-105 transition-transform z-30`}
-        title="Neuer Termin"
-      >
-        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-        </svg>
-      </button>
-    )}
-  </>
-)
+      {canWriteCurrentCalendar() && calendars.length > 0 && (
+        <button
+          type="button"
+          onClick={() => openEventModal()}
+          className={`fixed bottom-6 right-6 p-4 rounded-full ${theme.accent} text-white shadow-lg hover:scale-105 transition-transform z-30`}
+          title="Neuer Termin"
+        >
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+        </button>
+      )}
+    </>
+  )
+}
 
 export default CalendarView

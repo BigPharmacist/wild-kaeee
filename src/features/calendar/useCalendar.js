@@ -83,10 +83,9 @@ export default function useCalendar({ session, activeView }) {
     let startDate, endDate
 
     if (calendarViewMode === 'month') {
-      startDate = new Date(d.getFullYear(), d.getMonth(), 1)
-      endDate = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59)
-      startDate.setDate(startDate.getDate() - 7)
-      endDate.setDate(endDate.getDate() + 7)
+      // Für unendliches Scrollen: 12 Monate vor und nach dem aktuellen Datum laden
+      startDate = new Date(d.getFullYear(), d.getMonth() - 12, 1)
+      endDate = new Date(d.getFullYear(), d.getMonth() + 13, 0, 23, 59, 59)
     } else if (calendarViewMode === 'week') {
       const dayOfWeek = d.getDay() === 0 ? 6 : d.getDay() - 1
       startDate = new Date(d)
