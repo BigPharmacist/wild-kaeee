@@ -194,35 +194,14 @@ const CalendarView = ({
     }
   }, [calendarViewMode, calendarsLoading, eventsLoading])
 
-  const getScrollParent = (node) => {
-    let current = node
-    while (current && current !== document.body) {
-      const style = window.getComputedStyle(current)
-      const overflowY = style.overflowY
-      const overflow = style.overflow
-      if (overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay' || overflow === 'auto' || overflow === 'scroll') return current
-      current = current.parentElement
-    }
-    return window
-  }
-
-  // Scroll-based infinite loading (works with scrollable containers)
+  // Scroll-based infinite loading
   useEffect(() => {
     if (calendarViewMode !== 'month') return
     if (!scrollContainerRef.current) return
 
-    // Robustere scrollParent-Erkennung: Immer zuerst nach <main> mit overflow suchen
-    const explicitMain = scrollContainerRef.current.closest('main')
-    let scrollParent
-    if (explicitMain) {
-      const mainStyle = window.getComputedStyle(explicitMain)
-      const hasOverflow = mainStyle.overflow === 'auto' || mainStyle.overflow === 'scroll' ||
-                          mainStyle.overflowY === 'auto' || mainStyle.overflowY === 'scroll'
-      scrollParent = hasOverflow ? explicitMain : getScrollParent(scrollContainerRef.current)
-    } else {
-      scrollParent = getScrollParent(scrollContainerRef.current)
-    }
-    scrollParentRef.current = scrollParent
+    // Der scrollContainerRef ist jetzt selbst der scrollbare Container
+    const scrollContainer = scrollContainerRef.current
+    scrollParentRef.current = scrollContainer
 
     const canLoad = () => {
       const now = Date.now()
@@ -236,10 +215,7 @@ const CalendarView = ({
       if (ticking) return
       ticking = true
       requestAnimationFrame(() => {
-        const isWindow = scrollParent === window
-        const scrollTop = isWindow ? window.scrollY : scrollParent.scrollTop
-        const scrollHeight = isWindow ? document.documentElement.scrollHeight : scrollParent.scrollHeight
-        const clientHeight = isWindow ? window.innerHeight : scrollParent.clientHeight
+        const { scrollTop, scrollHeight, clientHeight } = scrollContainer
 
         // Laden am unteren Ende
         if (scrollTop + clientHeight >= scrollHeight - 800 && canLoad()) {
@@ -248,7 +224,6 @@ const CalendarView = ({
 
         // Laden am oberen Ende mit Scroll-Kompensation
         if (scrollTop <= 800 && canLoad()) {
-          // Speichere aktuelle scrollHeight vor dem Laden
           prevScrollHeightRef.current = scrollHeight
           isLoadingTopRef.current = true
           setMonthRange((prev) => ({ ...prev, start: prev.start - 3 }))
@@ -258,9 +233,9 @@ const CalendarView = ({
       })
     }
 
-    scrollParent.addEventListener('scroll', handleScroll, { passive: true })
+    scrollContainer.addEventListener('scroll', handleScroll, { passive: true })
     handleScroll()
-    return () => scrollParent.removeEventListener('scroll', handleScroll)
+    return () => scrollContainer.removeEventListener('scroll', handleScroll)
   }, [calendarViewMode, calendarsLoading, eventsLoading])
 
   // Scroll-Position kompensieren nach dem Laden von Monaten am Anfang
@@ -270,26 +245,19 @@ const CalendarView = ({
 
     // Warte einen Frame, damit React die neuen Monate gerendert hat
     requestAnimationFrame(() => {
-      const scrollParent = scrollParentRef.current
-      if (!scrollParent) return
+      const scrollContainer = scrollParentRef.current
+      if (!scrollContainer) return
 
-      const isWindow = scrollParent === window
-      const newScrollHeight = isWindow ? document.documentElement.scrollHeight : scrollParent.scrollHeight
-      const heightDiff = newScrollHeight - prevScrollHeightRef.current
+      const heightDiff = scrollContainer.scrollHeight - prevScrollHeightRef.current
 
       if (heightDiff > 0) {
-        // Scroll-Position um die Höhe der neuen Monate nach unten verschieben
-        if (isWindow) {
-          window.scrollBy(0, heightDiff)
-        } else {
-          scrollParent.scrollTop += heightDiff
-        }
+        scrollContainer.scrollTop += heightDiff
       }
 
       isLoadingTopRef.current = false
       prevScrollHeightRef.current = 0
     })
-  }, [monthRange.start]) // Nur wenn start sich ändert (= neue Monate oben)
+  }, [monthRange.start])
 
   // Scroll to today handler
   const scrollToToday = () => {
@@ -306,7 +274,7 @@ const CalendarView = ({
 
   return (
     <>
-      <div className={`sticky top-0 z-20 ${theme.bgApp} pb-4 -mt-4 pt-4 -mx-4 px-4 lg:-mx-8 lg:px-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6`}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
           <h2 className="text-2xl lg:text-3xl font-semibold tracking-tight">Kalender</h2>
 
@@ -441,9 +409,9 @@ const CalendarView = ({
           </p>
         </div>
       ) : (
-        <div className={`${theme.panel} rounded-2xl p-4 border ${theme.border} ${theme.cardShadow}`}>
+        <div className={`${theme.panel} rounded-2xl border ${theme.border} ${theme.cardShadow}`}>
           {calendarViewMode === 'month' && (
-            <div ref={scrollContainerRef} className="relative">
+            <div ref={scrollContainerRef} className="relative h-[calc(100vh-220px)] overflow-auto p-4">
               <button
                 type="button"
                 onClick={() => setShowWeekends(!showWeekends)}
