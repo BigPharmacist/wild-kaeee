@@ -306,7 +306,7 @@ const CalendarView = ({
 
   return (
     <>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <div className={`sticky top-0 z-20 ${theme.bgApp} pb-4 -mt-4 pt-4 -mx-4 px-4 lg:-mx-8 lg:px-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6`}>
         <div className="flex items-center gap-3">
           <h2 className="text-2xl lg:text-3xl font-semibold tracking-tight">Kalender</h2>
 
