@@ -225,7 +225,7 @@ const CalendarView = ({
                       className={`
                         min-h-24 p-1 rounded-lg border transition-colors
                         ${day.isCurrentMonth ? theme.panel : `${theme.panel} opacity-40`}
-                        ${day.isToday ? 'border-[#F59E0B]/50' : theme.border}
+                        ${day.isToday ? 'border-[#F59E0B] border-2 bg-[#FDE68A] ring-4 ring-[#F59E0B]/40 shadow-lg shadow-[#F59E0B]/25' : theme.border}
                         ${canWriteCurrentCalendar() ? 'cursor-pointer ' + theme.bgHover : ''}
                       `}
                     >
@@ -328,7 +328,7 @@ const CalendarView = ({
                 {workDays.map((day, idx) => (
                   <div
                     key={day.dateStr}
-                    className={`min-h-48 p-2 rounded-lg border ${day.isToday ? 'border-[#F59E0B]/50' : theme.border} ${theme.panel}`}
+                    className={`min-h-48 p-2 rounded-lg border ${day.isToday ? 'border-[#F59E0B] border-2 bg-[#FDE68A] ring-4 ring-[#F59E0B]/40 shadow-lg shadow-[#F59E0B]/25' : theme.border} ${theme.panel}`}
                   >
                     <div className={`text-xs font-medium mb-2 ${day.isToday ? theme.accentText : theme.textSecondary}`}>
                       {weekDays[idx]} {day.date.getDate()}
