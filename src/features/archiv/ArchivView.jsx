@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'react'
-import { FilePdf, Download, Eye, Upload, X, File, Spinner, MagnifyingGlass, Tag, User, FileText, FunnelSimple, Star, FloppyDisk } from '@phosphor-icons/react'
+import { FilePdf, Download, Eye, Upload, X, File, Spinner, MagnifyingGlass, Tag, User, FileText, FunnelSimple, Star, FloppyDisk, SquaresFour, List } from '@phosphor-icons/react'
 
 const ArchivView = ({
   theme,
@@ -48,6 +48,7 @@ const ArchivView = ({
   const [showSaveViewModal, setShowSaveViewModal] = useState(false)
   const [newViewName, setNewViewName] = useState('')
   const [savingView, setSavingView] = useState(false)
+  const [viewMode, setViewMode] = useState('grid') // 'grid' oder 'list'
 
   // Initial laden
   useEffect(() => {
@@ -184,6 +185,26 @@ const ArchivView = ({
               className={`absolute left-3 top-1/2 -translate-y-1/2 ${theme.textMuted}`}
             />
           </form>
+
+          {/* Ansicht-Toggle */}
+          <div className={`flex rounded-lg border ${theme.border} overflow-hidden`}>
+            <button
+              type="button"
+              onClick={() => setViewMode('grid')}
+              className={`p-2.5 ${viewMode === 'grid' ? 'bg-[#4C8BF5] text-white' : theme.bgHover} transition-colors`}
+              title="Kachelansicht"
+            >
+              <SquaresFour size={20} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('list')}
+              className={`p-2.5 ${viewMode === 'list' ? 'bg-[#4C8BF5] text-white' : theme.bgHover} transition-colors border-l ${theme.border}`}
+              title="Listenansicht"
+            >
+              <List size={20} />
+            </button>
+          </div>
 
           {/* Filter-Toggle */}
           <button
@@ -368,102 +389,214 @@ const ArchivView = ({
       ) : (
         <>
           <p className={`text-sm ${theme.textMuted} mb-4`}>{documents.length} Dokument{documents.length !== 1 ? 'e' : ''}</p>
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {documents.map((doc) => {
-              const docTags = getTagsForDocument(doc)
-              const correspondent = getCorrespondentForDocument(doc)
-              const docType = getTypeForDocument(doc)
 
-              return (
-                <div
-                  key={doc.id}
-                  className={`${theme.panel} rounded-xl border ${theme.border} ${theme.cardShadow} overflow-hidden hover:ring-2 hover:ring-[#4C8BF5] transition-all group`}
-                >
-                  {/* Thumbnail */}
-                  <div className="h-36 bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center relative overflow-hidden">
-                    {thumbnails[doc.id] ? (
-                      <img
-                        src={thumbnails[doc.id]}
-                        alt={doc.title}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <FilePdf size={48} className="text-red-500 opacity-70" />
-                    )}
+          {viewMode === 'grid' ? (
+            // Kachelansicht
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {documents.map((doc) => {
+                const docTags = getTagsForDocument(doc)
+                const correspondent = getCorrespondentForDocument(doc)
+                const docType = getTypeForDocument(doc)
 
-                    {/* Hover Actions */}
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => loadPreview(doc)}
-                        className="p-2 rounded-lg bg-white/90 hover:bg-white text-slate-700 transition-colors"
-                        title="Vorschau"
-                      >
-                        <Eye size={20} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => downloadDocument(doc)}
-                        className="p-2 rounded-lg bg-white/90 hover:bg-white text-slate-700 transition-colors"
-                        title="Herunterladen"
-                      >
-                        <Download size={20} />
-                      </button>
-                    </div>
-                  </div>
+                return (
+                  <div
+                    key={doc.id}
+                    className={`${theme.panel} rounded-xl border ${theme.border} ${theme.cardShadow} overflow-hidden hover:ring-2 hover:ring-[#4C8BF5] transition-all group`}
+                  >
+                    {/* Thumbnail */}
+                    <div className="h-36 bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center relative overflow-hidden">
+                      {thumbnails[doc.id] ? (
+                        <img
+                          src={thumbnails[doc.id]}
+                          alt={doc.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <FilePdf size={48} className="text-red-500 opacity-70" />
+                      )}
 
-                  {/* Info */}
-                  <div className="p-3 space-y-2">
-                    <p className={`text-sm font-medium ${theme.textPrimary} truncate`} title={doc.title}>
-                      {doc.title || 'Unbenannt'}
-                    </p>
-
-                    <div className={`text-xs ${theme.textMuted} flex items-center gap-2`}>
-                      <span>{formatDate(doc.created)}</span>
-                      <span>-</span>
-                      <span>{formatFileSize(doc.file_size)}</span>
-                    </div>
-
-                    {/* Korrespondent */}
-                    {correspondent && (
-                      <p className={`text-xs ${theme.textMuted} truncate flex items-center gap-1`}>
-                        <User size={12} />
-                        {correspondent.name}
-                      </p>
-                    )}
-
-                    {/* Dokumenttyp */}
-                    {docType && (
-                      <span className="inline-block px-2 py-0.5 rounded text-xs bg-amber-500/10 text-amber-600">
-                        {docType.name}
-                      </span>
-                    )}
-
-                    {/* Tags */}
-                    {docTags.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {docTags.slice(0, 3).map(tag => (
-                          <span
-                            key={tag.id}
-                            className="px-1.5 py-0.5 rounded text-xs"
-                            style={{
-                              backgroundColor: tag.color ? `${tag.color}20` : '#4C8BF510',
-                              color: tag.color || '#4C8BF5',
-                            }}
-                          >
-                            {tag.name}
-                          </span>
-                        ))}
-                        {docTags.length > 3 && (
-                          <span className={`text-xs ${theme.textMuted}`}>+{docTags.length - 3}</span>
-                        )}
+                      {/* Hover Actions */}
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => loadPreview(doc)}
+                          className="p-2 rounded-lg bg-white/90 hover:bg-white text-slate-700 transition-colors"
+                          title="Vorschau"
+                        >
+                          <Eye size={20} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => downloadDocument(doc)}
+                          className="p-2 rounded-lg bg-white/90 hover:bg-white text-slate-700 transition-colors"
+                          title="Herunterladen"
+                        >
+                          <Download size={20} />
+                        </button>
                       </div>
-                    )}
+                    </div>
+
+                    {/* Info */}
+                    <div className="p-3 space-y-2">
+                      <p className={`text-sm font-medium ${theme.textPrimary} truncate`} title={doc.title}>
+                        {doc.title || 'Unbenannt'}
+                      </p>
+
+                      <div className={`text-xs ${theme.textMuted} flex items-center gap-2`}>
+                        <span>{formatDate(doc.created)}</span>
+                        <span>-</span>
+                        <span>{formatFileSize(doc.file_size)}</span>
+                      </div>
+
+                      {/* Korrespondent */}
+                      {correspondent && (
+                        <p className={`text-xs ${theme.textMuted} truncate flex items-center gap-1`}>
+                          <User size={12} />
+                          {correspondent.name}
+                        </p>
+                      )}
+
+                      {/* Dokumenttyp */}
+                      {docType && (
+                        <span className="inline-block px-2 py-0.5 rounded text-xs bg-amber-500/10 text-amber-600">
+                          {docType.name}
+                        </span>
+                      )}
+
+                      {/* Tags */}
+                      {docTags.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {docTags.slice(0, 3).map(tag => (
+                            <span
+                              key={tag.id}
+                              className="px-1.5 py-0.5 rounded text-xs"
+                              style={{
+                                backgroundColor: tag.color ? `${tag.color}20` : '#4C8BF510',
+                                color: tag.color || '#4C8BF5',
+                              }}
+                            >
+                              {tag.name}
+                            </span>
+                          ))}
+                          {docTags.length > 3 && (
+                            <span className={`text-xs ${theme.textMuted}`}>+{docTags.length - 3}</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )
-            })}
-          </div>
+                )
+              })}
+            </div>
+          ) : (
+            // Listenansicht
+            <div className={`${theme.panel} rounded-xl border ${theme.border} ${theme.cardShadow} overflow-hidden`}>
+              <table className="w-full">
+                <thead>
+                  <tr className={`border-b ${theme.border} ${theme.bg}`}>
+                    <th className={`text-left px-3 py-2 text-xs font-medium ${theme.textMuted} uppercase tracking-wider`}>Dokument</th>
+                    <th className={`text-left px-3 py-2 text-xs font-medium ${theme.textMuted} uppercase tracking-wider hidden sm:table-cell`}>Korrespondent</th>
+                    <th className={`text-left px-3 py-2 text-xs font-medium ${theme.textMuted} uppercase tracking-wider hidden md:table-cell`}>Typ</th>
+                    <th className={`text-left px-3 py-2 text-xs font-medium ${theme.textMuted} uppercase tracking-wider hidden lg:table-cell`}>Tags</th>
+                    <th className={`text-right px-3 py-2 text-xs font-medium ${theme.textMuted} uppercase tracking-wider`}>Datum</th>
+                    <th className={`text-right px-3 py-2 text-xs font-medium ${theme.textMuted} uppercase tracking-wider w-20`}>Aktionen</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {documents.map((doc) => {
+                    const docTags = getTagsForDocument(doc)
+                    const correspondent = getCorrespondentForDocument(doc)
+                    const docType = getTypeForDocument(doc)
+
+                    return (
+                      <tr key={doc.id} className={`${theme.bgHover} transition-colors`}>
+                        <td className="px-3 py-1.5">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                              {thumbnails[doc.id] ? (
+                                <img
+                                  src={thumbnails[doc.id]}
+                                  alt={doc.title}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <FilePdf size={14} className="text-red-500 opacity-70" />
+                              )}
+                            </div>
+                            <p className={`text-sm ${theme.textPrimary} truncate`} title={doc.title}>
+                              {doc.title || 'Unbenannt'}
+                            </p>
+                          </div>
+                        </td>
+                        <td className={`px-3 py-1.5 hidden sm:table-cell`}>
+                          {correspondent ? (
+                            <span className={`text-sm ${theme.textSecondary}`}>{correspondent.name}</span>
+                          ) : (
+                            <span className={`text-sm ${theme.textMuted}`}>-</span>
+                          )}
+                        </td>
+                        <td className={`px-3 py-1.5 hidden md:table-cell`}>
+                          {docType ? (
+                            <span className="inline-block px-1.5 py-0.5 rounded text-xs bg-amber-500/10 text-amber-600">
+                              {docType.name}
+                            </span>
+                          ) : (
+                            <span className={`text-sm ${theme.textMuted}`}>-</span>
+                          )}
+                        </td>
+                        <td className={`px-3 py-1.5 hidden lg:table-cell`}>
+                          {docTags.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {docTags.slice(0, 2).map(tag => (
+                                <span
+                                  key={tag.id}
+                                  className="px-1.5 py-0.5 rounded text-xs"
+                                  style={{
+                                    backgroundColor: tag.color ? `${tag.color}20` : '#4C8BF510',
+                                    color: tag.color || '#4C8BF5',
+                                  }}
+                                >
+                                  {tag.name}
+                                </span>
+                              ))}
+                              {docTags.length > 2 && (
+                                <span className={`text-xs ${theme.textMuted}`}>+{docTags.length - 2}</span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className={`text-sm ${theme.textMuted}`}>-</span>
+                          )}
+                        </td>
+                        <td className={`px-3 py-1.5 text-right text-sm ${theme.textSecondary}`}>
+                          {formatDate(doc.created)}
+                        </td>
+                        <td className="px-3 py-1.5">
+                          <div className="flex items-center justify-end gap-0.5">
+                            <button
+                              type="button"
+                              onClick={() => loadPreview(doc)}
+                              className={`p-1 rounded ${theme.bgHover} ${theme.textSecondary} hover:text-[#4C8BF5] transition-colors`}
+                              title="Vorschau"
+                            >
+                              <Eye size={16} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => downloadDocument(doc)}
+                              className={`p-1 rounded ${theme.bgHover} ${theme.textSecondary} hover:text-[#0D9488] transition-colors`}
+                              title="Herunterladen"
+                            >
+                              <Download size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </>
       )}
 
