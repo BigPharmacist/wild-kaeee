@@ -435,14 +435,29 @@ function App() {
   const {
     chatMessages,
     chatLoading,
+    chatLoadingMore,
     chatError,
     chatInput,
     chatSending,
     chatEndRef,
     messageReads,
+    messageReactions,
+    hasMoreMessages,
+    editingMessageId,
+    pendingFile,
     setChatInput,
+    setEditingMessageId,
+    fetchChatMessages,
+    loadMoreMessages,
     sendChatMessage,
     deleteChatMessage,
+    editChatMessage,
+    canEditMessage,
+    toggleReaction,
+    selectChatFile,
+    setPendingFile,
+    EMOJI_SET,
+    ALLOWED_FILE_TYPES,
   } = useChat({ session, activeView, directChatUserId: chatTab === 'group' ? null : chatTab })
   const { unreadCounts: chatUnreadCounts } = useChatUnreadCounts({ session, staff })
   const {
@@ -878,6 +893,23 @@ function App() {
 
     window.addEventListener('navigate-to-fax', handleNavigateToFax)
     return () => window.removeEventListener('navigate-to-fax', handleNavigateToFax)
+  }, [])
+
+  // Browser-Notification Klick -> zur Chat-View navigieren
+  useEffect(() => {
+    const handleNavigateToChat = (event) => {
+      const { chatType, chatId } = event.detail || {}
+      setActiveView('chat')
+      // Zum richtigen Chat-Tab wechseln
+      if (chatType === 'group') {
+        setChatTab('group')
+      } else if (chatId) {
+        setChatTab(chatId)
+      }
+    }
+
+    window.addEventListener('navigate-to-chat', handleNavigateToChat)
+    return () => window.removeEventListener('navigate-to-chat', handleNavigateToChat)
   }, [])
 
   // Mobile Nav: Nach 3 Sekunden automatisch schließen wenn primärer Punkt gewählt
@@ -2686,6 +2718,7 @@ function App() {
                 <ChatView
                   theme={theme}
                   chatLoading={chatLoading}
+                  chatLoadingMore={chatLoadingMore}
                   chatMessages={chatMessages}
                   staffByAuthId={staffByAuthId}
                   session={session}
@@ -2698,7 +2731,21 @@ function App() {
                   directChatUserId={chatTab === 'group' ? null : chatTab}
                   directChatUser={chatTab === 'group' ? null : staffByAuthId[chatTab]}
                   messageReads={messageReads}
+                  messageReactions={messageReactions}
                   deleteChatMessage={deleteChatMessage}
+                  hasMoreMessages={hasMoreMessages}
+                  loadMoreMessages={loadMoreMessages}
+                  fetchChatMessages={fetchChatMessages}
+                  editingMessageId={editingMessageId}
+                  setEditingMessageId={setEditingMessageId}
+                  editChatMessage={editChatMessage}
+                  canEditMessage={canEditMessage}
+                  toggleReaction={toggleReaction}
+                  selectChatFile={selectChatFile}
+                  pendingFile={pendingFile}
+                  setPendingFile={setPendingFile}
+                  EMOJI_SET={EMOJI_SET}
+                  ALLOWED_FILE_TYPES={ALLOWED_FILE_TYPES}
                 />
               )}
 
