@@ -89,18 +89,18 @@ const SidebarNav = ({
                   <div className="relative">
                     <item.icon />
                     {hasUnread && (
-                      <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+                      <span className="absolute -top-1 -right-1 w-2 h-2 bg-[#FF6500] rounded-full" />
                     )}
                   </div>
                   <span className="flex-1">{item.label}</span>
                   {totalApoUnread > 0 && (
-                    <span className="text-xs text-red-400">({totalApoUnread})</span>
+                    <span className="text-xs text-[#FF8533]">({totalApoUnread})</span>
                   )}
                   {totalPostUnread > 0 && (
-                    <span className="text-xs text-red-400">({totalPostUnread})</span>
+                    <span className="text-xs text-[#FF8533]">({totalPostUnread})</span>
                   )}
                   {totalChatUnread > 0 && (
-                    <span className="text-xs text-red-400">({totalChatUnread})</span>
+                    <span className="text-xs text-[#FF8533]">({totalChatUnread})</span>
                   )}
                 </button>
               )
@@ -222,7 +222,7 @@ const SidebarNav = ({
                 >
                   <item.icon />
                   {hasUnread && (
-                    <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#1E293B]" />
+                    <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-[#FF6500] rounded-full border-2 border-[#1E293B]" />
                   )}
                 </button>
                 <span className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-[#1E293B] text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
@@ -300,7 +300,7 @@ const SidebarNav = ({
                     setShowLogoutMenu(false)
                     handleSignOut()
                   }}
-                  className="w-full px-4 py-2 text-left text-sm text-[#E5533D] hover:text-[#E11D48] flex items-center gap-2 hover:bg-[#FDE8E5] transition-colors"
+                  className="w-full px-4 py-2 text-left text-sm text-[#FF6500] hover:text-[#E65A00] flex items-center gap-2 hover:bg-[#FFF5EB] transition-colors"
                 >
                   <Icons.Logout />
                   Abmelden

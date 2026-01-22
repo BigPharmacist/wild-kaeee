@@ -22,7 +22,7 @@ import { supabaseUrl } from '../../lib/supabase'
 import useBesuchstermine from './useBesuchstermine'
 
 const priorityColors = {
-  ROT: 'bg-red-500 text-white',
+  ROT: 'bg-[#FF6500] text-white',
   ORANGE: 'bg-orange-500 text-white',
   'GRÜN': 'bg-green-500 text-white',
   GRAU: 'bg-gray-400 text-white',

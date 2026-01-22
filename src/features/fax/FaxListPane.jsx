@@ -2,7 +2,7 @@ import { CircleNotch, Printer } from '@phosphor-icons/react'
 
 // Hintergrundfarben für ROT, ORANGE, GRÜN und GRAU (ganze Zeile)
 const rowBackgroundColors = {
-  ROT: 'bg-red-100',
+  ROT: 'bg-[#FFF5EB]',
   ORANGE: 'bg-orange-100',
   'GRÜN': 'bg-green-100',
   GRAU: 'bg-gray-100',

@@ -140,7 +140,7 @@ const severityColors = {
   '1-2': 'bg-yellow-200 text-yellow-700',
   '2': 'bg-orange-100 text-orange-700',
   '2-3': 'bg-orange-200 text-orange-800',
-  '3': 'bg-red-100 text-red-700',
+  '3': 'bg-[#FFF5EB] text-[#FF6500]',
 }
 
 export function usePollen({ pharmacies }) {

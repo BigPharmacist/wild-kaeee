@@ -189,11 +189,12 @@ const ColorsView = ({ theme }) => {
           <span className="text-xs uppercase tracking-wide px-2 py-1 rounded-full bg-[#FEF3C7] text-[#1E293B] border border-[#F59E0B]/20">
             Creme
           </span>
-          <span className="text-xs uppercase tracking-wide px-2 py-1 rounded-full bg-[#E11D48]/15 text-[#E11D48] border border-[#E11D48]/20">
+          <span className="text-xs uppercase tracking-wide px-2 py-1 rounded-full bg-[#FF6500]/15 text-[#FF6500] border border-[#FF6500]/20">
             Error
           </span>
         </div>
       </div>
+
 
       {/* Notification Sounds */}
       <div className={`${theme.panel} rounded-2xl p-6 border ${theme.border} ${theme.cardShadow} mb-6`}>
@@ -272,8 +273,8 @@ const ColorsView = ({ theme }) => {
                 <span className={theme.textMuted}>#FEF3C7 Creme-Gelb</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-[#E11D48]" />
-                <span className={theme.textMuted}>#E11D48 Error Red</span>
+                <div className="w-4 h-4 rounded bg-[#FF6500]" />
+                <span className={theme.textMuted}>#FF6500 Error Orange</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded bg-[#1E293B]" />

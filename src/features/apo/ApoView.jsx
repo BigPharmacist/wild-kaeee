@@ -173,7 +173,7 @@ const ApoView = ({
                         className={`text-left ${theme.panel} rounded-2xl border ${theme.border} p-5 ${theme.cardShadow} ${theme.cardHoverShadow} hover:border-[#F59E0B] transition-all flex flex-col h-full ${isUnread ? 'ring-2 ring-blue-400' : ''}`}
                       >
                         <div className="flex items-center gap-2 mb-3">
-                          <span className="w-2 h-2 rounded-full bg-red-500" />
+                          <span className="w-2 h-2 rounded-full bg-[#FF6500]" />
                           <span className={`text-xs ${theme.textMuted}`}>
                             {msg.date ? new Date(msg.date).toLocaleDateString('de-DE') : ''}
                           </span>
@@ -190,7 +190,7 @@ const ApoView = ({
                           </p>
                         )}
                         {msg.product_name && (
-                          <span className={`inline-block mt-3 text-xs px-2.5 py-1 rounded-lg bg-red-50 text-red-700 font-medium`}>
+                          <span className={`inline-block mt-3 text-xs px-2.5 py-1 rounded-lg bg-[#FFF5EB] text-[#FF6500] font-medium`}>
                             {msg.product_name}
                           </span>
                         )}

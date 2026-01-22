@@ -349,7 +349,7 @@ const ArchivView = ({
               clearFilters()
               setLocalSearch('')
             }}
-            className={`text-xs ${theme.textMuted} hover:text-[#E11D48]`}
+            className={`text-xs ${theme.textMuted} hover:text-[#FF6500]`}
           >
             <X size={14} />
           </button>
@@ -358,7 +358,7 @@ const ArchivView = ({
 
       {/* Fehler */}
       {error && (
-        <div className="mb-4 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
+        <div className="mb-4 p-4 rounded-xl bg-[#FFF5EB] border border-[#FFD4B3] text-[#FF6500] text-sm">
           {error}
         </div>
       )}
@@ -412,7 +412,7 @@ const ArchivView = ({
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <FilePdf size={48} className="text-red-500 opacity-70" />
+                        <FilePdf size={48} className="text-[#FF6500] opacity-70" />
                       )}
 
                       {/* Hover Actions */}
@@ -520,7 +520,7 @@ const ArchivView = ({
                                   className="w-full h-full object-cover"
                                 />
                               ) : (
-                                <FilePdf size={14} className="text-red-500 opacity-70" />
+                                <FilePdf size={14} className="text-[#FF6500] opacity-70" />
                               )}
                             </div>
                             <p className={`text-sm ${theme.textPrimary} truncate`} title={doc.title}>

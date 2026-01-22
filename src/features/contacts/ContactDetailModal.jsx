@@ -93,7 +93,7 @@ export default function ContactDetailModal({
                 )}
               </div>
               {selectedCardNeedsConfirmation && (
-                <div className="text-[11px] text-red-500 font-normal mb-1">
+                <div className="text-[11px] text-[#FF6500] font-normal mb-1">
                   Achtung, bitte bestätigen
                 </div>
               )}

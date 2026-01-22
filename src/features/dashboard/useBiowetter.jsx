@@ -70,12 +70,12 @@ const severityColors = {
   'keine': 'bg-green-100 text-green-700',
   'geringe Gefährdung': 'bg-yellow-100 text-yellow-700',
   'hohe Gefährdung': 'bg-orange-100 text-orange-700',
-  'extreme Gefährdung': 'bg-red-100 text-red-700',
+  'extreme Gefährdung': 'bg-[#FFF5EB] text-[#FF6500]',
   // Thermische Reize (tatsächliche API-Werte)
   'schwache Wärmereize': 'bg-yellow-100 text-yellow-700',
   'mäßige Wärmereize': 'bg-orange-100 text-orange-700',
-  'starke Wärmereize': 'bg-red-100 text-red-700',
-  'extreme Wärmereize': 'bg-red-200 text-red-800',
+  'starke Wärmereize': 'bg-[#FFF5EB] text-[#FF6500]',
+  'extreme Wärmereize': 'bg-[#FFE5D4] text-[#E65A00]',
   'schwache Kältereize': 'bg-blue-100 text-blue-700',
   'mäßige Kältereize': 'bg-blue-200 text-blue-700',
   'starke Kältereize': 'bg-blue-300 text-blue-800',
@@ -87,13 +87,13 @@ const dotColors = {
   'kein Einfluss': 'bg-[#27AE60]',        // Success Green
   'keine': 'bg-[#27AE60]',                 // Success Green
   'geringe Gefährdung': 'bg-[#F2C94C]',   // Warning Yellow
-  'hohe Gefährdung': 'bg-[#E5533D]',      // Error Red
-  'extreme Gefährdung': 'bg-[#E11D48]',   // Error Red (darker)
+  'hohe Gefährdung': 'bg-[#FF6500]',      // Orange
+  'extreme Gefährdung': 'bg-[#FF6500]',   // Orange
   // Thermische Reize - Wärme
   'schwache Wärmereize': 'bg-[#F2C94C]',  // Warning Yellow
-  'mäßige Wärmereize': 'bg-[#E5533D]',    // Error Red
-  'starke Wärmereize': 'bg-[#E11D48]',    // Error Red (darker)
-  'extreme Wärmereize': 'bg-[#A3362A]',   // Error Red (darkest)
+  'mäßige Wärmereize': 'bg-[#FF8533]',    // Orange light
+  'starke Wärmereize': 'bg-[#FF6500]',    // Orange
+  'extreme Wärmereize': 'bg-[#E65A00]',   // Orange dark
   // Thermische Reize - Kälte
   'schwache Kältereize': 'bg-[#7DD3D8]',  // Teal light
   'mäßige Kältereize': 'bg-[#2EC4B6]',    // Accent Teal

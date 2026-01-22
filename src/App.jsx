@@ -43,6 +43,7 @@ function App() {
   const [chatTab, setChatTab] = useState(() => localStorage.getItem('nav_chatTab') || 'group')
   const [dokumenteTab, setDokumenteTab] = useState(() => localStorage.getItem('nav_dokumenteTab') || 'briefe')
   const [archivTab, setArchivTab] = useState(() => localStorage.getItem('nav_archivTab') || 'alle')
+  const [rechnungenTab, setRechnungenTab] = useState(() => localStorage.getItem('nav_rechnungenTab') || 'alt')
   const {
     pharmacies,
     pharmaciesLoading,
@@ -537,6 +538,17 @@ function App() {
     openPdfModal,
     closePdfModal,
     setCollapsedDays,
+    // Paperless
+    paperlessRechnungen,
+    paperlessLoading,
+    paperlessCollapsedDays,
+    paperlessPdfModalOpen,
+    selectedPaperlessPdf,
+    fetchPaperlessRechnungen,
+    openPaperlessPdfModal,
+    closePaperlessPdfModal,
+    togglePaperlessDayCollapsed,
+    getGrosshaendler,
   } = useRechnungen()
   const {
     documents: archivDocuments,
@@ -672,8 +684,8 @@ function App() {
     successBg: 'bg-[#0D9488] hover:bg-[#0F766E]',
     warning: 'text-[#F59E0B]',
     warningBg: 'bg-[#F59E0B] hover:bg-[#D97706]',
-    danger: 'text-[#E11D48] hover:text-[#BE123C] hover:bg-[#FEE2E2]',
-    dangerBg: 'bg-[#E11D48] hover:bg-[#BE123C]',
+    danger: 'text-[#FF6500] hover:text-[#E65A00] hover:bg-[#FFF5EB]',
+    dangerBg: 'bg-[#FF6500] hover:bg-[#E65A00]',
   }
 
   const navItems = [
@@ -736,6 +748,10 @@ function App() {
           label: `⭐ ${sv.name}`,
         })),
       ] : []),
+    ],
+    rechnungen: [
+      { id: 'alt', label: 'Alt' },
+      { id: 'neu', label: 'Neu' },
     ],
     misc: [
       { id: 'uploads', label: 'Uploads' },
@@ -841,6 +857,10 @@ function App() {
     localStorage.setItem('nav_archivTab', archivTab)
   }, [archivTab])
 
+  useEffect(() => {
+    localStorage.setItem('nav_rechnungenTab', rechnungenTab)
+  }, [rechnungenTab])
+
   // Browser-Tab-Titel mit Fax-Count aktualisieren
   useEffect(() => {
     if (faxCount > 0) {
@@ -893,6 +913,7 @@ function App() {
     if (activeView === 'chat') return chatTab
     if (activeView === 'dokumente') return dokumenteTab
     if (activeView === 'archiv') return archivTab
+    if (activeView === 'rechnungen') return rechnungenTab
     return secondaryTab
   }
 
@@ -919,6 +940,8 @@ function App() {
         const viewId = itemId.replace('view-', '')
         archivFilterBySavedView(viewId)
       }
+    } else if (activeView === 'rechnungen') {
+      setRechnungenTab(itemId)
     } else {
       setSecondaryTab(itemId)
     }
@@ -2369,11 +2392,18 @@ function App() {
 
   // GH-Rechnungen laden bei View-Wechsel
   useEffect(() => {
-    if (session && activeView === 'rechnungen' && rechnungen.length === 0 && !rechnungenLoading) {
-      fetchRechnungen()
+    if (session && activeView === 'rechnungen') {
+      // Alt (Supabase)
+      if (rechnungenTab === 'alt' && rechnungen.length === 0 && !rechnungenLoading) {
+        fetchRechnungen()
+      }
+      // Neu (Paperless)
+      if (rechnungenTab === 'neu' && paperlessRechnungen.length === 0 && !paperlessLoading) {
+        fetchPaperlessRechnungen()
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeView, session])
+  }, [activeView, session, rechnungenTab])
 
   const handleSignIn = async (e) => {
     e.preventDefault()
@@ -2821,7 +2851,145 @@ function App() {
                 <>
                   <h2 className="text-2xl lg:text-3xl font-semibold mb-6 tracking-tight">Großhandelsrechnungen</h2>
 
-                  {rechnungenLoading ? (
+                  {rechnungenTab === 'neu' ? (
+                    // Paperless-Ansicht
+                    paperlessLoading ? (
+                      <div className="flex items-center justify-center py-12">
+                        <svg className="w-8 h-8 animate-spin text-[#F59E0B]" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                      </div>
+                    ) : paperlessRechnungen.length === 0 ? (
+                      <div className={`${theme.panel} rounded-2xl p-8 border ${theme.border} ${theme.cardShadow} text-center`}>
+                        <Icons.FileText className="w-12 h-12 mx-auto mb-4 text-[#64748B]" />
+                        <p className={theme.textMuted}>Keine Rechnungen in Paperless gefunden.</p>
+                        <p className={`text-xs ${theme.textMuted} mt-2`}>Saved View "Rechnungsdatum 8 Tage" prüfen</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
+                        {(() => {
+                          // Nach Datum gruppieren
+                          const byDate = paperlessRechnungen.reduce((acc, doc) => {
+                            const dateKey = doc.datum || 'unbekannt'
+                            if (!acc[dateKey]) acc[dateKey] = []
+                            acc[dateKey].push(doc)
+                            return acc
+                          }, {})
+
+                          // Sortierte Datumsschlüssel (neueste zuerst)
+                          const sortedDates = Object.keys(byDate).sort((a, b) => new Date(b) - new Date(a))
+
+                          return sortedDates.map((dateKey, index) => {
+                            const dayDocs = byDate[dateKey]
+                            // Nach Titel sortieren (kleinste Rechnungsnummer oben)
+                            const phoenix = dayDocs.filter(d => getGrosshaendler(d.correspondentName) === 'phoenix').sort((a, b) => b.title.localeCompare(a.title))
+                            const ahd = dayDocs.filter(d => getGrosshaendler(d.correspondentName) === 'ahd').sort((a, b) => b.title.localeCompare(a.title))
+                            const sanacorp = dayDocs.filter(d => getGrosshaendler(d.correspondentName) === 'sanacorp').sort((a, b) => b.title.localeCompare(a.title))
+
+                            const dateLabel = dateKey === 'unbekannt' ? 'Unbekanntes Datum' : new Date(dateKey).toLocaleDateString('de-DE', {
+                              weekday: 'long',
+                              day: '2-digit',
+                              month: 'long',
+                              year: 'numeric'
+                            })
+
+                            // Erster Tag ausgeklappt, Rest eingeklappt
+                            const isCollapsed = index === 0
+                              ? paperlessCollapsedDays[dateKey] === true
+                              : paperlessCollapsedDays[dateKey] !== false
+
+                            return (
+                              <div key={dateKey}>
+                                {/* Tagesüberschrift */}
+                                <button
+                                  onClick={() => togglePaperlessDayCollapsed(dateKey)}
+                                  className="w-full flex items-center gap-3 mb-3 group cursor-pointer"
+                                >
+                                  <svg
+                                    className={`w-4 h-4 ${theme.textMuted} transition-transform ${isCollapsed ? '' : 'rotate-90'}`}
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                  >
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                  </svg>
+                                  <h3 className="text-base font-semibold">{dateLabel}</h3>
+                                  <span className={`text-xs ${theme.textMuted}`}>({dayDocs.length})</span>
+                                  <div className={`flex-1 h-px ${theme.border} border-t`} />
+                                </button>
+
+                                {/* Drei Spalten */}
+                                {!isCollapsed && (
+                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    {/* Phoenix - grün */}
+                                    <div className="space-y-1">
+                                      {phoenix.length > 0 ? phoenix.map(doc => (
+                                        <button
+                                          key={doc.id}
+                                          onClick={() => openPaperlessPdfModal(doc)}
+                                          className="w-full text-left px-3 py-2 rounded-lg bg-[#0D9488]/10 hover:bg-[#0D9488]/20 transition-colors border-l-4 border-[#0D9488]"
+                                        >
+                                          <div className="flex justify-between items-start">
+                                            <p className="text-sm font-medium text-[#0D9488] truncate">{doc.title}</p>
+                                          </div>
+                                          <p className={`text-xs ${theme.textMuted} truncate`}>{doc.original_file_name}</p>
+                                        </button>
+                                      )) : (
+                                        <div className="px-3 py-2 rounded-lg bg-gray-50 text-center">
+                                          <p className={`text-xs ${theme.textMuted}`}>–</p>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* AHD - gelb */}
+                                    <div className="space-y-1">
+                                      {ahd.length > 0 ? ahd.map(doc => (
+                                        <button
+                                          key={doc.id}
+                                          onClick={() => openPaperlessPdfModal(doc)}
+                                          className="w-full text-left px-3 py-2 rounded-lg bg-[#FEF3C7]/50 hover:bg-[#FEF3C7] transition-colors border-l-4 border-[#F59E0B]"
+                                        >
+                                          <div className="flex justify-between items-start">
+                                            <p className="text-sm font-medium text-[#D97706] truncate">{doc.title}</p>
+                                          </div>
+                                          <p className={`text-xs ${theme.textMuted} truncate`}>{doc.original_file_name}</p>
+                                        </button>
+                                      )) : (
+                                        <div className="px-3 py-2 rounded-lg bg-gray-50 text-center">
+                                          <p className={`text-xs ${theme.textMuted}`}>–</p>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* Sanacorp - blau */}
+                                    <div className="space-y-1">
+                                      {sanacorp.length > 0 ? sanacorp.map(doc => (
+                                        <button
+                                          key={doc.id}
+                                          onClick={() => openPaperlessPdfModal(doc)}
+                                          className="w-full text-left px-3 py-2 rounded-lg bg-[#1E293B]/10 hover:bg-[#1E293B]/20 transition-colors border-l-4 border-[#1E293B]"
+                                        >
+                                          <div className="flex justify-between items-start">
+                                            <p className="text-sm font-medium text-[#1E293B] truncate">{doc.title}</p>
+                                          </div>
+                                          <p className={`text-xs ${theme.textMuted} truncate`}>{doc.original_file_name}</p>
+                                        </button>
+                                      )) : (
+                                        <div className="px-3 py-2 rounded-lg bg-gray-50 text-center">
+                                          <p className={`text-xs ${theme.textMuted}`}>–</p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })
+                        })()}
+                      </div>
+                    )
+                  ) : rechnungenLoading ? (
                     <div className="flex items-center justify-center py-12">
                       <svg className="w-8 h-8 animate-spin text-[#F59E0B]" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -2849,9 +3017,9 @@ function App() {
 
                         return sortedDates.map((dateKey, index) => {
                           const dayRechnungen = byDate[dateKey]
-                          const phoenix = dayRechnungen.filter(r => r.grosshaendler?.toLowerCase() === 'phoenix')
-                          const ahd = dayRechnungen.filter(r => r.grosshaendler?.toLowerCase() === 'ahd')
-                          const sanacorp = dayRechnungen.filter(r => r.grosshaendler?.toLowerCase() === 'sanacorp')
+                          const phoenix = dayRechnungen.filter(r => r.grosshaendler?.toLowerCase() === 'phoenix').sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+                          const ahd = dayRechnungen.filter(r => r.grosshaendler?.toLowerCase() === 'ahd').sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+                          const sanacorp = dayRechnungen.filter(r => r.grosshaendler?.toLowerCase() === 'sanacorp').sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
 
                           const dateLabel = new Date(dateKey).toLocaleDateString('de-DE', {
                             weekday: 'long',
@@ -3753,6 +3921,64 @@ function App() {
           </div>
         )}
 
+        {/* PDF-Modal für Paperless-Rechnungen */}
+        {paperlessPdfModalOpen && selectedPaperlessPdf && (
+          <div
+            className={`fixed inset-0 z-50 ${theme.overlay} flex items-center justify-center p-4`}
+            onClick={closePaperlessPdfModal}
+          >
+            <div
+              className={`${theme.panel} rounded-2xl border ${theme.border} ${theme.cardShadow} w-full max-w-5xl h-[90vh] flex flex-col`}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className={`flex items-center justify-between px-5 py-4 border-b ${theme.border} flex-shrink-0`}>
+                <div>
+                  <h3 className="text-base font-semibold">{selectedPaperlessPdf.correspondentName} - {selectedPaperlessPdf.title}</h3>
+                  <p className={`text-xs ${theme.textMuted}`}>
+                    {selectedPaperlessPdf.datum ? new Date(selectedPaperlessPdf.datum).toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }) : 'Unbekanntes Datum'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <a
+                    href={selectedPaperlessPdf.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`p-2 rounded-lg ${theme.bgHover} ${theme.textSecondary}`}
+                    title="In neuem Tab öffnen"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
+                  <a
+                    href={selectedPaperlessPdf.url}
+                    download={selectedPaperlessPdf.original_file_name || `${selectedPaperlessPdf.title}.pdf`}
+                    className={`p-2 rounded-lg ${theme.bgHover} ${theme.textSecondary}`}
+                    title="Herunterladen"
+                  >
+                    <Icons.Download />
+                  </a>
+                  <button
+                    type="button"
+                    onClick={closePaperlessPdfModal}
+                    className={`p-2 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
+                    title="Schließen"
+                  >
+                    <Icons.X />
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <iframe
+                  src={selectedPaperlessPdf.url}
+                  className="w-full h-full border-0"
+                  title={`PDF ${selectedPaperlessPdf.title}`}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
         {weatherModalOpen && (
           <div
             className={`fixed inset-0 z-50 ${theme.overlay} flex items-center justify-center p-4`}
@@ -3975,7 +4201,7 @@ function App() {
                           setShowSignatureCanvas(false)
                           setShowDokumentationModal(true)
                         }}
-                        className={`${isComplete ? theme.primaryBg : 'bg-red-500 hover:bg-red-600'} text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors`}
+                        className={`${isComplete ? theme.primaryBg : 'bg-[#FF6500] hover:bg-[#E65A00]'} text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors`}
                       >
                         Bearbeiten
                       </button>
@@ -4003,7 +4229,7 @@ function App() {
                           setShowSignatureCanvas(false)
                           setShowDokumentationModal(true)
                         }}
-                        className={`${isComplete ? theme.primaryBg : 'bg-red-500 hover:bg-red-600'} text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors`}
+                        className={`${isComplete ? theme.primaryBg : 'bg-[#FF6500] hover:bg-[#E65A00]'} text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors`}
                       >
                         Bearbeiten
                       </button>
@@ -4705,7 +4931,7 @@ function App() {
                       className="w-10 h-10 rounded-lg cursor-pointer border-0"
                     />
                     <div className="flex gap-2">
-                      {['#0D9488', '#F59E0B', '#FEF3C7', '#E11D48', '#1E293B', '#64748B'].map((color) => (
+                      {['#0D9488', '#F59E0B', '#FEF3C7', '#FF6500', '#1E293B', '#64748B'].map((color) => (
                         <button
                           key={color}
                           type="button"

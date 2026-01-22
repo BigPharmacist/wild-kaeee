@@ -262,9 +262,9 @@ export default function LetterXpressModal({
 
           {/* Error */}
           {error && (
-            <div className="flex items-center gap-2 p-2 rounded-lg bg-red-50 border border-red-200">
-              <Warning className="w-4 h-4 text-red-600 flex-shrink-0" weight="fill" />
-              <p className="text-xs text-red-800">{error}</p>
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-[#FFF5EB] border border-[#FFD4B3]">
+              <Warning className="w-4 h-4 text-[#FF6500] flex-shrink-0" weight="fill" />
+              <p className="text-xs text-[#CC5200]">{error}</p>
             </div>
           )}
 

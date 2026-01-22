@@ -102,7 +102,7 @@ export default function ContactFormModal({
                 <div className="relative">
                   {/* Warnung über unbestätigtem KI-Bild */}
                   {contactCardEnhancedPreview && !contactForm.businessCardEnhancedConfirmed && (
-                    <div className="absolute -top-5 left-0 right-0 text-[10px] text-red-500 font-normal text-center whitespace-nowrap">
+                    <div className="absolute -top-5 left-0 right-0 text-[10px] text-[#FF6500] font-normal text-center whitespace-nowrap">
                       Achtung, bitte bestätigen
                     </div>
                   )}
