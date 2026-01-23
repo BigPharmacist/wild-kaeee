@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 
-const SidebarNav = ({
+const SidebarNav = function SidebarNav({
   theme,
   mobileNavOpen,
   setMobileNavOpen,
@@ -17,7 +17,7 @@ const SidebarNav = ({
   currentStaff,
   session,
   handleSignOut,
-}) => {
+}) {
   const [showLogoutMenu, setShowLogoutMenu] = useState(false)
   const logoutMenuRef = useRef(null)
 
@@ -33,6 +33,133 @@ const SidebarNav = ({
     }
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showLogoutMenu])
+
+  useEffect(() => {
+    if (localStorage.getItem('debug_sidebar') !== '1') return
+    const summarizeTarget = (el) => {
+      if (!el || !el.tagName) return String(el)
+      const tag = el.tagName.toLowerCase()
+      const id = el.id ? `#${el.id}` : ''
+      const cls = el.className ? `.${String(el.className).replace(/\s+/g, '.')}` : ''
+      return `${tag}${id}${cls}`
+    }
+    const logEvent = (label, event, phase) => {
+      const path = (event.composedPath ? event.composedPath() : []).slice(0, 5).map(summarizeTarget)
+      console.log(
+        `[sidebar debug] ${label} ${phase}`,
+        {
+          type: event.type,
+          button: event.button,
+          detail: event.detail,
+          defaultPrevented: event.defaultPrevented,
+          cancelBubble: event.cancelBubble,
+          target: summarizeTarget(event.target),
+          currentTarget: summarizeTarget(event.currentTarget),
+          path,
+        },
+      )
+    }
+    const handler = (event) => {
+      const { clientX, clientY } = event
+      const elements = document.elementsFromPoint(clientX, clientY).slice(0, 6)
+      // Log the top stack under the cursor to find click blockers.
+      console.log('[sidebar debug] click at', clientX, clientY)
+      elements.forEach((el, idx) => {
+        const tag = el.tagName?.toLowerCase()
+        const id = el.id ? `#${el.id}` : ''
+        const cls = el.className ? `.${String(el.className).replace(/\s+/g, '.')}` : ''
+        console.log(`  ${idx}: ${tag}${id}${cls}`)
+      })
+    }
+    const capture = (event) => logEvent('capture', event, event.eventPhase)
+    const bubble = (event) => logEvent('bubble', event, event.eventPhase)
+
+    // Patch preventDefault/stopPropagation to find who cancels clicks.
+    const win = window
+    if (!win.__sidebarDebugPatched) {
+      win.__sidebarDebugPatched = true
+      const origPrevent = Event.prototype.preventDefault
+      const origStop = Event.prototype.stopPropagation
+      const origStopImmediate = Event.prototype.stopImmediatePropagation
+      Event.prototype.preventDefault = function patchedPreventDefault() {
+        try {
+          const target = this.target
+          if (this.type && (this.type === 'pointerdown' || this.type === 'mousedown' || this.type === 'click')) {
+            const inPrimary = target?.closest?.('[data-sidebar="primary"]')
+            if (inPrimary) {
+              console.log('[sidebar debug] preventDefault on', this.type, 'target', summarizeTarget(target))
+              console.log(new Error('preventDefault stack').stack)
+            }
+          }
+        } catch (_e) {}
+        return origPrevent.call(this)
+      }
+      Event.prototype.stopPropagation = function patchedStopPropagation() {
+        try {
+          const target = this.target
+          if (this.type && (this.type === 'pointerdown' || this.type === 'mousedown' || this.type === 'click')) {
+            const inPrimary = target?.closest?.('[data-sidebar="primary"]')
+            if (inPrimary) {
+              console.log('[sidebar debug] stopPropagation on', this.type, 'target', summarizeTarget(target))
+              console.log(new Error('stopPropagation stack').stack)
+            }
+          }
+        } catch (_e) {}
+        return origStop.call(this)
+      }
+      Event.prototype.stopImmediatePropagation = function patchedStopImmediatePropagation() {
+        try {
+          const target = this.target
+          if (this.type && (this.type === 'pointerdown' || this.type === 'mousedown' || this.type === 'click')) {
+            const inPrimary = target?.closest?.('[data-sidebar="primary"]')
+            if (inPrimary) {
+              console.log('[sidebar debug] stopImmediatePropagation on', this.type, 'target', summarizeTarget(target))
+              console.log(new Error('stopImmediatePropagation stack').stack)
+            }
+          }
+        } catch (_e) {}
+        return origStopImmediate.call(this)
+      }
+      win.__sidebarDebugRestore = () => {
+        Event.prototype.preventDefault = origPrevent
+        Event.prototype.stopPropagation = origStop
+        Event.prototype.stopImmediatePropagation = origStopImmediate
+        win.__sidebarDebugPatched = false
+      }
+    }
+    document.addEventListener('pointerdown', handler, true)
+    document.addEventListener('pointerdown', capture, true)
+    document.addEventListener('pointerup', capture, true)
+    document.addEventListener('mousedown', capture, true)
+    document.addEventListener('mouseup', capture, true)
+    document.addEventListener('click', capture, true)
+    document.addEventListener('pointerdown', bubble, false)
+    document.addEventListener('pointerup', bubble, false)
+    document.addEventListener('mousedown', bubble, false)
+    document.addEventListener('mouseup', bubble, false)
+    document.addEventListener('click', bubble, false)
+    return () => {
+      document.removeEventListener('pointerdown', handler, true)
+      document.removeEventListener('pointerdown', capture, true)
+      document.removeEventListener('pointerup', capture, true)
+      document.removeEventListener('mousedown', capture, true)
+      document.removeEventListener('mouseup', capture, true)
+      document.removeEventListener('click', capture, true)
+      document.removeEventListener('pointerdown', bubble, false)
+      document.removeEventListener('pointerup', bubble, false)
+      document.removeEventListener('mousedown', bubble, false)
+      document.removeEventListener('mouseup', bubble, false)
+      document.removeEventListener('click', bubble, false)
+      if (window.__sidebarDebugRestore) {
+        window.__sidebarDebugRestore()
+        window.__sidebarDebugRestore = null
+      }
+    }
+  }, [])
+
+  const handlePrimaryActivate = (id) => {
+    setActiveView(id)
+  }
 
   return (
   <>
@@ -84,12 +211,12 @@ const SidebarNav = ({
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-[6px] text-sm font-medium transition-colors ${
                     activeView === item.id ? 'bg-[#334155] text-white' : 'text-[#E5E7EB] hover:bg-[#334155]'
                   }`}
-                  onClick={() => setActiveView(item.id)}
+                  onClick={() => handlePrimaryActivate(item.id)}
                 >
                   <div className="relative">
                     <item.icon />
                     {hasUnread && (
-                      <span className="absolute -top-1 -right-1 w-2 h-2 bg-[#FF6500] rounded-full" />
+                      <span className="absolute -top-1 -right-1 w-2 h-2 bg-[#FF6500] rounded-full pointer-events-none" />
                     )}
                   </div>
                   <span className="flex-1">{item.label}</span>
@@ -111,7 +238,7 @@ const SidebarNav = ({
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-[6px] text-sm font-medium transition-colors ${
                 activeView === miscNavItem.id ? 'bg-[#334155] text-white' : 'text-[#E5E7EB] hover:bg-[#334155]'
               }`}
-              onClick={() => setActiveView(miscNavItem.id)}
+              onClick={() => handlePrimaryActivate(miscNavItem.id)}
             >
               <miscNavItem.icon />
               <span className="flex-1">{miscNavItem.label}</span>
@@ -196,7 +323,7 @@ const SidebarNav = ({
       </div>
     </aside>
 
-    <aside className={`hidden lg:flex flex-shrink-0 ${theme.sidebarBg} w-12 min-w-[3rem] max-w-[3rem] overflow-visible h-full`}>
+    <aside data-sidebar="primary" className={`hidden lg:flex flex-shrink-0 ${theme.sidebarBg} w-12 min-w-[3rem] max-w-[3rem] overflow-visible h-full relative z-[45] pointer-events-auto`}>
       <div className="h-full flex flex-col">
         <nav className="py-3 space-y-1 flex flex-col items-center flex-1 pl-1">
           {navItems.map((item) => {
@@ -207,27 +334,23 @@ const SidebarNav = ({
               : 0
             const hasUnread = totalApoUnread > 0 || totalPostUnread > 0 || totalChatUnread > 0
             return (
-              <div key={item.id} className="relative group">
+              <div key={item.id} className="relative">
                 {activeView === item.id && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] bg-[#F59E0B] rounded-r" />
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] bg-[#F59E0B] rounded-r pointer-events-none z-10" />
                 )}
                 <button
                   type="button"
-                  className={`w-10 h-10 flex items-center justify-center mx-auto rounded-[6px] transition-colors ${theme.sidebarText} ${
+                  className={`w-10 h-10 flex items-center justify-center mx-auto rounded-[6px] transition-colors relative ${theme.sidebarText} ${
                     activeView === item.id ? theme.sidebarActive : theme.sidebarHover
                   }`}
-                  onClick={() => {
-                    setActiveView(item.id)
-                  }}
+                  onClick={() => handlePrimaryActivate(item.id)}
+                  title={`${item.label}${totalApoUnread > 0 ? ` (${totalApoUnread})` : ''}${totalPostUnread > 0 ? ` (${totalPostUnread})` : ''}${totalChatUnread > 0 ? ` (${totalChatUnread})` : ''}`}
                 >
-                  <item.icon />
+                  <span className="pointer-events-none"><item.icon /></span>
                   {hasUnread && (
-                    <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-[#FF6500] rounded-full border-2 border-[#1E293B]" />
+                    <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-[#FF6500] rounded-full border-2 border-[#1E293B] pointer-events-none" />
                   )}
                 </button>
-                <span className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-[#1E293B] text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
-                  {item.label}{totalApoUnread > 0 && ` (${totalApoUnread})`}{totalPostUnread > 0 && ` (${totalPostUnread})`}{totalChatUnread > 0 && ` (${totalChatUnread})`}
-                </span>
               </div>
             )
           })}
@@ -235,28 +358,26 @@ const SidebarNav = ({
 
         {/* Sonstiges-Icon */}
         <div className="py-2 flex justify-center border-t border-[#334155] pl-1">
-          <div className="relative group">
+          <div className="relative">
             {activeView === miscNavItem.id && (
-              <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] bg-[#F59E0B] rounded-r" />
+              <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] bg-[#F59E0B] rounded-r pointer-events-none z-10" />
             )}
             <button
               type="button"
-              className={`w-10 h-10 flex items-center justify-center mx-auto rounded-[6px] transition-colors ${theme.sidebarText} ${
+              className={`w-10 h-10 flex items-center justify-center mx-auto rounded-[6px] transition-colors relative ${theme.sidebarText} ${
                 activeView === miscNavItem.id ? theme.sidebarActive : theme.sidebarHover
               }`}
-              onClick={() => setActiveView(miscNavItem.id)}
+              onClick={() => handlePrimaryActivate(miscNavItem.id)}
+              title={miscNavItem.label}
             >
-              <miscNavItem.icon />
+              <span className="pointer-events-none"><miscNavItem.icon /></span>
             </button>
-            <span className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-[#1E293B] text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
-              {miscNavItem.label}
-            </span>
           </div>
         </div>
 
         {/* Avatar mit Logout-Dropdown */}
         <div className="py-3 flex justify-center border-t border-[#334155] pl-1" ref={logoutMenuRef}>
-          <div className="relative group">
+          <div className="relative">
             <button
               onClick={() => setShowLogoutMenu(!showLogoutMenu)}
               className="w-10 h-10 flex items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-[#4C8BF5]"
@@ -266,21 +387,14 @@ const SidebarNav = ({
                 <img
                   src={currentStaff.avatar_url}
                   alt={session?.user?.email}
-                  className={`h-9 w-9 rounded-full object-cover border-2 ${showLogoutMenu ? 'border-[#4C8BF5]' : 'border-[#334155]'} transition-colors`}
+                  className={`h-9 w-9 rounded-full object-cover border-2 ${showLogoutMenu ? 'border-[#4C8BF5]' : 'border-[#334155]'} transition-colors pointer-events-none`}
                 />
               ) : (
-                <div className={`h-9 w-9 rounded-full border-2 ${showLogoutMenu ? 'border-[#4C8BF5]' : 'border-[#334155]'} flex items-center justify-center text-xs text-[#E5E7EB] bg-[#334155] transition-colors`}>
+                <div className={`h-9 w-9 rounded-full border-2 ${showLogoutMenu ? 'border-[#4C8BF5]' : 'border-[#334155]'} flex items-center justify-center text-xs text-[#E5E7EB] bg-[#334155] transition-colors pointer-events-none`}>
                   {session?.user?.email?.[0]?.toUpperCase() || '?'}
                 </div>
               )}
             </button>
-
-            {/* Tooltip */}
-            {!showLogoutMenu && (
-              <span className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-[#1E293B] text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
-                {currentStaff?.first_name ? `${currentStaff.first_name} ${currentStaff.last_name || ''}` : session?.user?.email}
-              </span>
-            )}
 
             {/* Dropdown-Menü */}
             {showLogoutMenu && (
@@ -314,8 +428,8 @@ const SidebarNav = ({
 
     <aside
       className={`
-        ${theme.secondarySidebarBg} border-r ${theme.border} flex-shrink-0 z-40
-        hidden lg:flex lg:relative inset-y-0 left-0 top-0
+        ${theme.secondarySidebarBg} border-r ${theme.border} flex-shrink-0 relative z-[40] pointer-events-auto
+        hidden lg:flex
         w-48 h-full
       `}
     >
