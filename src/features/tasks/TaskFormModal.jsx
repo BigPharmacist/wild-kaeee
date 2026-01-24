@@ -143,6 +143,174 @@ const RecurrencePicker = ({ taskForm, handleTaskInput }) => {
     )
   }
 
+// Assignee Multi-Select Picker Component
+const AssigneePicker = ({ taskForm, handleTaskInput, staff }) => {
+  const [isOpen, setIsOpen] = useState(false)
+  const [popupPosition, setPopupPosition] = useState({ top: 0, left: 0 })
+  const buttonRef = useRef(null)
+  const popupRef = useRef(null)
+
+  const groups = [
+    { id: 'APO', label: 'APO', fullLabel: 'ApothekerInnen', color: 'bg-[#673ab7]' },
+    { id: 'PTA', label: 'PTA', fullLabel: 'PTA', color: 'bg-[#2196f3]' },
+    { id: 'PKA', label: 'PKA', fullLabel: 'PKA', color: 'bg-[#4caf50]' },
+  ]
+
+  // Get current selections
+  const selectedGroups = taskForm.assignedGroups || []
+  const selectedUsers = taskForm.assignedUsers || []
+
+  // Close popup when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (popupRef.current && !popupRef.current.contains(e.target) &&
+          buttonRef.current && !buttonRef.current.contains(e.target)) {
+        setIsOpen(false)
+      }
+    }
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [isOpen])
+
+  const handleOpen = () => {
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      setPopupPosition({
+        top: rect.top - 10,
+        left: rect.left + rect.width / 2,
+      })
+    }
+    setIsOpen(!isOpen)
+  }
+
+  const toggleGroup = (groupId) => {
+    const newGroups = selectedGroups.includes(groupId)
+      ? selectedGroups.filter(g => g !== groupId)
+      : [...selectedGroups, groupId]
+    handleTaskInput('assignedGroups', newGroups)
+  }
+
+  const toggleUser = (userId) => {
+    const newUsers = selectedUsers.includes(userId)
+      ? selectedUsers.filter(u => u !== userId)
+      : [...selectedUsers, userId]
+    handleTaskInput('assignedUsers', newUsers)
+  }
+
+  // Build display text
+  const getDisplayText = () => {
+    const parts = []
+    if (selectedGroups.length > 0) {
+      parts.push(selectedGroups.join(', '))
+    }
+    if (selectedUsers.length > 0) {
+      const names = selectedUsers.map(uid => {
+        const user = staff?.find(s => s.id === uid)
+        return user ? user.first_name : '?'
+      })
+      parts.push(names.join(', '))
+    }
+    return parts.length > 0 ? parts.join(', ') : '-'
+  }
+
+  const totalSelected = selectedGroups.length + selectedUsers.length
+
+  return (
+    <div className="flex flex-col">
+      <label className="text-[11px] text-[#ccc] mb-1">Zugewiesen</label>
+
+      {/* Trigger button */}
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={handleOpen}
+        className="h-[38px] px-3 bg-[#f0f0f0] rounded-[0.65em] text-sm text-[#5a5a5a] text-left flex items-center justify-between min-w-[140px] max-w-[200px] hover:bg-[#ebebeb] transition-colors"
+      >
+        <span className="truncate">{getDisplayText()}</span>
+        {totalSelected > 0 && (
+          <span className="ml-2 px-1.5 py-0.5 bg-[#1976d2] text-white text-xs rounded-full">
+            {totalSelected}
+          </span>
+        )}
+      </button>
+
+      {/* Popup */}
+      {isOpen && (
+        <div
+          ref={popupRef}
+          className="fixed bg-white rounded-[0.65em] shadow-xl border border-[#ccc] p-3 z-[100] w-64 max-h-80 overflow-y-auto"
+          style={{
+            top: popupPosition.top,
+            left: popupPosition.left,
+            transform: 'translate(-50%, -100%)',
+          }}
+        >
+          {/* Groups */}
+          <div className="mb-3">
+            <p className="text-xs text-[#999] uppercase tracking-wide mb-2">Gruppen</p>
+            <div className="space-y-1">
+              {groups.map(group => (
+                <label
+                  key={group.id}
+                  className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[#f0f0f0] cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedGroups.includes(group.id)}
+                    onChange={() => toggleGroup(group.id)}
+                    className="w-4 h-4 accent-[#1976d2]"
+                  />
+                  <span className={`w-6 h-6 rounded-full ${group.color} text-white text-xs font-bold flex items-center justify-center`}>
+                    {group.label}
+                  </span>
+                  <span className="text-sm text-[#5a5a5a]">{group.fullLabel}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="border-t border-[#eee] my-2" />
+
+          {/* Staff */}
+          <div>
+            <p className="text-xs text-[#999] uppercase tracking-wide mb-2">Mitarbeiter</p>
+            <div className="space-y-1">
+              {staff?.map(s => (
+                <label
+                  key={s.id}
+                  className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[#f0f0f0] cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedUsers.includes(s.id)}
+                    onChange={() => toggleUser(s.id)}
+                    className="w-4 h-4 accent-[#1976d2]"
+                  />
+                  {s.avatar_url ? (
+                    <img
+                      src={s.avatar_url}
+                      alt={s.first_name}
+                      className="w-6 h-6 rounded-full object-cover"
+                    />
+                  ) : (
+                    <span className="w-6 h-6 rounded-full bg-[#a8dfd1] text-[#1e6251] text-xs font-medium flex items-center justify-center">
+                      {s.first_name?.[0]?.toUpperCase() || '?'}
+                    </span>
+                  )}
+                  <span className="text-sm text-[#5a5a5a]">{s.first_name} {s.last_name}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 const TaskFormModal = ({
   theme,
   editingTask,
@@ -153,6 +321,7 @@ const TaskFormModal = ({
   saveTaskFromModal,
   closeTaskModal,
   staff,
+  projects,
 }) => {
   if (!editingTask) return null
 
@@ -226,9 +395,9 @@ const TaskFormModal = ({
                 className="h-[38px] px-3 bg-[#f0f0f0] rounded-[0.65em] text-sm text-[#5a5a5a] border-0 outline-none min-w-[70px] cursor-pointer focus:ring-2 focus:ring-[#1976d2]"
               >
                 <option value="">-</option>
-                <option value="A">A</option>
-                <option value="B">B</option>
-                <option value="C">C</option>
+                {'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(letter => (
+                  <option key={letter} value={letter}>{letter}</option>
+                ))}
               </select>
             </div>
 
@@ -261,22 +430,29 @@ const TaskFormModal = ({
               handleTaskInput={handleTaskInput}
             />
 
-            {/* Assignee (Team feature) */}
+            {/* Project */}
             <div className="flex flex-col">
-              <label className="text-[11px] text-[#ccc] mb-1">Zugewiesen</label>
+              <label className="text-[11px] text-[#ccc] mb-1">Projekt</label>
               <select
-                value={taskForm.assignedTo || ''}
-                onChange={(e) => handleTaskInput('assignedTo', e.target.value || null)}
-                className="h-[38px] px-3 bg-[#f0f0f0] rounded-[0.65em] text-sm text-[#5a5a5a] border-0 outline-none min-w-[100px] cursor-pointer focus:ring-2 focus:ring-[#1976d2]"
+                value={taskForm.projectId || ''}
+                onChange={(e) => handleTaskInput('projectId', e.target.value || null)}
+                className="h-[38px] px-3 bg-[#f0f0f0] rounded-[0.65em] text-sm text-[#5a5a5a] border-0 outline-none min-w-[120px] cursor-pointer focus:ring-2 focus:ring-[#1976d2]"
               >
-                <option value="">-</option>
-                {staff?.map(s => (
-                  <option key={s.id} value={s.id}>
-                    {s.first_name}
+                <option value="">Kein Projekt</option>
+                {projects?.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
                   </option>
                 ))}
               </select>
             </div>
+
+            {/* Assignee Multi-Select */}
+            <AssigneePicker
+              taskForm={taskForm}
+              handleTaskInput={handleTaskInput}
+              staff={staff}
+            />
           </div>
 
           {/* Error message (sleek-style) */}

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Plus } from '@phosphor-icons/react'
+import { Plus, FolderPlus } from '@phosphor-icons/react'
 
 const SidebarNav = function SidebarNav({
   theme,
@@ -19,6 +19,7 @@ const SidebarNav = function SidebarNav({
   session,
   handleSignOut,
   onAddTask, // Callback to open task modal
+  onAddProject, // Callback to open project modal
 }) {
   const [showLogoutMenu, setShowLogoutMenu] = useState(false)
   const logoutMenuRef = useRef(null)
@@ -66,6 +67,19 @@ const SidebarNav = function SidebarNav({
             </h2>
           </div>
           <div className="flex items-center gap-2">
+            {activeView === 'tasks' && onAddProject && (
+              <button
+                type="button"
+                onClick={() => {
+                  onAddProject()
+                  setMobileNavOpen(false)
+                }}
+                className="p-2 rounded-[6px] text-[#E5E7EB] hover:bg-[#334155]"
+                title="Neues Projekt"
+              >
+                <FolderPlus size={20} weight="bold" />
+              </button>
+            )}
             {activeView === 'tasks' && onAddTask && (
               <button
                 type="button"
@@ -160,7 +174,7 @@ const SidebarNav = function SidebarNav({
                 <button
                   key={item.id}
                   type="button"
-                  className={`w-full flex items-center text-left px-3 py-2.5 rounded-[6px] text-sm font-medium border-l-4 transition-colors ${
+                  className={`w-full flex items-center gap-2 text-left px-3 py-2.5 rounded-[6px] text-sm font-medium border-l-4 transition-colors overflow-hidden ${
                     isActive
                       ? theme.secondaryActive
                       : 'border-transparent text-[#E5E7EB] hover:bg-[#334155] hover:text-white'
@@ -170,7 +184,13 @@ const SidebarNav = function SidebarNav({
                     setMobileNavOpen(false)
                   }}
                 >
-                  <span>{item.label}</span>
+                  {item.color && (
+                    <span
+                      className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: item.color }}
+                    />
+                  )}
+                  <span className="flex-1 min-w-0 truncate">{item.label}</span>
                   <UnreadBadge count={badgeCount} />
                 </button>
               )
@@ -324,10 +344,10 @@ const SidebarNav = function SidebarNav({
       className={`
         ${theme.secondarySidebarBg} border-r ${theme.border} flex-shrink-0 relative z-[40] pointer-events-auto
         hidden lg:flex
-        w-48 h-full
+        w-48 h-full overflow-hidden
       `}
     >
-      <div className="h-full flex flex-col">
+      <div className="h-full flex flex-col w-full overflow-hidden">
         <div className="px-4 pt-4 pb-3 border-b border-[#1E293B]">
           <p className="text-xs uppercase tracking-[0.08em] text-[#64748B]">
             Navigation
@@ -336,15 +356,29 @@ const SidebarNav = function SidebarNav({
             <h2 className="text-sm font-semibold text-[#E5E7EB]">
               {navItems.find((item) => item.id === activeView)?.label || 'Kontext'}
             </h2>
-            {activeView === 'tasks' && onAddTask && (
-              <button
-                type="button"
-                onClick={onAddTask}
-                className="p-1 rounded hover:bg-[#1E293B] text-[#E5E7EB] hover:text-white transition-colors"
-                title="Neue Aufgabe"
-              >
-                <Plus size={18} weight="bold" />
-              </button>
+            {activeView === 'tasks' && (
+              <div className="flex items-center gap-1">
+                {onAddProject && (
+                  <button
+                    type="button"
+                    onClick={onAddProject}
+                    className="p-1 rounded hover:bg-[#1E293B] text-[#E5E7EB] hover:text-white transition-colors"
+                    title="Neues Projekt"
+                  >
+                    <FolderPlus size={18} weight="bold" />
+                  </button>
+                )}
+                {onAddTask && (
+                  <button
+                    type="button"
+                    onClick={onAddTask}
+                    className="p-1 rounded hover:bg-[#1E293B] text-[#E5E7EB] hover:text-white transition-colors"
+                    title="Neue Aufgabe"
+                  >
+                    <Plus size={18} weight="bold" />
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -369,7 +403,7 @@ const SidebarNav = function SidebarNav({
               <button
                 key={item.id}
                 type="button"
-                className={`w-full flex items-center text-left px-3 py-2.5 rounded-[6px] text-sm font-medium border-l-4 transition-colors ${
+                className={`w-full flex items-center gap-2 text-left px-3 py-2.5 rounded-[6px] text-sm font-medium border-l-4 transition-colors overflow-hidden ${
                   isActive
                     ? theme.secondaryActive
                     : 'border-transparent text-[#E5E7EB] hover:bg-[#1E293B] hover:text-white'
@@ -379,7 +413,13 @@ const SidebarNav = function SidebarNav({
                   handleSecondarySelect(item.id)
                 }}
               >
-                <span>{item.label}</span>
+                {item.color && (
+                  <span
+                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: item.color }}
+                  />
+                )}
+                <span className="flex-1 min-w-0 truncate">{item.label}</span>
                 <UnreadBadge count={badgeCount} />
               </button>
             )

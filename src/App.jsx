@@ -16,6 +16,7 @@ import { useFaxCounts, useUrgentFax } from './features/fax'
 import { contactScan } from './features/contacts'
 import { useWeather, usePollen, useBiowetter } from './features/dashboard'
 import { useTasks } from './features/tasks'
+import { useProjects } from './features/projects'
 import { useCalendar } from './features/calendar'
 import { useRechnungen } from './features/rechnungen'
 import { useArchiv } from './features/archiv'
@@ -40,6 +41,8 @@ const SettingsView = lazy(() => import('./features/settings/SettingsView'))
 const PlanView = lazy(() => import('./features/plan/PlanView'))
 const TasksView = lazy(() => import('./features/tasks/TasksView'))
 const TaskFormModal = lazy(() => import('./features/tasks/TaskFormModal'))
+const TaskCompleteModal = lazy(() => import('./features/tasks/TaskCompleteModal'))
+const ProjectFormModal = lazy(() => import('./features/projects/ProjectFormModal'))
 const DokumenteView = lazy(() => import('./features/dokumente/DokumenteView'))
 const CalendarView = lazy(() => import('./features/calendar/CalendarView'))
 const NotdienstplanungView = lazy(() => import('./features/calendar/NotdienstplanungView'))
@@ -246,10 +249,11 @@ function App() {
     setQuickAddInput,
     groupedTasks,
     allProjects,
+    filteredTasks,
     filterPriority,
     setFilterPriority,
-    filterProject,
-    setFilterProject,
+    filterProjectId,
+    setFilterProjectId,
     filterAssignee,
     setFilterAssignee,
     filterDue,
@@ -266,10 +270,27 @@ function App() {
     closeTaskModal,
     handleTaskInput,
     saveTaskFromModal,
+    completingTask,
+    confirmTaskComplete,
+    cancelTaskComplete,
     createTask,
     toggleTaskComplete,
     deleteTask,
+    updateTaskOrder,
+    calculateSortOrder,
   } = useTasks({ session, activeView, currentStaff })
+
+  const {
+    projects,
+    editingProject,
+    projectForm,
+    projectSaving,
+    projectSaveError,
+    openProjectModal,
+    closeProjectModal,
+    handleProjectInput,
+    saveProject,
+  } = useProjects({ session, currentStaff })
 
   const {
     checkContactDuplicates,
@@ -576,6 +597,15 @@ function App() {
   const miscNavItem = { id: 'misc', icon: () => <DotsThree size={20} weight="bold" />, label: 'Sonstiges' }
 
   const secondaryNavMap = useMemo(() => ({
+    tasks: [
+      { id: 'all', label: 'Alle Aufgaben' },
+      ...(projects.length > 0 ? [{ id: 'divider' }] : []),
+      ...projects.map(p => ({
+        id: `project-${p.id}`,
+        label: p.name,
+        color: p.color,
+      })),
+    ],
     apo: [
       { id: 'amk', label: 'AMK' },
       { id: 'recall', label: 'Rückrufe' },
@@ -640,7 +670,7 @@ function App() {
       ...(currentStaff?.is_admin ? [{ id: 'tracking', label: 'Tracking' }] : []),
       ...(currentStaff?.is_admin ? [{ id: 'admin', label: 'Admin' }] : []),
     ],
-  }), [currentStaff?.is_admin, staff, session?.user?.id, archivDocumentTypes, archivSavedViews])
+  }), [currentStaff?.is_admin, staff, session?.user?.id, archivDocumentTypes, archivSavedViews, projects])
 
   // Fax-PDF Popup öffnen (für Kalender-Links)
   const openFaxPdfPopup = async (faxId) => {
@@ -732,13 +762,23 @@ function App() {
 
   // Mobile Nav Timer und getActiveSecondaryId/handleSecondarySelect sind jetzt im NavigationContext
 
-  // Wrapper für handleSecondarySelect mit Archiv-spezifischer Logik
+  // Wrapper für handleSecondarySelect mit Archiv- und Tasks-spezifischer Logik
   const handleSecondarySelectWithArchiv = (itemId) => {
     // Divider ignorieren
     if (itemId === 'divider') return
 
     // Basis-Navigation über Context
     handleSecondarySelect(itemId)
+
+    // Tasks-spezifische Filter anwenden (Projekte)
+    if (activeView === 'tasks') {
+      if (itemId === 'all') {
+        setFilterProjectId(null)
+      } else if (itemId.startsWith('project-')) {
+        const projectId = itemId.replace('project-', '')
+        setFilterProjectId(projectId)
+      }
+    }
 
     // Archiv-spezifische Filter anwenden
     if (activeView === 'archiv') {
@@ -1565,6 +1605,7 @@ function App() {
             session={session}
             handleSignOut={handleSignOut}
             onAddTask={openTaskModal}
+            onAddProject={openProjectModal}
           />
 
           {/* Main Content */}
@@ -1751,11 +1792,13 @@ function App() {
                   allProjects={allProjects}
                   staff={staff}
                   currentStaff={currentStaff}
+                  filteredTasks={filteredTasks}
                   filterPriority={filterPriority}
                   setFilterPriority={setFilterPriority}
-                  filterProject={filterProject}
-                  setFilterProject={setFilterProject}
+                  filterProjectId={filterProjectId}
+                  setFilterProjectId={setFilterProjectId}
                   filterAssignee={filterAssignee}
+                  projects={projects}
                   setFilterAssignee={setFilterAssignee}
                   filterDue={filterDue}
                   setFilterDue={setFilterDue}
@@ -1767,6 +1810,9 @@ function App() {
                   toggleTaskComplete={toggleTaskComplete}
                   deleteTask={deleteTask}
                   openTaskModal={openTaskModal}
+                  openProjectModal={openProjectModal}
+                  updateTaskOrder={updateTaskOrder}
+                  calculateSortOrder={calculateSortOrder}
                 />
               )}
 
@@ -2942,6 +2988,26 @@ function App() {
           saveTaskFromModal={saveTaskFromModal}
           closeTaskModal={closeTaskModal}
           staff={staff}
+          projects={projects}
+        />
+
+        {/* Task Complete Modal */}
+        <TaskCompleteModal
+          task={completingTask}
+          currentStaff={currentStaff}
+          onConfirm={confirmTaskComplete}
+          onCancel={cancelTaskComplete}
+        />
+
+        {/* Project Form Modal */}
+        <ProjectFormModal
+          editingProject={editingProject}
+          projectForm={projectForm}
+          projectSaving={projectSaving}
+          projectSaveError={projectSaveError}
+          handleProjectInput={handleProjectInput}
+          saveProject={saveProject}
+          closeProjectModal={closeProjectModal}
         />
 
         {/* PDF-Modal für GH-Rechnungen */}

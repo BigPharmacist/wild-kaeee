@@ -12,7 +12,7 @@ export default function useTasks({ session, activeView, currentStaff }) {
 
   // Filter state
   const [filterPriority, setFilterPriority] = useState(null)
-  const [filterProject, setFilterProject] = useState(null)
+  const [filterProjectId, setFilterProjectId] = useState(null)
   const [filterAssignee, setFilterAssignee] = useState(null)
   const [filterDue, setFilterDue] = useState(null)
   const [showCompleted, setShowCompleted] = useState(false)
@@ -28,11 +28,16 @@ export default function useTasks({ session, activeView, currentStaff }) {
     recurrenceInterval: null,
     recurrenceCount: 1,
     recurrenceStrict: false,
-    project: '',
+    projectId: null,
     assignedTo: null,
+    assignedGroups: [],
+    assignedUsers: [],
   })
   const [taskSaving, setTaskSaving] = useState(false)
   const [taskSaveError, setTaskSaveError] = useState('')
+
+  // Complete modal state (for confirming task completion with attachments)
+  const [completingTask, setCompletingTask] = useState(null)
 
   // Parse quick-add input to extract components
   const parseTaskInput = (input) => {
@@ -42,10 +47,10 @@ export default function useTasks({ session, activeView, currentStaff }) {
     let recurrence = null
     let project = null
 
-    // Extract priority: (A), (B), (C) at start
-    const priorityMatch = text.match(/^\(([ABC])\)\s*/)
+    // Extract priority: (A), (B), ... (Z) at start
+    const priorityMatch = text.match(/^\(([A-Z])\)\s*/i)
     if (priorityMatch) {
-      priority = priorityMatch[1]
+      priority = priorityMatch[1].toUpperCase()
       text = text.replace(priorityMatch[0], '')
     }
 
@@ -119,47 +124,23 @@ export default function useTasks({ session, activeView, currentStaff }) {
     return true
   }
 
-  // Toggle task completion
+  // Toggle task completion - opens modal for completing, direct toggle for uncompleting
   const toggleTaskComplete = async (taskId) => {
     const task = tasks.find(t => t.id === taskId)
     if (!task) return false
 
-    const newCompleted = !task.completed
-
-    // Handle recurrence: if completing a recurring task, create next occurrence
-    if (newCompleted && task.recurrence && task.due_date) {
-      const currentDue = new Date(task.due_date)
-      let nextDue = new Date(currentDue)
-
-      switch (task.recurrence) {
-        case 'daily':
-          nextDue.setDate(nextDue.getDate() + 1)
-          break
-        case 'weekly':
-          nextDue.setDate(nextDue.getDate() + 7)
-          break
-        case 'monthly':
-          nextDue.setMonth(nextDue.getMonth() + 1)
-          break
-      }
-
-      // Create new recurring task
-      await supabase.from('tasks').insert({
-        text: task.text,
-        priority: task.priority,
-        due_date: nextDue.toISOString().substring(0, 10),
-        recurrence: task.recurrence,
-        project: task.project,
-        created_by: task.created_by,
-        assigned_to: task.assigned_to,
-      })
+    if (!task.completed) {
+      // Opening completion: show modal for confirmation and attachments
+      setCompletingTask(task)
+      return true
     }
 
+    // Uncompleting: direct toggle without modal
     const { error } = await supabase
       .from('tasks')
       .update({
-        completed: newCompleted,
-        completed_at: newCompleted ? new Date().toISOString() : null,
+        completed: false,
+        completed_at: null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', taskId)
@@ -172,10 +153,117 @@ export default function useTasks({ session, activeView, currentStaff }) {
     // Optimistic update
     setTasks(prev => prev.map(t =>
       t.id === taskId
-        ? { ...t, completed: newCompleted, completed_at: newCompleted ? new Date().toISOString() : null }
+        ? { ...t, completed: false, completed_at: null }
         : t
     ))
     return true
+  }
+
+  // Confirm task completion (called from modal)
+  const confirmTaskComplete = async (note) => {
+    const task = completingTask
+    if (!task) return false
+
+    // Handle recurrence: if completing a recurring task, create next occurrence
+    if (task.recurrence && task.due_date) {
+      const currentDue = new Date(task.due_date)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+
+      // For strict recurrence (+), calculate from today; otherwise from due date
+      const isStrict = task.recurrence.startsWith('+')
+      const baseDate = isStrict ? today : currentDue
+      let nextDue = new Date(baseDate)
+
+      // Parse sleek format: [+]<count><interval> (e.g., "1d", "+2w", "1m")
+      const recMatch = task.recurrence.match(/^\+?(\d+)([dbwmy])$/)
+
+      if (recMatch) {
+        const count = parseInt(recMatch[1]) || 1
+        const interval = recMatch[2]
+
+        switch (interval) {
+          case 'd': // days
+            nextDue.setDate(nextDue.getDate() + count)
+            break
+          case 'b': // business days
+            let daysAdded = 0
+            while (daysAdded < count) {
+              nextDue.setDate(nextDue.getDate() + 1)
+              const day = nextDue.getDay()
+              if (day !== 0 && day !== 6) daysAdded++ // skip weekends
+            }
+            break
+          case 'w': // weeks
+            nextDue.setDate(nextDue.getDate() + (count * 7))
+            break
+          case 'm': // months
+            nextDue.setMonth(nextDue.getMonth() + count)
+            break
+          case 'y': // years
+            nextDue.setFullYear(nextDue.getFullYear() + count)
+            break
+        }
+      } else {
+        // Legacy format support
+        switch (task.recurrence) {
+          case 'daily':
+            nextDue.setDate(nextDue.getDate() + 1)
+            break
+          case 'weekly':
+            nextDue.setDate(nextDue.getDate() + 7)
+            break
+          case 'monthly':
+            nextDue.setMonth(nextDue.getMonth() + 1)
+            break
+        }
+      }
+
+      // Create new recurring task
+      await supabase.from('tasks').insert({
+        text: task.text,
+        priority: task.priority,
+        due_date: nextDue.toISOString().substring(0, 10),
+        recurrence: task.recurrence,
+        project_id: task.project_id,
+        created_by: task.created_by,
+        assigned_to: task.assigned_to,
+      })
+    }
+
+    const completedAt = new Date().toISOString()
+
+    const { error } = await supabase
+      .from('tasks')
+      .update({
+        completed: true,
+        completed_at: completedAt,
+        completed_note: note,
+        completed_by: currentStaff?.id,
+        updated_at: completedAt,
+      })
+      .eq('id', task.id)
+
+    if (error) {
+      setTasksError(error.message)
+      return false
+    }
+
+    // Optimistic update
+    setTasks(prev => prev.map(t =>
+      t.id === task.id
+        ? { ...t, completed: true, completed_at: completedAt, completed_note: note, completed_by: currentStaff?.id }
+        : t
+    ))
+
+    // Close modal
+    setCompletingTask(null)
+    return true
+  }
+
+  // Cancel task completion modal
+  const cancelTaskComplete = () => {
+    setCompletingTask(null)
   }
 
   // Update task
@@ -214,9 +302,61 @@ export default function useTasks({ session, activeView, currentStaff }) {
     return true
   }
 
-  // Filtered tasks (memoized)
+  // Update task order after drag & drop
+  const updateTaskOrder = async (taskId, newPriority, newSortOrder) => {
+    const { error } = await supabase
+      .from('tasks')
+      .update({
+        priority: newPriority,
+        sort_order: newSortOrder,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', taskId)
+
+    if (error) {
+      setTasksError(error.message)
+      return false
+    }
+
+    // Optimistic update
+    setTasks(prev => prev.map(t =>
+      t.id === taskId
+        ? { ...t, priority: newPriority, sort_order: newSortOrder }
+        : t
+    ))
+    return true
+  }
+
+  // Calculate new sort_order for a task dropped between two others
+  const calculateSortOrder = (tasksInZone, dropIndex) => {
+    if (tasksInZone.length === 0) {
+      return 1000
+    }
+
+    // Dropping at the beginning
+    if (dropIndex === 0) {
+      const firstOrder = tasksInZone[0]?.sort_order || 1000
+      return firstOrder - 1000
+    }
+
+    // Dropping at the end
+    if (dropIndex >= tasksInZone.length) {
+      const lastOrder = tasksInZone[tasksInZone.length - 1]?.sort_order || 0
+      return lastOrder + 1000
+    }
+
+    // Dropping between two tasks
+    const prevOrder = tasksInZone[dropIndex - 1]?.sort_order || 0
+    const nextOrder = tasksInZone[dropIndex]?.sort_order || prevOrder + 2000
+    return Math.floor((prevOrder + nextOrder) / 2)
+  }
+
+  // Filtered and sorted tasks (memoized)
   const filteredTasks = useMemo(() => {
-    return tasks.filter(task => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const filtered = tasks.filter(task => {
       // Hide completed unless showCompleted
       if (!showCompleted && task.completed) return false
 
@@ -224,15 +364,13 @@ export default function useTasks({ session, activeView, currentStaff }) {
       if (filterPriority && task.priority !== filterPriority) return false
 
       // Project filter
-      if (filterProject && task.project !== filterProject) return false
+      if (filterProjectId && task.project_id !== filterProjectId) return false
 
       // Assignee filter
       if (filterAssignee && task.assigned_to !== filterAssignee) return false
 
       // Due date filter
       if (filterDue) {
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
         const taskDue = task.due_date ? new Date(task.due_date) : null
 
         switch (filterDue) {
@@ -253,7 +391,46 @@ export default function useTasks({ session, activeView, currentStaff }) {
 
       return true
     })
-  }, [tasks, showCompleted, filterPriority, filterProject, filterAssignee, filterDue])
+
+    // Sort by: 1. Priority (A→Z→none), 2. sort_order, 3. Due date, 4. Created at
+    // Priority order: A=0, B=1, ..., Z=25, none=26
+    const getPriorityOrder = (p) => {
+      if (!p) return 26
+      const code = p.toUpperCase().charCodeAt(0)
+      return code >= 65 && code <= 90 ? code - 65 : 26
+    }
+
+    filtered.sort((a, b) => {
+      // 1. Priority: A < B < ... < Z < none
+      const prioA = getPriorityOrder(a.priority)
+      const prioB = getPriorityOrder(b.priority)
+      if (prioA !== prioB) return prioA - prioB
+
+      // 2. sort_order (lower values first, for manual drag & drop ordering)
+      const sortA = a.sort_order || 0
+      const sortB = b.sort_order || 0
+      if (sortA !== sortB) return sortA - sortB
+
+      // 3. Due date: overdue < today < future < none
+      const dueA = a.due_date ? new Date(a.due_date) : null
+      const dueB = b.due_date ? new Date(b.due_date) : null
+
+      // Tasks with due date come before tasks without
+      if (dueA && !dueB) return -1
+      if (!dueA && dueB) return 1
+
+      // Both have due dates: sort by date (earliest first)
+      if (dueA && dueB) {
+        const diff = dueA.getTime() - dueB.getTime()
+        if (diff !== 0) return diff
+      }
+
+      // 4. Created at (newest first as fallback)
+      return new Date(b.created_at) - new Date(a.created_at)
+    })
+
+    return filtered
+  }, [tasks, showCompleted, filterPriority, filterProjectId, filterAssignee, filterDue])
 
   // Grouped tasks (memoized)
   const groupedTasks = useMemo(() => {
@@ -326,6 +503,23 @@ export default function useTasks({ session, activeView, currentStaff }) {
     setEditingTask(task || { id: null })
     setTaskSaveError('')
     const recParsed = parseRecurrence(task?.recurrence)
+
+    // Get assigned groups and users from task or set defaults
+    let assignedGroups = task?.assigned_groups || []
+    let assignedUsers = task?.assigned_users || []
+
+    // Fallback to old single-assignment fields if arrays are empty
+    if (assignedGroups.length === 0 && task?.assigned_to_group) {
+      assignedGroups = [task.assigned_to_group]
+    }
+    if (assignedUsers.length === 0 && task?.assigned_to) {
+      assignedUsers = [task.assigned_to]
+    }
+    // Default to current user if nothing assigned
+    if (assignedGroups.length === 0 && assignedUsers.length === 0 && !task?.id) {
+      assignedUsers = currentStaff?.id ? [currentStaff.id] : []
+    }
+
     setTaskForm({
       text: task?.text || '',
       priority: task?.priority || null,
@@ -334,8 +528,10 @@ export default function useTasks({ session, activeView, currentStaff }) {
       recurrenceInterval: recParsed.interval,
       recurrenceCount: recParsed.count,
       recurrenceStrict: recParsed.strict,
-      project: task?.project || '',
-      assignedTo: task?.assigned_to || currentStaff?.id || null,
+      projectId: task?.project_id || null,
+      assignedTo: null, // deprecated, kept for compatibility
+      assignedGroups,
+      assignedUsers,
     })
   }
 
@@ -373,13 +569,22 @@ export default function useTasks({ session, activeView, currentStaff }) {
       taskForm.recurrenceStrict
     )
 
+    // Use new array fields for multi-assignment
+    const assignedGroups = taskForm.assignedGroups || []
+    const assignedUsers = taskForm.assignedUsers || []
+
     const taskData = {
       text: taskForm.text.trim(),
       priority: taskForm.priority || null,
       due_date: taskForm.dueDate || null,
       recurrence: recurrence,
-      project: taskForm.project || null,
-      assigned_to: taskForm.assignedTo || currentStaff?.id,
+      project_id: taskForm.projectId || null,
+      // New array fields
+      assigned_groups: assignedGroups,
+      assigned_users: assignedUsers,
+      // Keep old fields for backward compatibility (first item or null)
+      assigned_to: assignedUsers.length > 0 ? assignedUsers[0] : null,
+      assigned_to_group: assignedGroups.length > 0 ? assignedGroups[0] : null,
     }
 
     let success
@@ -441,8 +646,8 @@ export default function useTasks({ session, activeView, currentStaff }) {
     // Filters
     filterPriority,
     setFilterPriority,
-    filterProject,
-    setFilterProject,
+    filterProjectId,
+    setFilterProjectId,
     filterAssignee,
     setFilterAssignee,
     filterDue,
@@ -452,7 +657,7 @@ export default function useTasks({ session, activeView, currentStaff }) {
     groupBy,
     setGroupBy,
 
-    // Modal
+    // Edit Modal
     editingTask,
     taskForm,
     taskSaving,
@@ -463,6 +668,11 @@ export default function useTasks({ session, activeView, currentStaff }) {
     handleTaskInput,
     saveTaskFromModal,
 
+    // Complete Modal
+    completingTask,
+    confirmTaskComplete,
+    cancelTaskComplete,
+
     // Actions
     fetchTasks,
     createTask,
@@ -470,5 +680,9 @@ export default function useTasks({ session, activeView, currentStaff }) {
     updateTask,
     deleteTask,
     parseTaskInput,
+
+    // Drag & Drop
+    updateTaskOrder,
+    calculateSortOrder,
   }
 }
