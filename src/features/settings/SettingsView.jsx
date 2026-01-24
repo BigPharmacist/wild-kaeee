@@ -1,3 +1,5 @@
+import ChatSettingsSection from './ChatSettingsSection'
+
 const SettingsView = ({
   theme,
   settingsTab,
@@ -615,6 +617,10 @@ const SettingsView = ({
             onRefresh={fetchCourierLocations}
           />
         </div>
+      )}
+
+      {settingsTab === 'ai-chat' && (
+        <ChatSettingsSection theme={theme} />
       )}
 
       {settingsTab === 'admin' && (

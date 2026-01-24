@@ -59,7 +59,7 @@ import 'react-image-crop/dist/ReactCrop.css'
 const ReactMarkdown = lazy(() => import('react-markdown'))
 import remarkGfm from 'remark-gfm'
 
-import { Icons, UnreadBadge, LoadingSpinner } from './shared/ui'
+import { Icons, UnreadBadge, LoadingSpinner, FloatingAiChat } from './shared/ui'
 
 
 function App() {
@@ -667,6 +667,7 @@ function App() {
       { id: 'staff', label: 'Kollegium' },
       { id: 'contacts', label: 'Kontakte' },
       { id: 'email', label: 'E-Mail' },
+      { id: 'ai-chat', label: 'KI-Chat' },
       ...(currentStaff?.is_admin ? [{ id: 'tracking', label: 'Tracking' }] : []),
       ...(currentStaff?.is_admin ? [{ id: 'admin', label: 'Admin' }] : []),
     ],
@@ -4385,6 +4386,9 @@ function App() {
             </div>
           </div>
         )}
+
+        {/* Floating AI Chat Widget */}
+        <FloatingAiChat theme={theme} />
 
         </div>
       </Suspense>
