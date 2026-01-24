@@ -124,10 +124,22 @@ export function useRechnungen() {
       // Dokumente mit Korrespondent-Namen anreichern (direkt aus geladenen Daten)
       const enrichedDocs = (data.results || []).map(doc => {
         const correspondent = corrs.find(c => c.id === doc.correspondent)
+        // Rechnungsdatum aus custom_fields extrahieren (falls vorhanden)
+        // custom_fields ist ein Array von { field: ID, value: Wert }
+        // Wir suchen nach einem Datum-Feld (value im Format YYYY-MM-DD)
+        let rechnungsDatum = null
+        if (doc.custom_fields && Array.isArray(doc.custom_fields)) {
+          const datumField = doc.custom_fields.find(cf =>
+            cf.value && typeof cf.value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(cf.value)
+          )
+          if (datumField) {
+            rechnungsDatum = datumField.value
+          }
+        }
         return {
           ...doc,
           correspondentName: correspondent?.name || 'Unbekannt',
-          datum: doc.created ? doc.created.split('T')[0] : null,
+          datum: rechnungsDatum || (doc.created ? doc.created.split('T')[0] : null),
         }
       })
 

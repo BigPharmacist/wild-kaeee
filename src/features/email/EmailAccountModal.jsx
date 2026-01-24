@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react'
 import { Link, ListBullets, ListNumbers, Quotes, TextB, TextItalic, TextUnderline } from '@phosphor-icons/react'
+import DOMPurify from 'dompurify'
 
 export default function EmailAccountModal({
   theme,
@@ -17,8 +18,9 @@ export default function EmailAccountModal({
   // Editor-Inhalt synchronisieren wenn Modal geöffnet wird
   useEffect(() => {
     if (signatureRef.current && editingEmailAccount) {
-      if (signatureRef.current.innerHTML !== (emailAccountForm.signature || '')) {
-        signatureRef.current.innerHTML = emailAccountForm.signature || ''
+      const sanitizedSignature = DOMPurify.sanitize(emailAccountForm.signature || '')
+      if (signatureRef.current.innerHTML !== sanitizedSignature) {
+        signatureRef.current.innerHTML = sanitizedSignature
       }
     }
   }, [emailAccountForm.signature, editingEmailAccount])

@@ -34,7 +34,7 @@ const DashboardHeader = ({
 
       <div className="hidden lg:block absolute left-[17rem]">
         <SplitFlapDisplay
-          charCount={24}
+          charCount={32}
           interval={30000}
           urgentFaxe={urgentFaxe}
           faxCount={faxCount}

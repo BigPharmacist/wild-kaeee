@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, memo } from 'react'
 
 // Helper: Generate weeks for a given month
 const generateMonthWeeks = (year, month, todayStr, calendarEvents) => {
@@ -127,7 +127,7 @@ const MonthGrid = ({
   )
 }
 
-const CalendarView = ({
+const CalendarView = memo(function CalendarView({
   theme,
   calendars,
   selectedCalendarId,
@@ -150,7 +150,7 @@ const CalendarView = ({
   canWriteCurrentCalendar,
   openEventModal,
   getEventColor,
-}) => {
+}) {
   const today = new Date()
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
 
@@ -602,6 +602,6 @@ const CalendarView = ({
       )}
     </>
   )
-}
+})
 
 export default CalendarView

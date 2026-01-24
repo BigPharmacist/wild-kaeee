@@ -1,6 +1,7 @@
+import { memo } from 'react'
 import { Sparkle } from '@phosphor-icons/react'
 
-const DashboardHome = ({
+const DashboardHome = memo(function DashboardHome({
   theme,
   openWeatherModal,
   weatherLoading,
@@ -28,7 +29,8 @@ const DashboardHome = ({
   biowetterAiRecommendation,
   biowetterAiLoading,
   openBiowetterModal,
-}) => (
+}) {
+  return (
   <>
     <h2 className="text-2xl lg:text-3xl font-semibold mb-6 tracking-tight">Dashboard</h2>
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -429,6 +431,7 @@ const DashboardHome = ({
       </div>
     </div>
   </>
-)
+  )
+})
 
 export default DashboardHome

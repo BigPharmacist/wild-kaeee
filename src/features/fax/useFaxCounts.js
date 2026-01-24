@@ -151,9 +151,7 @@ export default function useFaxCounts() {
         }
       })
       .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('Fax Realtime verbunden')
-        } else if (status === 'CHANNEL_ERROR') {
+        if (status === 'CHANNEL_ERROR') {
           console.error('Fax Realtime Fehler - Fallback auf Polling')
         }
       })

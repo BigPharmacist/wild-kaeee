@@ -77,7 +77,7 @@ const SplitFlapChar = ({ targetChar, delay = 0 }) => {
   }, [targetChar])
 
   return (
-    <div className="relative w-[1.1em] h-[1.6em] mx-[1px]">
+    <div className="relative w-[1.3em] h-[2.5em] mx-[1px]">
       {/* Hintergrund */}
       <div className="absolute inset-0 bg-[#1E293B] rounded-[2px] shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]" />
 
@@ -92,9 +92,9 @@ const SplitFlapChar = ({ targetChar, delay = 0 }) => {
         }}
       >
         <span
-          className="text-[1.3em] text-[#ffd900] font-bold leading-none translate-y-[55%]"
+          className="text-[1.6em] text-[#ffd900] font-bold leading-none translate-y-[55%]"
           style={{
-            fontFamily: "'Helvetica Neue', Arial, sans-serif",
+            fontFamily: "'Oswald', sans-serif",
             textShadow: '0 0 3px rgba(255,217,0,0.3)'
           }}
         >
@@ -116,9 +116,9 @@ const SplitFlapChar = ({ targetChar, delay = 0 }) => {
         }}
       >
         <span
-          className="text-[1.3em] text-[#ffd900] font-bold leading-none -translate-y-[45%]"
+          className="text-[1.6em] text-[#ffd900] font-bold leading-none -translate-y-[45%]"
           style={{
-            fontFamily: "'Helvetica Neue', Arial, sans-serif",
+            fontFamily: "'Oswald', sans-serif",
             textShadow: '0 0 3px rgba(255,217,0,0.3)'
           }}
         >
@@ -199,8 +199,8 @@ const SplitFlapDisplay = ({ messages = [], charCount = 20, interval = 30000, urg
 
   return (
     <div
-      className="flex items-center bg-[#1E293B] px-2 py-0.5 rounded-md shadow-[0_2px_8px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.05)]"
-      style={{ fontSize: '18px' }}
+      className="flex items-center bg-[#1E293B] px-2 py-0 rounded-md shadow-[0_2px_8px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.05)]"
+      style={{ fontSize: '16.2px' }}
     >
       {displayText.split('').map((char, index) => (
         <SplitFlapChar

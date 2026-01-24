@@ -137,8 +137,6 @@ export default function LetterXpressModal({
         registered: options.registered,
       })
 
-      console.log('Send result:', result)
-
       // Suche Job-ID in verschiedenen möglichen Feldern
       const id = result.letter?.id || result.letter?.jobid || result.id || result.jobid
       if (id) {

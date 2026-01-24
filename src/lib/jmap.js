@@ -425,7 +425,6 @@ class JMAPClient {
     // Sofort einmal prüfen, dann im Intervall
     poll()
     this.pollingInterval = setInterval(poll, intervalMs)
-    console.log(`JMAP Polling gestartet (alle ${intervalMs / 1000}s)`)
 
     return this.pollingInterval
   }
@@ -437,7 +436,6 @@ class JMAPClient {
     if (this.pollingInterval) {
       clearInterval(this.pollingInterval)
       this.pollingInterval = null
-      console.log('JMAP Polling gestoppt')
     }
   }
 

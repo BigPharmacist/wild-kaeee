@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState } from 'react'
 import { CheckCircle, CircleNotch, Link, ListBullets, ListNumbers, Paperclip, PaperPlaneTilt, Quotes, Sparkle, TextB, TextItalic, TextUnderline, X } from '@phosphor-icons/react'
+import DOMPurify from 'dompurify'
 
 export default function EmailComposeModal({
   theme,
@@ -173,8 +174,9 @@ Inhalt: ${originalEmail.preview || originalEmail.textBody || ''}`
   // Editor-Inhalt synchronisieren wenn composeData.body sich ändert
   useEffect(() => {
     if (editorRef.current && show) {
-      if (editorRef.current.innerHTML !== composeData.body) {
-        editorRef.current.innerHTML = composeData.body
+      const sanitizedBody = DOMPurify.sanitize(composeData.body)
+      if (editorRef.current.innerHTML !== sanitizedBody) {
+        editorRef.current.innerHTML = sanitizedBody
       }
     }
   }, [composeData.body, show])

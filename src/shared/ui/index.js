@@ -1,3 +1,5 @@
 export { default as Icons } from './Icons'
 export { default as UnreadBadge } from './UnreadBadge'
 export { default as AiAssistantPanel } from './AiAssistantPanel'
+export { default as ErrorBoundary } from './ErrorBoundary'
+export { default as LoadingSpinner } from './LoadingSpinner'

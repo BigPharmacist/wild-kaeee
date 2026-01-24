@@ -1,49 +1,113 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react'
 import { supabase, supabaseUrl } from './lib/supabase'
-import { House, Camera, Pill, CalendarDots, CalendarBlank, ChatCircle, GearSix, EnvelopeSimple, Printer, Palette, Sparkle, DotsThree, Files, Archive } from '@phosphor-icons/react'
-import { EmailAccountModal, EmailSettingsSection, EmailView, useEmailSettings, useEmailUnreadCount } from './features/email'
-import { FaxView, useFaxCounts, useUrgentFax } from './features/fax'
-import { ContactDetailModal, ContactFormModal, ContactsSettingsSection, useContacts } from './features/contacts'
+import { downloadAmkPdf, downloadRecallPdf } from './lib/pdfGenerator'
+import {
+  detectRotationWithAI,
+  rotateImageByDegrees,
+  compressImage,
+  getEnhancedImage,
+  rotateImage,
+} from './lib/imageProcessing'
+import { useNavigation, useAuth, usePharmacy, useTheme, useContactsContext, useEmail, usePhotosContext, useChatContext } from './context'
+import { House, Camera, Pill, CalendarDots, CalendarBlank, ChatCircle, GearSix, EnvelopeSimple, Printer, Palette, Sparkle, DotsThree, Files, Archive, CheckSquare } from '@phosphor-icons/react'
+
+// Hooks müssen synchron importiert werden
+import { useFaxCounts, useUrgentFax } from './features/fax'
 import { contactScan } from './features/contacts'
-import { AuthView } from './features/auth'
-import { DashboardHeader, SidebarNav, DashboardHome, useWeather, usePollen, useBiowetter } from './features/dashboard'
-import { ApoView } from './features/apo'
-import { PhotosView, usePhotos } from './features/photos'
-import { ChatView, useChat, useChatUnreadCounts } from './features/chat'
-import { SettingsView, usePharmacies, useStaff } from './features/settings'
-import { PlanView } from './features/plan'
-import { DokumenteView } from './features/dokumente'
-import { CalendarView, useCalendar, NotdienstplanungView } from './features/calendar'
-import { ColorsView } from './features/colors'
+import { useWeather, usePollen, useBiowetter } from './features/dashboard'
+import { useTasks } from './features/tasks'
+import { useCalendar } from './features/calendar'
 import { useRechnungen } from './features/rechnungen'
-import { ArchivView, useArchiv } from './features/archiv'
-import { useTracking, TrackingWidget, CourierMap, CourierTable } from './features/tracking'
-import ReactCrop from 'react-image-crop'
+import { useArchiv } from './features/archiv'
+import { useTracking } from './features/tracking'
+
+// Lazy-loaded Feature Views (werden erst bei Bedarf geladen)
+const EmailView = lazy(() => import('./features/email/EmailView'))
+const EmailAccountModal = lazy(() => import('./features/email/EmailAccountModal'))
+const EmailSettingsSection = lazy(() => import('./features/email/EmailSettingsSection'))
+const FaxView = lazy(() => import('./features/fax/FaxView'))
+const ContactDetailModal = lazy(() => import('./features/contacts/ContactDetailModal'))
+const ContactFormModal = lazy(() => import('./features/contacts/ContactFormModal'))
+const ContactsSettingsSection = lazy(() => import('./features/contacts/ContactsSettingsSection'))
+const AuthView = lazy(() => import('./features/auth/AuthView'))
+const DashboardHeader = lazy(() => import('./features/dashboard/DashboardHeader'))
+const SidebarNav = lazy(() => import('./features/dashboard/SidebarNav'))
+const DashboardHome = lazy(() => import('./features/dashboard/DashboardHome'))
+const ApoView = lazy(() => import('./features/apo/ApoView'))
+const PhotosView = lazy(() => import('./features/photos/PhotosView'))
+const ChatView = lazy(() => import('./features/chat/ChatView'))
+const SettingsView = lazy(() => import('./features/settings/SettingsView'))
+const PlanView = lazy(() => import('./features/plan/PlanView'))
+const TasksView = lazy(() => import('./features/tasks/TasksView'))
+const TaskFormModal = lazy(() => import('./features/tasks/TaskFormModal'))
+const DokumenteView = lazy(() => import('./features/dokumente/DokumenteView'))
+const CalendarView = lazy(() => import('./features/calendar/CalendarView'))
+const NotdienstplanungView = lazy(() => import('./features/calendar/NotdienstplanungView'))
+const ColorsView = lazy(() => import('./features/colors/ColorsView'))
+const ArchivView = lazy(() => import('./features/archiv/ArchivView'))
+const TrackingWidget = lazy(() => import('./features/tracking/TrackingWidget'))
+const CourierMap = lazy(() => import('./features/tracking/CourierMap'))
+const CourierTable = lazy(() => import('./features/tracking/CourierTable'))
+
+// Schwere Libraries - ReactCrop lazy, remarkGfm synchron (klein)
+const ReactCrop = lazy(() => import('react-image-crop').then(m => ({ default: m.default })))
 import 'react-image-crop/dist/ReactCrop.css'
-import { jsPDF } from 'jspdf'
-import ReactMarkdown from 'react-markdown'
+// jsPDF wird in den PDF-Funktionen dynamisch importiert
+const ReactMarkdown = lazy(() => import('react-markdown'))
 import remarkGfm from 'remark-gfm'
-import { Icons, UnreadBadge } from './shared/ui'
+
+import { Icons, UnreadBadge, LoadingSpinner } from './shared/ui'
 
 
 function App() {
-  const [session, setSession] = useState(null)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState('')
-  const [authView, setAuthView] = useState('login') // 'login' | 'forgot' | 'resetPassword'
-  const [successMessage, setSuccessMessage] = useState('')
-  const [mobileNavOpen, setMobileNavOpen] = useState(false)
-  const [secondaryTab, setSecondaryTab] = useState(() => localStorage.getItem('nav_secondaryTab') || 'overview')
-  const [activeView, setActiveView] = useState(() => localStorage.getItem('nav_activeView') || 'dashboard')
-  const [settingsTab, setSettingsTab] = useState(() => localStorage.getItem('nav_settingsTab') || 'pharmacies')
-  const [chatTab, setChatTab] = useState(() => localStorage.getItem('nav_chatTab') || 'group')
-  const [dokumenteTab, setDokumenteTab] = useState(() => localStorage.getItem('nav_dokumenteTab') || 'briefe')
-  const [archivTab, setArchivTab] = useState(() => localStorage.getItem('nav_archivTab') || 'alle')
-  const [rechnungenTab, setRechnungenTab] = useState(() => localStorage.getItem('nav_rechnungenTab') || 'alt')
+  // Navigation aus Context
+  const {
+    activeView,
+    setActiveView,
+    secondaryTab,
+    setSecondaryTab,
+    settingsTab,
+    setSettingsTab,
+    chatTab,
+    setChatTab,
+    dokumenteTab,
+    setDokumenteTab,
+    archivTab,
+    setArchivTab,
+    rechnungenTab,
+    setRechnungenTab,
+    apoTab,
+    setApoTab,
+    mobileNavOpen,
+    setMobileNavOpen,
+    getActiveSecondaryId,
+    handleSecondarySelect,
+    updateSecondaryForView,
+  } = useNavigation()
+
+  // Auth aus Context
+  const {
+    session,
+    authView,
+    email,
+    setEmail,
+    password,
+    setPassword,
+    newPassword,
+    setNewPassword,
+    confirmPassword,
+    setConfirmPassword,
+    loading,
+    message,
+    successMessage,
+    handleSignIn,
+    handleForgotPassword,
+    handleResetPassword,
+    handleAuthViewChange,
+    handleSignOut,
+  } = useAuth()
+
+  // Pharmacy & Staff aus Context
   const {
     pharmacies,
     pharmaciesLoading,
@@ -55,12 +119,10 @@ function App() {
     pharmacyLookup,
     fetchPharmacies,
     handleEditInput,
-    openCreateModal: openPharmacyCreateModal,
+    openPharmacyCreateModal,
     openEditModal,
     closeEditModal,
     handleEditSubmit,
-  } = usePharmacies()
-  const {
     staff,
     filteredStaff,
     staffLoading,
@@ -89,7 +151,7 @@ function App() {
     setStaffViewMode,
     isExited,
     toggleTrackingEnabled,
-  } = useStaff({ session, pharmacies })
+  } = usePharmacy()
   const {
     isTracking,
     trackingError,
@@ -101,6 +163,8 @@ function App() {
     stopTracking,
     fetchCourierLocations,
   } = useTracking({ currentStaff, session, isTrackingViewOpen: activeView === 'settings' && settingsTab === 'tracking' })
+
+  // Email aus Context
   const {
     emailAccounts,
     emailPermissions,
@@ -110,6 +174,7 @@ function App() {
     emailAccountSaving,
     emailAccountMessage,
     selectedEmailAccount,
+    selectedEmailAccountObj,
     setEmailAccountForm,
     fetchEmailAccounts,
     fetchEmailPermissions,
@@ -119,6 +184,7 @@ function App() {
     handleDeleteEmailAccount,
     handleSelectEmailAccount,
     toggleEmailPermission,
+    emailUnreadCount,
     // KI-Assistent
     aiSettings,
     setAiSettings,
@@ -126,16 +192,9 @@ function App() {
     aiSettingsMessage,
     fetchAiSettings,
     saveAiSettings,
-  } = useEmailSettings({ sessionUserId: session?.user?.id })
-  const selectedEmailAccountObj = useMemo(
-    () => emailAccounts.find(a => a.id === selectedEmailAccount),
-    [emailAccounts, selectedEmailAccount]
-  )
-  const {
-    unreadCount: emailUnreadCount,
-    markAsRead: _markEmailAsRead,  
-    refresh: _refreshEmailCount,  
-  } = useEmailUnreadCount({ account: selectedEmailAccountObj })
+  } = useEmail()
+
+  // Contacts aus Context
   const {
     contacts,
     contactsLoading,
@@ -177,7 +236,40 @@ function App() {
     saveContact,
     openContactDetail,
     contactScanApi,
-  } = useContacts({ sessionUserId: session?.user?.id })
+  } = useContactsContext()
+
+  const {
+    tasks,
+    tasksLoading,
+    tasksError,
+    quickAddInput,
+    setQuickAddInput,
+    groupedTasks,
+    allProjects,
+    filterPriority,
+    setFilterPriority,
+    filterProject,
+    setFilterProject,
+    filterAssignee,
+    setFilterAssignee,
+    filterDue,
+    setFilterDue,
+    showCompleted,
+    setShowCompleted,
+    groupBy,
+    setGroupBy,
+    editingTask,
+    taskForm,
+    taskSaving,
+    taskSaveError,
+    openTaskModal,
+    closeTaskModal,
+    handleTaskInput,
+    saveTaskFromModal,
+    createTask,
+    toggleTaskComplete,
+    deleteTask,
+  } = useTasks({ session, activeView, currentStaff })
 
   const {
     checkContactDuplicates,
@@ -191,197 +283,45 @@ function App() {
     contactsApi: contactScanApi,
   })
 
-  const [mistralApiKey, setMistralApiKey] = useState(null)
-  const [googleApiKey, setGoogleApiKey] = useState(null)
-
-  // API Key Fetch-Funktionen (müssen vor useBusinessCardScan definiert sein)
-  const fetchMistralApiKey = async () => {
-    const { data, error } = await supabase
-      .from('api_keys')
-      .select('key')
-      .eq('name', 'Mistral')
-      .single()
-    if (!error && data) {
-      setMistralApiKey(data.key)
-      return data.key
-    }
-    return null
-  }
-
-  const fetchGoogleApiKey = async () => {
-    console.log('fetchGoogleApiKey: Suche nach Google Nano Banana Key...')
-    const { data, error } = await supabase
-      .from('api_keys')
-      .select('key')
-      .eq('name', 'Google Nano Banana')
-      .single()
-    console.log('fetchGoogleApiKey Result:', { found: !!data, error: error?.message })
-    if (!error && data) {
-      setGoogleApiKey(data.key)
-      return data.key
-    }
-    const { data: fallbackData, error: fallbackError } = await supabase
-      .from('api_keys')
-      .select('key')
-      .ilike('name', '%google%nano%banana%')
-      .limit(1)
-      .single()
-    console.log('fetchGoogleApiKey Fallback:', { found: !!fallbackData, error: fallbackError?.message })
-    if (!fallbackError && fallbackData) {
-      setGoogleApiKey(fallbackData.key)
-      return fallbackData.key
-    }
-    return null
-  }
-
-  // Bildverarbeitungsfunktionen (müssen vor useBusinessCardScan definiert sein)
-  const detectRotationWithAI = async (file, apiKey) => {
-    const base64 = await new Promise((resolve) => {
-      const reader = new FileReader()
-      reader.onload = () => resolve(reader.result.split(',')[1])
-      reader.readAsDataURL(file)
-    })
-    const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'pixtral-12b-2409',
-        messages: [{
-          role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: 'Analysiere dieses Bild einer Visitenkarte. Um wie viel Grad im Uhrzeigersinn muss es gedreht werden, damit der Text richtig lesbar ist (horizontal, von links nach rechts)? Antworte NUR mit einer Zahl: 0, 90, 180 oder 270'
-            },
-            {
-              type: 'image_url',
-              image_url: { url: `data:image/jpeg;base64,${base64}` }
-            }
-          ]
-        }],
-        max_tokens: 10,
-      }),
-    })
-    const result = await response.json()
-    const content = result.choices?.[0]?.message?.content || '0'
-    const match = content.match(/\b(0|90|180|270)\b/)
-    return match ? parseInt(match[1], 10) : 0
-  }
-
-  const rotateImageByDegrees = (file, degrees) => {
-    if (degrees === 0) return Promise.resolve(file)
-    return new Promise((resolve) => {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const img = new Image()
-        img.onload = () => {
-          const canvas = document.createElement('canvas')
-          const ctx = canvas.getContext('2d')
-          if (degrees === 90 || degrees === 270) {
-            canvas.width = img.height
-            canvas.height = img.width
-          } else {
-            canvas.width = img.width
-            canvas.height = img.height
-          }
-          ctx.translate(canvas.width / 2, canvas.height / 2)
-          ctx.rotate((degrees * Math.PI) / 180)
-          ctx.drawImage(img, -img.width / 2, -img.height / 2)
-          canvas.toBlob((blob) => {
-            resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }))
-          }, 'image/jpeg', 0.95)
-        }
-        img.src = e.target.result
-      }
-      reader.readAsDataURL(file)
-    })
-  }
-
-  const compressImage = (file, maxWidth = 800, quality = 0.7) => {
-    return new Promise((resolve) => {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const img = new Image()
-        img.onload = () => {
-          const canvas = document.createElement('canvas')
-          let width = img.width
-          let height = img.height
-          if (width > maxWidth) {
-            height = (height * maxWidth) / width
-            width = maxWidth
-          }
-          canvas.width = width
-          canvas.height = height
-          const ctx = canvas.getContext('2d')
-          ctx.drawImage(img, 0, 0, width, height)
-          canvas.toBlob((blob) => {
-            resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }))
-          }, 'image/jpeg', quality)
-        }
-        img.src = e.target.result
-      }
-      reader.readAsDataURL(file)
-    })
-  }
-
-  const getEnhancedImage = async (file, apiKey) => {
-    const base64 = await new Promise((resolve) => {
-      const reader = new FileReader()
-      reader.onload = () => resolve(reader.result.split(',')[1])
-      reader.readAsDataURL(file)
-    })
-    const response = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': apiKey,
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              {
-                inline_data: {
-                  mime_type: file.type || 'image/jpeg',
-                  data: base64
-                }
-              },
-              {
-                text: `Enhance this business card photo:
-1. Crop tightly to the card edges
-2. Correct perspective distortion (make edges straight and rectangular)
-3. Improve sharpness and readability
-4. Keep all text, logos, and colors exactly as they are
-5. Output as a clean, professional-looking scan`
-              }
-            ]
-          }],
-          generationConfig: {
-            responseModalities: ['TEXT', 'IMAGE'],
-          }
-        })
-      }
-    )
-    const result = await response.json()
-    console.log('Nano Banana Pro Response:', response.status, result)
-    const imagePart = result.candidates?.[0]?.content?.parts?.find(p => p.inlineData)
-    if (imagePart?.inlineData?.data) {
-      const binaryString = atob(imagePart.inlineData.data)
-      const bytes = new Uint8Array(binaryString.length)
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i)
-      }
-      const blob = new Blob([bytes], { type: imagePart.inlineData.mimeType || 'image/png' })
-      const previewUrl = URL.createObjectURL(blob)
-      const enhancedFile = new File([blob], 'enhanced.png', { type: blob.type })
-      return { previewUrl, enhancedFile }
-    }
-    throw new Error('Keine verbesserte Bilddaten in der Antwort')
-  }
+  // Photos aus Context (inkl. API Keys)
+  const {
+    mistralApiKey,
+    googleApiKey,
+    fetchMistralApiKey,
+    fetchGoogleApiKey,
+    latestPhoto,
+    photoUploading,
+    allPhotos,
+    photosLoading,
+    businessCards,
+    businessCardsLoading,
+    selectedPhoto,
+    photoEditorOpen,
+    crop,
+    completedCrop,
+    brightness,
+    contrast,
+    photoSaving,
+    photoOcrData,
+    ocrProcessing,
+    cameraInputRef,
+    photoImgRef,
+    setCrop,
+    setCompletedCrop,
+    setBrightness,
+    setContrast,
+    setPhotoSaving,
+    fetchLatestPhoto,
+    handleCameraCapture,
+    fetchAllPhotos,
+    deletePhoto,
+    fetchBusinessCards,
+    deleteBusinessCard,
+    fetchPhotoOcrData,
+    runOcrForPhoto,
+    openPhotoEditor,
+    closePhotoEditor,
+  } = usePhotosContext()
 
   const { handleBusinessCardScan } = contactScan.useBusinessCardScan({
     mistralApiKey,
@@ -397,8 +337,6 @@ function App() {
     contactsApi: contactScanApi,
   })
   const businessCardScanRef = useRef(null)
-  const mobileNavTimerRef = useRef(null)
-  const isInitialMount = useRef(true)
   const {
     weatherLocation,
     weatherInput,
@@ -432,6 +370,8 @@ function App() {
     aiRecommendation: biowetterAiRecommendation,
     aiRecommendationLoading: biowetterAiLoading,
   } = useBiowetter({ pharmacies, aiSettings })
+
+  // Chat aus Context
   const {
     chatMessages,
     chatLoading,
@@ -445,6 +385,7 @@ function App() {
     hasMoreMessages,
     editingMessageId,
     pendingFile,
+    chatUnreadCounts,
     setChatInput,
     setEditingMessageId,
     fetchChatMessages,
@@ -458,43 +399,8 @@ function App() {
     setPendingFile,
     EMOJI_SET,
     ALLOWED_FILE_TYPES,
-  } = useChat({ session, activeView, directChatUserId: chatTab === 'group' ? null : chatTab })
-  const { unreadCounts: chatUnreadCounts } = useChatUnreadCounts({ session, staff })
-  const {
-    latestPhoto,
-    photoUploading,
-    allPhotos,
-    photosLoading,
-    businessCards,
-    businessCardsLoading,
-    selectedPhoto,
-    photoEditorOpen,
-    crop,
-    completedCrop,
-    brightness,
-    contrast,
-    photoSaving,
-    photoOcrData,
-    ocrProcessing,
-    cameraInputRef,
-    photoImgRef,
-    setCrop,
-    setCompletedCrop,
-    setBrightness,
-    setContrast,
-    setPhotoSaving,
-    setAllPhotos: _setAllPhotos,  
-    fetchLatestPhoto,
-    handleCameraCapture,
-    fetchAllPhotos,
-    deletePhoto,
-    fetchBusinessCards,
-    deleteBusinessCard,
-    fetchPhotoOcrData,
-    runOcrForPhoto,
-    openPhotoEditor,
-    closePhotoEditor,
-  } = usePhotos({ mistralApiKey, fetchMistralApiKey })
+  } = useChatContext()
+
   const signatureCanvasRef = useRef(null)
   const signatureCtxRef = useRef(null)
   const pznCameraInputRef = useRef(null)
@@ -504,7 +410,6 @@ function App() {
   const [enhanceResultPreview, setEnhanceResultPreview] = useState('')
   const [enhanceLoading, setEnhanceLoading] = useState(false)
   const [enhanceMessage, setEnhanceMessage] = useState('')
-  const [apoTab, setApoTab] = useState(() => localStorage.getItem('nav_apoTab') || 'amk')
   const [apoYear, setApoYear] = useState(() => new Date().getFullYear())
   const [apoSearch, setApoSearch] = useState('')
   const [amkMessages, setAmkMessages] = useState([])
@@ -651,62 +556,14 @@ function App() {
     getEventColor,
   } = useCalendar({ session, activeView })
 
-  const theme = {
-    // Backgrounds - Leicht bläuliches Weiß
-    bgApp: 'bg-[#F8FAFC]',
-    bg: 'bg-[#F8FAFC]',
-    surface: 'bg-white',
-    panel: 'bg-white',
-    bgHover: 'hover:bg-[#FEF3C7]/30',
-    bgCard: 'bg-white',
-    // Text - Navy & Slate-Grau
-    textPrimary: 'text-[#1E293B]',
-    text: 'text-[#1E293B]',
-    textSecondary: 'text-[#64748B]',
-    textMuted: 'text-[#94A3B8]',
-    // Borders
-    border: 'border-[#CBD5E1]',
-    divider: 'border-[#1E293B]/20',
-    // Navigation - Amber aktiv
-    navActive: 'bg-[#FEF3C7] text-[#1E293B] border border-[#F59E0B]/30',
-    navHover: 'hover:bg-[#FEF3C7]/50 hover:text-[#1E293B]',
-    // Amber (Primary) - CTA, wichtige Buttons
-    accent: 'bg-[#F59E0B] hover:bg-[#D97706]',
-    accentText: 'text-[#F59E0B]',
-    primary: 'text-[#F59E0B]',
-    primaryBg: 'bg-[#F59E0B]',
-    primaryHover: 'hover:bg-[#D97706]',
-    // Teal (Secondary)
-    secondary: 'text-[#0D9488]',
-    secondaryAccent: 'bg-[#0D9488] hover:bg-[#0F766E]',
-    // Sidebar - Dunkles Navy-Slate
-    sidebarBg: 'bg-[#1E293B]',
-    sidebarHover: 'hover:bg-[#334155]',
-    sidebarActive: 'border-[#F59E0B] bg-transparent',
-    sidebarText: 'text-[#E2E8F0]',
-    sidebarTextActive: 'text-[#E2E8F0]',
-    secondarySidebarBg: 'bg-[#334155]',
-    secondaryActive: 'border-l-4 border-[#F59E0B] bg-[#1E293B] text-[#FEF3C7]',
-    // Inputs
-    input: 'bg-white border-[#CBD5E1] focus:border-[#0D9488] focus:ring-1 focus:ring-[#0D9488]',
-    inputPlaceholder: 'placeholder-[#94A3B8]',
-    // Shadows
-    cardShadow: 'shadow-[0_4px_12px_rgba(30,41,59,0.08)]',
-    cardHoverShadow: 'hover:shadow-[0_8px_20px_rgba(30,41,59,0.12)]',
-    overlay: 'bg-[#1E293B]/40',
-    // Status Colors
-    success: 'text-[#0D9488]',
-    successBg: 'bg-[#0D9488] hover:bg-[#0F766E]',
-    warning: 'text-[#F59E0B]',
-    warningBg: 'bg-[#F59E0B] hover:bg-[#D97706]',
-    danger: 'text-[#FF6500] hover:text-[#E65A00] hover:bg-[#FFF5EB]',
-    dangerBg: 'bg-[#FF6500] hover:bg-[#E65A00]',
-  }
+  // Theme aus Context
+  const { theme } = useTheme()
 
   const navItems = [
     { id: 'dashboard', icon: () => <House size={20} weight="regular" />, label: 'Dashboard' },
     { id: 'apo', icon: () => <Pill size={20} weight="regular" />, label: 'Apo' },
-    { id: 'plan', icon: () => <CalendarDots size={20} weight="regular" />, label: 'Plan' },
+    { id: 'tasks', icon: () => <CheckSquare size={20} weight="regular" />, label: 'Tasks' },
+    { id: 'plan', icon: () => <CalendarDots size={20} weight="regular" />, label: 'Team' },
     { id: 'calendar', icon: () => <CalendarBlank size={20} weight="regular" />, label: 'Kalender' },
     { id: 'chat', icon: () => <ChatCircle size={20} weight="regular" />, label: 'Chat' },
     { id: 'post', icon: () => <Icons.PostHorn />, label: 'Post' },
@@ -819,19 +676,10 @@ function App() {
     }
   }
 
+  // Secondary-Tab wird im NavigationContext verwaltet
   useEffect(() => {
-    // Beim ersten Mount den gespeicherten Wert behalten
-    if (isInitialMount.current) {
-      isInitialMount.current = false
-      return
-    }
-    if (activeView === 'settings' || activeView === 'apo' || activeView === 'chat' || activeView === 'dokumente') return
-    const nextItems = secondaryNavMap[activeView] || []
-    if (nextItems.length) {
-      setSecondaryTab(nextItems[0].id)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeView])
+    updateSecondaryForView(secondaryNavMap)
+  }, [activeView, updateSecondaryForView, secondaryNavMap])
 
   // Archiv-Metadaten laden wenn Archiv-Ansicht aktiv wird
   useEffect(() => {
@@ -843,38 +691,7 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeView])
 
-  // Navigation in localStorage speichern
-  useEffect(() => {
-    localStorage.setItem('nav_activeView', activeView)
-  }, [activeView])
-
-  useEffect(() => {
-    localStorage.setItem('nav_secondaryTab', secondaryTab)
-  }, [secondaryTab])
-
-  useEffect(() => {
-    localStorage.setItem('nav_settingsTab', settingsTab)
-  }, [settingsTab])
-
-  useEffect(() => {
-    localStorage.setItem('nav_chatTab', chatTab)
-  }, [chatTab])
-
-  useEffect(() => {
-    localStorage.setItem('nav_apoTab', apoTab)
-  }, [apoTab])
-
-  useEffect(() => {
-    localStorage.setItem('nav_dokumenteTab', dokumenteTab)
-  }, [dokumenteTab])
-
-  useEffect(() => {
-    localStorage.setItem('nav_archivTab', archivTab)
-  }, [archivTab])
-
-  useEffect(() => {
-    localStorage.setItem('nav_rechnungenTab', rechnungenTab)
-  }, [rechnungenTab])
+  // Navigation localStorage wird jetzt im NavigationContext gespeichert
 
   // Browser-Tab-Titel mit Fax-Count aktualisieren
   useEffect(() => {
@@ -888,7 +705,8 @@ function App() {
   // Browser-Notification Klick -> zur Fax-View navigieren
   useEffect(() => {
     const handleNavigateToFax = () => {
-      setActiveView('fax')
+      setActiveView('post')
+      setSecondaryTab('fax')
     }
 
     window.addEventListener('navigate-to-fax', handleNavigateToFax)
@@ -912,57 +730,18 @@ function App() {
     return () => window.removeEventListener('navigate-to-chat', handleNavigateToChat)
   }, [])
 
-  // Mobile Nav: Nach 3 Sekunden automatisch schließen wenn primärer Punkt gewählt
-  useEffect(() => {
-    // Timer abbrechen wenn vorhanden
-    if (mobileNavTimerRef.current) {
-      clearTimeout(mobileNavTimerRef.current)
-      mobileNavTimerRef.current = null
-    }
-    // Nur Timer starten wenn Menü offen ist
-    if (mobileNavOpen) {
-      mobileNavTimerRef.current = setTimeout(() => {
-        setMobileNavOpen(false)
-      }, 5000)
-    }
-    return () => {
-      if (mobileNavTimerRef.current) {
-        clearTimeout(mobileNavTimerRef.current)
-      }
-    }
-  }, [activeView, mobileNavOpen])
+  // Mobile Nav Timer und getActiveSecondaryId/handleSecondarySelect sind jetzt im NavigationContext
 
-  useEffect(() => {
-    document.body.style.overflow = mobileNavOpen ? 'hidden' : ''
-    return () => {
-      document.body.style.overflow = ''
-    }
-  }, [mobileNavOpen])
+  // Wrapper für handleSecondarySelect mit Archiv-spezifischer Logik
+  const handleSecondarySelectWithArchiv = (itemId) => {
+    // Divider ignorieren
+    if (itemId === 'divider') return
 
-  const getActiveSecondaryId = () => {
-    if (activeView === 'settings') return settingsTab
-    if (activeView === 'apo') return apoTab
-    if (activeView === 'chat') return chatTab
-    if (activeView === 'dokumente') return dokumenteTab
-    if (activeView === 'archiv') return archivTab
-    if (activeView === 'rechnungen') return rechnungenTab
-    return secondaryTab
-  }
+    // Basis-Navigation über Context
+    handleSecondarySelect(itemId)
 
-  const handleSecondarySelect = (itemId) => {
-    if (activeView === 'settings') {
-      setSettingsTab(itemId)
-    } else if (activeView === 'apo') {
-      setApoTab(itemId)
-    } else if (activeView === 'chat') {
-      setChatTab(itemId)
-    } else if (activeView === 'dokumente') {
-      setDokumenteTab(itemId)
-    } else if (activeView === 'archiv') {
-      // Divider ignorieren
-      if (itemId === 'divider') return
-      setArchivTab(itemId)
-      // Filter anwenden
+    // Archiv-spezifische Filter anwenden
+    if (activeView === 'archiv') {
       if (itemId === 'alle') {
         archivClearFilters()
       } else if (itemId.startsWith('type-')) {
@@ -972,10 +751,6 @@ function App() {
         const viewId = itemId.replace('view-', '')
         archivFilterBySavedView(viewId)
       }
-    } else if (activeView === 'rechnungen') {
-      setRechnungenTab(itemId)
-    } else {
-      setSecondaryTab(itemId)
     }
   }
 
@@ -986,649 +761,9 @@ function App() {
     setPendingFaxId(faxId)
   }
 
-  // PDF-Download für AMK-Meldungen
-  const downloadAmkPdf = async (msg) => {
-    const doc = new jsPDF()
-    const pageWidth = doc.internal.pageSize.getWidth()
-    const pageHeight = doc.internal.pageSize.getHeight()
-    const margin = 20
-    const maxWidth = pageWidth - margin * 2
-    let y = 20
-
-    // Logo laden und einfügen
-    try {
-      const logoUrl = `${supabaseUrl}/storage/v1/object/public/assets/AMK-Logo.jpg`
-      const response = await fetch(logoUrl)
-      const blob = await response.blob()
-      const base64 = await new Promise((resolve) => {
-        const reader = new FileReader()
-        reader.onloadend = () => resolve(reader.result.split(',')[1])
-        reader.readAsDataURL(blob)
-      })
-      doc.addImage(base64, 'JPEG', margin, y, 60, 28)
-      y += 38
-    } catch (_e) { // eslint-disable-line no-unused-vars
-      y += 10
-    }
-
-    // Titel
-    doc.setFontSize(14)
-    doc.setFont('helvetica', 'bold')
-    const titleLines = doc.splitTextToSize(msg.title || '', maxWidth)
-    doc.text(titleLines, margin, y)
-    y += titleLines.length * 7 + 5
-
-    // Kategorie
-    if (msg.category) {
-      doc.setFontSize(10)
-      doc.setFont('helvetica', 'normal')
-      doc.setTextColor(100)
-      doc.text(msg.category, margin, y)
-      y += 6
-    }
-
-    // Datum
-    if (msg.date) {
-      doc.setFontSize(10)
-      doc.setTextColor(100)
-      doc.text(new Date(msg.date).toLocaleDateString('de-DE'), margin, y)
-      y += 10
-    }
-
-    doc.setTextColor(0)
-
-    // Institution
-    if (msg.institution) {
-      doc.setFontSize(10)
-      doc.setFont('helvetica', 'bold')
-      doc.text('Institution:', margin, y)
-      doc.setFont('helvetica', 'normal')
-      doc.text(msg.institution, margin + 25, y)
-      y += 8
-    }
-
-    // Trennlinie
-    doc.setDrawColor(200)
-    doc.line(margin, y, pageWidth - margin, y)
-    y += 8
-
-    // Volltext (ohne doppelten Titel/Datum am Anfang)
-    if (msg.full_text) {
-      doc.setFontSize(10)
-      doc.setFont('helvetica', 'normal')
-
-      // Entferne Titel und Datum am Anfang des Textes, falls vorhanden
-      let cleanedText = msg.full_text
-      if (msg.title && cleanedText.startsWith(msg.title)) {
-        cleanedText = cleanedText.substring(msg.title.length).trim()
-      }
-      // Entferne Datumszeile am Anfang (Format: dd.mm.yyyy oder yyyy-mm-dd)
-      cleanedText = cleanedText.replace(/^\d{1,2}\.\d{1,2}\.\d{4}\s*\n?/, '').trim()
-      cleanedText = cleanedText.replace(/^\d{4}-\d{2}-\d{2}\s*\n?/, '').trim()
-
-      const textLines = doc.splitTextToSize(cleanedText, maxWidth)
-
-      for (let i = 0; i < textLines.length; i++) {
-        if (y > pageHeight - 40) {
-          doc.addPage()
-          y = 20
-        }
-        doc.text(textLines[i], margin, y)
-        y += 5
-      }
-      y += 10
-    }
-
-    // Dokumentationen aus Datenbank laden
-    const { data: dokumentationen } = await supabase
-      .from('amk_dokumentationen')
-      .select('*')
-      .eq('amk_message_id', msg.id)
-      .order('erstellt_am', { ascending: true })
-
-    // Fußzeile mit Dokumentation
-    if (y > pageHeight - 80) {
-      doc.addPage()
-      y = 20
-    }
-
-    doc.setDrawColor(200)
-    doc.line(margin, y, pageWidth - margin, y)
-    y += 10
-
-    // Gespeicherte Dokumentationen anzeigen
-    if (dokumentationen && dokumentationen.length > 0) {
-      doc.setFontSize(15)
-      doc.setFont('helvetica', 'bold')
-      doc.text('Dokumentation:', margin, y)
-      y += 12
-
-      for (const dok of dokumentationen) {
-        // Berechne Box-Höhe
-        let boxHeight = 16 // Padding oben/unten
-        const boxPadding = 8
-        const innerWidth = maxWidth - boxPadding * 2
-
-        let bemerkungLines = []
-        if (dok.bemerkung) {
-          doc.setFontSize(14)
-          bemerkungLines = doc.splitTextToSize(dok.bemerkung, innerWidth)
-          boxHeight += bemerkungLines.length * 7
-        }
-        if (dok.unterschrift_data) {
-          boxHeight += 38 // Größere Unterschrift (75x30) + Abstand
-        }
-        boxHeight += 14 // Name/Datum
-
-        // Seitenumbruch prüfen
-        if (y + boxHeight > pageHeight - 20) {
-          doc.addPage()
-          y = 20
-        }
-
-        // Box mit runden Ecken zeichnen
-        doc.setFillColor(245, 247, 250)
-        doc.setDrawColor(200)
-        doc.roundedRect(margin, y, maxWidth, boxHeight, 4, 4, 'FD')
-
-        let boxY = y + boxPadding
-
-        // Bemerkung
-        if (dok.bemerkung && bemerkungLines.length > 0) {
-          doc.setFont('helvetica', 'normal')
-          doc.setFontSize(14)
-          doc.setTextColor(0)
-          for (const line of bemerkungLines) {
-            doc.text(line, margin + boxPadding, boxY + 4)
-            boxY += 7
-          }
-          boxY += 4
-        }
-
-        // Unterschrift als Bild (50% größer: 75x30)
-        if (dok.unterschrift_data) {
-          try {
-            doc.addImage(dok.unterschrift_data, 'PNG', margin + boxPadding, boxY, 75, 30)
-            boxY += 34
-          } catch (_e) { // eslint-disable-line no-unused-vars
-            // Fehler beim Laden der Unterschrift ignorieren
-          }
-        }
-
-        // Name und Datum
-        doc.setFontSize(12)
-        doc.setTextColor(100)
-        const nameAndDate = [
-          dok.erstellt_von_name || '',
-          dok.erstellt_am ? new Date(dok.erstellt_am).toLocaleString('de-DE') : ''
-        ].filter(Boolean).join(' · ')
-        if (nameAndDate) {
-          doc.text(nameAndDate, margin + boxPadding, boxY + 4)
-        }
-        doc.setTextColor(0)
-
-        y += boxHeight + 8
-      }
-    } else {
-      // Leere Unterschriftsfelder nur wenn keine Dokumentation vorhanden
-      doc.setFontSize(9)
-      doc.setFont('helvetica', 'normal')
-      doc.text('Bearbeitet durch:', margin, y)
-      doc.line(margin + 35, y, margin + 100, y)
-      y += 8
-      doc.text('Bearbeitet am:', margin, y)
-      doc.line(margin + 35, y, margin + 100, y)
-      y += 12
-
-      doc.setFont('helvetica', 'bold')
-      doc.text('Zur Kenntnis genommen:', margin, y)
-      y += 8
-      doc.setFont('helvetica', 'normal')
-      for (let i = 0; i < 5; i++) {
-        doc.text('Name / Datum:', margin, y)
-        doc.line(margin + 30, y, margin + 100, y)
-        y += 8
-      }
-    }
-
-    // Download
-    const filename = `AMK_${msg.title?.substring(0, 30).replace(/[^a-zA-Z0-9äöüÄÖÜß]/g, '_') || 'Meldung'}.pdf`
-    doc.save(filename)
-  }
-
-  // PDF-Download für Rückrufe
-  const downloadRecallPdf = async (msg) => {
-    const doc = new jsPDF()
-    const pageWidth = doc.internal.pageSize.getWidth()
-    const pageHeight = doc.internal.pageSize.getHeight()
-    const margin = 20
-    const maxWidth = pageWidth - margin * 2
-    let y = 20
-
-    // Logo laden und einfügen (AMK-Logo)
-    try {
-      const logoUrl = `${supabaseUrl}/storage/v1/object/public/assets/AMK-Logo.jpg`
-      const response = await fetch(logoUrl)
-      const blob = await response.blob()
-      const base64 = await new Promise((resolve) => {
-        const reader = new FileReader()
-        reader.onloadend = () => resolve(reader.result.split(',')[1])
-        reader.readAsDataURL(blob)
-      })
-      doc.addImage(base64, 'JPEG', margin, y, 60, 28)
-      y += 38
-    } catch (_e) { // eslint-disable-line no-unused-vars
-      y += 10
-    }
-
-    // Rückruf-Badge
-    doc.setFillColor(239, 68, 68)
-    doc.roundedRect(margin, y, 30, 8, 2, 2, 'F')
-    doc.setFontSize(8)
-    doc.setTextColor(255)
-    doc.setFont('helvetica', 'bold')
-    doc.text('RÜCKRUF', margin + 3, y + 5.5)
-    y += 14
-
-    doc.setTextColor(0)
-
-    // Titel
-    doc.setFontSize(14)
-    doc.setFont('helvetica', 'bold')
-    const titleLines = doc.splitTextToSize(msg.title || '', maxWidth)
-    doc.text(titleLines, margin, y)
-    y += titleLines.length * 7 + 5
-
-    // Produktname
-    if (msg.product_name) {
-      doc.setFontSize(11)
-      doc.setFont('helvetica', 'bold')
-      doc.setTextColor(220, 38, 38)
-      doc.text(msg.product_name, margin, y)
-      y += 8
-    }
-
-    doc.setTextColor(0)
-
-    // Rückrufnummer und Datum in einer Zeile
-    doc.setFontSize(10)
-    doc.setFont('helvetica', 'normal')
-    doc.setTextColor(100)
-    let infoLine = ''
-    if (msg.recall_number) infoLine += `Rückrufnummer: ${msg.recall_number}`
-    if (msg.date) {
-      if (infoLine) infoLine += '  |  '
-      infoLine += new Date(msg.date).toLocaleDateString('de-DE')
-    }
-    if (infoLine) {
-      doc.text(infoLine, margin, y)
-      y += 8
-    }
-
-    doc.setTextColor(0)
-
-    // Trennlinie
-    doc.setDrawColor(200)
-    doc.line(margin, y, pageWidth - margin, y)
-    y += 8
-
-    // KI-Zusammenfassung (falls vorhanden)
-    if (msg.ai_zusammenfassung) {
-      doc.setFillColor(240, 249, 255)
-      const summaryLines = doc.splitTextToSize(msg.ai_zusammenfassung.replace(/[*#]/g, ''), maxWidth - 10)
-      const boxHeight = summaryLines.length * 5 + 12
-      doc.roundedRect(margin, y, maxWidth, boxHeight, 3, 3, 'F')
-
-      doc.setFontSize(9)
-      doc.setFont('helvetica', 'bold')
-      doc.setTextColor(59, 130, 246)
-      doc.text('KI-Zusammenfassung:', margin + 5, y + 6)
-
-      doc.setFont('helvetica', 'normal')
-      doc.setTextColor(0)
-      doc.setFontSize(9)
-      doc.text(summaryLines, margin + 5, y + 12)
-      y += boxHeight + 8
-    }
-
-    // Chargen-Info
-    if (msg.ai_chargen_alle !== null || (msg.ai_chargen_liste && msg.ai_chargen_liste.length > 0)) {
-      doc.setFontSize(10)
-      doc.setFont('helvetica', 'bold')
-      doc.text('Betroffene Chargen:', margin, y)
-      y += 6
-      doc.setFont('helvetica', 'normal')
-
-      if (msg.ai_chargen_alle) {
-        doc.setTextColor(220, 38, 38)
-        doc.text('ALLE CHARGEN BETROFFEN', margin, y)
-        doc.setTextColor(0)
-        y += 6
-      } else if (msg.ai_chargen_liste && msg.ai_chargen_liste.length > 0) {
-        const chargenText = msg.ai_chargen_liste.join(', ')
-        const chargenLines = doc.splitTextToSize(chargenText, maxWidth)
-        doc.text(chargenLines, margin, y)
-        y += chargenLines.length * 5 + 2
-      }
-      y += 4
-    }
-
-    // PZN-Info
-    if (msg.ai_pzn_betroffen && msg.ai_pzn_betroffen.length > 0) {
-      doc.setFontSize(10)
-      doc.setFont('helvetica', 'bold')
-      doc.text('Betroffene PZN:', margin, y)
-      y += 6
-      doc.setFont('helvetica', 'normal')
-      const pznText = msg.ai_pzn_betroffen.join(', ')
-      const pznLines = doc.splitTextToSize(pznText, maxWidth)
-      doc.text(pznLines, margin, y)
-      y += pznLines.length * 5 + 6
-    }
-
-    // Trennlinie vor Volltext
-    if (msg.full_text) {
-      doc.setDrawColor(200)
-      doc.line(margin, y, pageWidth - margin, y)
-      y += 8
-    }
-
-    // Volltext
-    if (msg.full_text) {
-      doc.setFontSize(10)
-      doc.setFont('helvetica', 'normal')
-
-      let cleanedText = msg.full_text
-      if (msg.title && cleanedText.startsWith(msg.title)) {
-        cleanedText = cleanedText.substring(msg.title.length).trim()
-      }
-      cleanedText = cleanedText.replace(/^\d{1,2}\.\d{1,2}\.\d{4}\s*\n?/, '').trim()
-      cleanedText = cleanedText.replace(/^\d{4}-\d{2}-\d{2}\s*\n?/, '').trim()
-
-      const textLines = doc.splitTextToSize(cleanedText, maxWidth)
-
-      for (let i = 0; i < textLines.length; i++) {
-        if (y > pageHeight - 40) {
-          doc.addPage()
-          y = 20
-        }
-        doc.text(textLines[i], margin, y)
-        y += 5
-      }
-      y += 10
-    }
-
-    // Dokumentationen aus Datenbank laden
-    const { data: dokumentationen } = await supabase
-      .from('recall_dokumentationen')
-      .select('*')
-      .eq('recall_message_id', msg.id)
-      .order('erstellt_am', { ascending: true })
-
-    // Fußzeile mit Dokumentation
-    if (y > pageHeight - 80) {
-      doc.addPage()
-      y = 20
-    }
-
-    doc.setDrawColor(200)
-    doc.line(margin, y, pageWidth - margin, y)
-    y += 10
-
-    // Gespeicherte Dokumentationen anzeigen
-    if (dokumentationen && dokumentationen.length > 0) {
-      doc.setFontSize(15)
-      doc.setFont('helvetica', 'bold')
-      doc.text('Dokumentation:', margin, y)
-      y += 12
-
-      for (const dok of dokumentationen) {
-        // Berechne Box-Höhe
-        let boxHeight = 16 // Padding oben/unten
-        const boxPadding = 8
-        const innerWidth = maxWidth - boxPadding * 2
-
-        let bemerkungLines = []
-        if (dok.bemerkung) {
-          doc.setFontSize(14)
-          bemerkungLines = doc.splitTextToSize(dok.bemerkung, innerWidth)
-          boxHeight += bemerkungLines.length * 7
-        }
-        if (dok.unterschrift_data) {
-          boxHeight += 38 // Größere Unterschrift (75x30) + Abstand
-        }
-        // Platz für PZN-Fotos
-        if (dok.pzn_fotos && Object.keys(dok.pzn_fotos).length > 0) {
-          boxHeight += 65 // Foto (60x45) + Label + Abstand
-        }
-        boxHeight += 14 // Name/Datum
-
-        // Seitenumbruch prüfen
-        if (y + boxHeight > pageHeight - 20) {
-          doc.addPage()
-          y = 20
-        }
-
-        // Box mit runden Ecken zeichnen
-        doc.setFillColor(245, 247, 250)
-        doc.setDrawColor(200)
-        doc.roundedRect(margin, y, maxWidth, boxHeight, 4, 4, 'FD')
-
-        let boxY = y + boxPadding
-
-        // Bemerkung
-        if (dok.bemerkung && bemerkungLines.length > 0) {
-          doc.setFont('helvetica', 'normal')
-          doc.setFontSize(14)
-          doc.setTextColor(0)
-          for (const line of bemerkungLines) {
-            doc.text(line, margin + boxPadding, boxY + 4)
-            boxY += 7
-          }
-          boxY += 4
-        }
-
-        // Unterschrift als Bild (50% größer: 75x30)
-        if (dok.unterschrift_data) {
-          try {
-            doc.addImage(dok.unterschrift_data, 'PNG', margin + boxPadding, boxY, 75, 30)
-            boxY += 34
-          } catch (_e) { // eslint-disable-line no-unused-vars
-            // Fehler beim Laden der Unterschrift ignorieren
-          }
-        }
-
-        // PZN-Fotos anzeigen
-        if (dok.pzn_fotos && Object.keys(dok.pzn_fotos).length > 0) {
-          doc.setFontSize(9)
-          doc.setFont('helvetica', 'bold')
-          doc.setTextColor(0)
-          doc.text('PZN-Fotos:', margin + boxPadding, boxY + 4)
-          boxY += 8
-
-          let photoX = margin + boxPadding
-          for (const [pzn, path] of Object.entries(dok.pzn_fotos)) {
-            try {
-              const photoUrl = `${supabaseUrl}/storage/v1/object/public/recall-fotos/${path}`
-              const photoResponse = await fetch(photoUrl)
-              const photoBlob = await photoResponse.blob()
-              const photoBase64 = await new Promise((resolve) => {
-                const reader = new FileReader()
-                reader.onloadend = () => resolve(reader.result)
-                reader.readAsDataURL(photoBlob)
-              })
-
-              // Foto einfügen (60x45 - 50% größer)
-              doc.addImage(photoBase64, 'JPEG', photoX, boxY, 60, 45)
-
-              // PZN-Label unter dem Foto
-              doc.setFontSize(8)
-              doc.setFont('helvetica', 'normal')
-              doc.text(pzn, photoX + 30, boxY + 50, { align: 'center' })
-
-              photoX += 65
-            } catch (_e) { // eslint-disable-line no-unused-vars
-              // Fehler beim Laden des Fotos ignorieren
-            }
-          }
-          boxY += 55
-        }
-
-        // Name und Datum
-        doc.setFontSize(12)
-        doc.setTextColor(100)
-        const nameAndDate = [
-          dok.erstellt_von_name || '',
-          dok.erstellt_am ? new Date(dok.erstellt_am).toLocaleString('de-DE') : ''
-        ].filter(Boolean).join(' · ')
-        if (nameAndDate) {
-          doc.text(nameAndDate, margin + boxPadding, boxY + 4)
-        }
-        doc.setTextColor(0)
-
-        y += boxHeight + 8
-      }
-    } else {
-      // Leere Unterschriftsfelder nur wenn keine Dokumentation vorhanden
-      doc.setFontSize(9)
-      doc.setFont('helvetica', 'normal')
-      doc.text('Bearbeitet durch:', margin, y)
-      doc.line(margin + 35, y, margin + 100, y)
-      y += 8
-      doc.text('Bearbeitet am:', margin, y)
-      doc.line(margin + 35, y, margin + 100, y)
-      y += 12
-
-      doc.setFont('helvetica', 'bold')
-      doc.text('Zur Kenntnis genommen:', margin, y)
-      y += 8
-      doc.setFont('helvetica', 'normal')
-      for (let i = 0; i < 5; i++) {
-        doc.text('Name / Datum:', margin, y)
-        doc.line(margin + 30, y, margin + 100, y)
-        y += 8
-      }
-    }
-
-    // Download
-    const filename = `Rueckruf_${msg.product_name?.substring(0, 30).replace(/[^a-zA-Z0-9äöüÄÖÜß]/g, '_') || msg.title?.substring(0, 30).replace(/[^a-zA-Z0-9äöüÄÖÜß]/g, '_') || 'Meldung'}.pdf`
-    doc.save(filename)
-  }
-
-  // EXIF-Orientation aus JPEG auslesen (1-8)
-  const getExifOrientation = (file) => {
-    return new Promise((resolve) => {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const view = new DataView(e.target.result)
-        if (view.getUint16(0, false) !== 0xFFD8) {
-          resolve(1) // Kein JPEG
-          return
-        }
-        let offset = 2
-        while (offset < view.byteLength) {
-          const marker = view.getUint16(offset, false)
-          offset += 2
-          if (marker === 0xFFE1) { // APP1 (EXIF)
-            if (view.getUint32(offset + 2, false) !== 0x45786966) { // "Exif"
-              resolve(1)
-              return
-            }
-            const little = view.getUint16(offset + 8, false) === 0x4949
-            const tags = view.getUint16(offset + 16, little)
-            for (let i = 0; i < tags; i++) {
-              const tagOffset = offset + 18 + i * 12
-              if (view.getUint16(tagOffset, little) === 0x0112) { // Orientation tag
-                resolve(view.getUint16(tagOffset + 8, little))
-                return
-              }
-            }
-            resolve(1)
-            return
-          } else if ((marker & 0xFF00) !== 0xFF00) {
-            break
-          } else {
-            offset += view.getUint16(offset, false)
-          }
-        }
-        resolve(1)
-      }
-      reader.readAsArrayBuffer(file.slice(0, 65536))
-    })
-  }
-
-  // Bild automatisch drehen basierend auf EXIF-Orientation
-  const _autoRotateImage = async (file) => {  
-    const orientation = await getExifOrientation(file)
-    if (orientation === 1) return file // Keine Drehung nötig
-
-    return new Promise((resolve) => {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const img = new Image()
-        img.onload = () => {
-          const canvas = document.createElement('canvas')
-          const ctx = canvas.getContext('2d')
-
-          // Canvas-Größe basierend auf Orientation
-          if (orientation >= 5 && orientation <= 8) {
-            canvas.width = img.height
-            canvas.height = img.width
-          } else {
-            canvas.width = img.width
-            canvas.height = img.height
-          }
-
-          // Transformation basierend auf Orientation
-          switch (orientation) {
-            case 2: ctx.transform(-1, 0, 0, 1, canvas.width, 0); break // Horizontal flip
-            case 3: ctx.transform(-1, 0, 0, -1, canvas.width, canvas.height); break // 180°
-            case 4: ctx.transform(1, 0, 0, -1, 0, canvas.height); break // Vertical flip
-            case 5: ctx.transform(0, 1, 1, 0, 0, 0); break // 90° CW + flip
-            case 6: ctx.transform(0, 1, -1, 0, canvas.width, 0); break // 90° CW
-            case 7: ctx.transform(0, -1, -1, 0, canvas.width, canvas.height); break // 90° CCW + flip
-            case 8: ctx.transform(0, -1, 1, 0, 0, canvas.height); break // 90° CCW
-            default: break
-          }
-
-          ctx.drawImage(img, 0, 0)
-          canvas.toBlob((blob) => {
-            resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }))
-          }, 'image/jpeg', 0.95)
-        }
-        img.src = e.target.result
-      }
-      reader.readAsDataURL(file)
-    })
-  }
-
-  const rotateImage = (file, degrees) => {
-    return new Promise((resolve) => {
-      if (degrees === 0) {
-        resolve(file)
-        return
-      }
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const img = new Image()
-        img.onload = () => {
-          const canvas = document.createElement('canvas')
-          const isRotated90or270 = degrees === 90 || degrees === 270
-          canvas.width = isRotated90or270 ? img.height : img.width
-          canvas.height = isRotated90or270 ? img.width : img.height
-          const ctx = canvas.getContext('2d')
-          ctx.translate(canvas.width / 2, canvas.height / 2)
-          ctx.rotate((degrees * Math.PI) / 180)
-          ctx.drawImage(img, -img.width / 2, -img.height / 2)
-          canvas.toBlob((blob) => {
-            resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }))
-          }, 'image/jpeg', 0.9)
-        }
-        img.src = e.target.result
-      }
-      reader.readAsDataURL(file)
-    })
-  }
+  // PDF-Download Wrapper-Funktionen (nutzen das extrahierte Modul)
+  const handleDownloadAmkPdf = (msg) => downloadAmkPdf(msg, supabase, supabaseUrl)
+  const handleDownloadRecallPdf = (msg) => downloadRecallPdf(msg, supabase, supabaseUrl)
 
   const handleContactCardChange = (event) => {
     const file = event.target.files?.[0]
@@ -2297,87 +1432,7 @@ function App() {
     }, 'image/jpeg', 0.9)
   }
 
-  useEffect(() => {
-    // Check URL for invite or recovery tokens
-    const hashParams = new URLSearchParams(window.location.hash.substring(1))
-    const searchParams = new URLSearchParams(window.location.search)
-    const type = hashParams.get('type') || searchParams.get('type')
-    const accessToken = hashParams.get('access_token')
-    const refreshToken = hashParams.get('refresh_token')
-    const isAuthLink = type === 'invite' || type === 'recovery'
-    const hasAuthTokens = Boolean(accessToken && refreshToken)
-
-    const initAuth = async () => {
-      // If this is an invite or recovery link with tokens
-      if (isAuthLink && hasAuthTokens) {
-        const { data: { session: existingSession } } = await supabase.auth.getSession()
-        if (existingSession) {
-          setSession(existingSession)
-          setAuthView('resetPassword')
-          window.history.replaceState({}, document.title, window.location.pathname)
-          return
-        }
-
-        // Set the new session from the tokens in the URL
-        const { data, error } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        })
-        if (!error && data.session) {
-          setSession(data.session)
-          setAuthView('resetPassword')
-          // Clean up the URL
-          window.history.replaceState({}, document.title, window.location.pathname)
-          return
-        }
-      }
-
-      // Normal session check (also covers auth links where the session is already set)
-      const { data: { session } } = await supabase.auth.getSession()
-      setSession(session)
-      if (session && isAuthLink) {
-        setAuthView('resetPassword')
-        window.history.replaceState({}, document.title, window.location.pathname)
-      }
-    }
-
-    initAuth()
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setSession(session)
-      if (event === 'PASSWORD_RECOVERY') {
-        setAuthView('resetPassword')
-      }
-      if (event === 'SIGNED_IN') {
-        const nextHashParams = new URLSearchParams(window.location.hash.substring(1))
-        const nextSearchParams = new URLSearchParams(window.location.search)
-        const nextType = nextHashParams.get('type') || nextSearchParams.get('type')
-        if (nextType === 'invite' || nextType === 'recovery') {
-          setAuthView('resetPassword')
-          window.history.replaceState({}, document.title, window.location.pathname)
-        }
-      }
-    })
-
-    return () => subscription.unsubscribe()
-  }, [])
-
-  useEffect(() => {
-    if (session) {
-      fetchPharmacies()
-      fetchStaff()
-      fetchContacts()
-      fetchEmailAccounts()
-      fetchEmailPermissions()
-      fetchAiSettings()
-      fetchLatestPhoto()
-      fetchAllPhotos()
-      fetchPhotoOcrData()
-      fetchMistralApiKey()
-      fetchGoogleApiKey()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session])
+  // Alle Daten werden jetzt von Contexts geladen (Pharmacies, Staff, Contacts, Email, Photos)
 
   useEffect(() => {
     if (session && activeView === 'photos' && secondaryTab === 'visitenkarten') {
@@ -2437,104 +1492,39 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeView, session, rechnungenTab])
 
-  const handleSignIn = async (e) => {
-    e.preventDefault()
-    setLoading(true)
-    setMessage('')
-    setSuccessMessage('')
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) setMessage(error.message)
-    setLoading(false)
-  }
-
-  const handleForgotPassword = async (e) => {
-    e.preventDefault()
-    if (!email.trim()) {
-      setMessage('Bitte E-Mail-Adresse eingeben')
-      return
-    }
-    setLoading(true)
-    setMessage('')
-    setSuccessMessage('')
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin,
-    })
-    if (error) {
-      setMessage(error.message)
-    } else {
-      setSuccessMessage('Falls ein Konto mit dieser E-Mail existiert, wurde ein Link zum Zurücksetzen gesendet.')
-    }
-    setLoading(false)
-  }
-
-  const handleResetPassword = async (e) => {
-    e.preventDefault()
-    if (newPassword !== confirmPassword) {
-      setMessage('Passwörter stimmen nicht überein')
-      return
-    }
-    if (newPassword.length < 6) {
-      setMessage('Passwort muss mindestens 6 Zeichen lang sein')
-      return
-    }
-    setLoading(true)
-    setMessage('')
-    setSuccessMessage('')
-    const { error } = await supabase.auth.updateUser({ password: newPassword })
-    if (error) {
-      setMessage(error.message)
-    } else {
-      setSuccessMessage('Passwort erfolgreich geändert!')
-      setNewPassword('')
-      setConfirmPassword('')
-      setAuthView('login')
-    }
-    setLoading(false)
-  }
-
-  const handleAuthViewChange = (view) => {
-    setAuthView(view)
-    setMessage('')
-    setSuccessMessage('')
-  }
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    setMessage('')
-    setSuccessMessage('')
-    setAuthView('login')
-  }
-
   // Password reset view (even if logged in via invite link)
   if (authView === 'resetPassword') {
     return (
-      <AuthView
-        authView={authView}
-        onAuthViewChange={handleAuthViewChange}
-        email={email}
-        setEmail={setEmail}
-        password={password}
-        setPassword={setPassword}
-        newPassword={newPassword}
-        setNewPassword={setNewPassword}
-        confirmPassword={confirmPassword}
-        setConfirmPassword={setConfirmPassword}
-        loading={loading}
-        message={message}
-        successMessage={successMessage}
-        handleSignIn={handleSignIn}
-        handleForgotPassword={handleForgotPassword}
-        handleResetPassword={handleResetPassword}
-        theme={theme}
-      />
+      <Suspense fallback={<LoadingSpinner message="Lädt..." />}>
+        <AuthView
+          authView={authView}
+          onAuthViewChange={handleAuthViewChange}
+          email={email}
+          setEmail={setEmail}
+          password={password}
+          setPassword={setPassword}
+          newPassword={newPassword}
+          setNewPassword={setNewPassword}
+          confirmPassword={confirmPassword}
+          setConfirmPassword={setConfirmPassword}
+          loading={loading}
+          message={message}
+          successMessage={successMessage}
+          handleSignIn={handleSignIn}
+          handleForgotPassword={handleForgotPassword}
+          handleResetPassword={handleResetPassword}
+          theme={theme}
+        />
+      </Suspense>
     )
   }
 
   // Dashboard view
   if (session) {
     return (
-      <div className={`h-screen ${theme.bgApp} ${theme.textPrimary} flex flex-col relative overflow-hidden`}>
-        <DashboardHeader
+      <Suspense fallback={<div className="h-screen flex items-center justify-center"><LoadingSpinner message="App wird geladen..." /></div>}>
+        <div className={`h-screen ${theme.bgApp} ${theme.textPrimary} flex flex-col relative overflow-hidden`}>
+          <DashboardHeader
           theme={theme}
           mobileNavOpen={mobileNavOpen}
           setMobileNavOpen={setMobileNavOpen}
@@ -2567,13 +1557,14 @@ function App() {
             setActiveView={setActiveView}
             secondaryNavMap={secondaryNavMap}
             getActiveSecondaryId={getActiveSecondaryId}
-            handleSecondarySelect={handleSecondarySelect}
+            handleSecondarySelect={handleSecondarySelectWithArchiv}
             unreadCounts={{ ...unreadCounts, fax: faxCount, email: emailUnreadCount, chat: chatUnreadCounts }}
             Icons={Icons}
             UnreadBadge={UnreadBadge}
             currentStaff={currentStaff}
             session={session}
             handleSignOut={handleSignOut}
+            onAddTask={openTaskModal}
           />
 
           {/* Main Content */}
@@ -2746,6 +1737,36 @@ function App() {
                   setPendingFile={setPendingFile}
                   EMOJI_SET={EMOJI_SET}
                   ALLOWED_FILE_TYPES={ALLOWED_FILE_TYPES}
+                />
+              )}
+
+              {activeView === 'tasks' && (
+                <TasksView
+                  theme={theme}
+                  tasksLoading={tasksLoading}
+                  tasksError={tasksError}
+                  quickAddInput={quickAddInput}
+                  setQuickAddInput={setQuickAddInput}
+                  groupedTasks={groupedTasks}
+                  allProjects={allProjects}
+                  staff={staff}
+                  currentStaff={currentStaff}
+                  filterPriority={filterPriority}
+                  setFilterPriority={setFilterPriority}
+                  filterProject={filterProject}
+                  setFilterProject={setFilterProject}
+                  filterAssignee={filterAssignee}
+                  setFilterAssignee={setFilterAssignee}
+                  filterDue={filterDue}
+                  setFilterDue={setFilterDue}
+                  showCompleted={showCompleted}
+                  setShowCompleted={setShowCompleted}
+                  groupBy={groupBy}
+                  setGroupBy={setGroupBy}
+                  createTask={createTask}
+                  toggleTaskComplete={toggleTaskComplete}
+                  deleteTask={deleteTask}
+                  openTaskModal={openTaskModal}
                 />
               )}
 
@@ -3910,6 +2931,19 @@ function App() {
           )}
         />
 
+        {/* Task Form Modal */}
+        <TaskFormModal
+          theme={theme}
+          editingTask={editingTask}
+          taskForm={taskForm}
+          taskSaving={taskSaving}
+          taskSaveError={taskSaveError}
+          handleTaskInput={handleTaskInput}
+          saveTaskFromModal={saveTaskFromModal}
+          closeTaskModal={closeTaskModal}
+          staff={staff}
+        />
+
         {/* PDF-Modal für GH-Rechnungen */}
         {pdfModalOpen && selectedPdf && (
           <div
@@ -4254,7 +3288,7 @@ function App() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => downloadAmkPdf(selectedApoMessage)}
+                        onClick={() => handleDownloadAmkPdf(selectedApoMessage)}
                         className={`${theme.accentText} ${theme.bgHover} p-2 rounded-lg`}
                         title="Als PDF herunterladen"
                       >
@@ -4282,7 +3316,7 @@ function App() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => downloadRecallPdf(selectedApoMessage)}
+                        onClick={() => handleDownloadRecallPdf(selectedApoMessage)}
                         className={`${theme.accentText} ${theme.bgHover} p-2 rounded-lg`}
                         title="Als PDF herunterladen"
                       >
@@ -5286,30 +4320,33 @@ function App() {
           </div>
         )}
 
-      </div>
+        </div>
+      </Suspense>
     )
   }
 
   return (
-    <AuthView
-      authView={authView}
-      onAuthViewChange={handleAuthViewChange}
-      email={email}
-      setEmail={setEmail}
-      password={password}
-      setPassword={setPassword}
-      newPassword={newPassword}
-      setNewPassword={setNewPassword}
-      confirmPassword={confirmPassword}
-      setConfirmPassword={setConfirmPassword}
-      loading={loading}
-      message={message}
-      successMessage={successMessage}
-      handleSignIn={handleSignIn}
-      handleForgotPassword={handleForgotPassword}
-      handleResetPassword={handleResetPassword}
-      theme={theme}
-    />
+    <Suspense fallback={<LoadingSpinner message="Lädt..." />}>
+      <AuthView
+        authView={authView}
+        onAuthViewChange={handleAuthViewChange}
+        email={email}
+        setEmail={setEmail}
+        password={password}
+        setPassword={setPassword}
+        newPassword={newPassword}
+        setNewPassword={setNewPassword}
+        confirmPassword={confirmPassword}
+        setConfirmPassword={setConfirmPassword}
+        loading={loading}
+        message={message}
+        successMessage={successMessage}
+        handleSignIn={handleSignIn}
+        handleForgotPassword={handleForgotPassword}
+        handleResetPassword={handleResetPassword}
+        theme={theme}
+      />
+    </Suspense>
   )
 }
 

@@ -8,6 +8,7 @@ import {
   Printer,
   Trash,
 } from '@phosphor-icons/react'
+import DOMPurify from 'dompurify'
 
 export default function EmailDetailPane({
   theme,
@@ -53,7 +54,7 @@ export default function EmailDetailPane({
             <div><strong>Datum:</strong> ${date}</div>
           </div>
         </div>
-        <div class="body">${getEmailBody(emailDetail)}</div>
+        <div class="body">${DOMPurify.sanitize(getEmailBody(emailDetail))}</div>
       </body>
       </html>
     `)
@@ -143,7 +144,7 @@ export default function EmailDetailPane({
             <div
               className={`prose prose-sm max-w-none ${theme.text} [&_*]:max-w-full [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full [&_table]:w-full [&_table]:table-fixed [&_td]:break-words [&_th]:break-words [&_pre]:overflow-x-auto [&_pre]:max-w-full [&_div]:max-w-full [&_p]:max-w-full`}
               style={{ overflowWrap: 'anywhere', wordBreak: 'break-word', maxWidth: '100%' }}
-              dangerouslySetInnerHTML={{ __html: getEmailBody(emailDetail) }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(getEmailBody(emailDetail)) }}
             />
 
             {emailDetail.attachments?.length > 0 && (

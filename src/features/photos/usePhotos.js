@@ -104,7 +104,6 @@ export function usePhotos({ mistralApiKey, fetchMistralApiKey }) {
       .storage
       .from('documents')
       .remove([`photos/${photoName}`])
-    console.log('Delete response:', { data, error, photoName })
     if (error) {
       alert('Löschen fehlgeschlagen: ' + error.message)
       return

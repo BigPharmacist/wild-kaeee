@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { Plus } from '@phosphor-icons/react'
 
 const SidebarNav = function SidebarNav({
   theme,
@@ -17,6 +18,7 @@ const SidebarNav = function SidebarNav({
   currentStaff,
   session,
   handleSignOut,
+  onAddTask, // Callback to open task modal
 }) {
   const [showLogoutMenu, setShowLogoutMenu] = useState(false)
   const logoutMenuRef = useRef(null)
@@ -33,129 +35,6 @@ const SidebarNav = function SidebarNav({
     }
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showLogoutMenu])
-
-  useEffect(() => {
-    if (localStorage.getItem('debug_sidebar') !== '1') return
-    const summarizeTarget = (el) => {
-      if (!el || !el.tagName) return String(el)
-      const tag = el.tagName.toLowerCase()
-      const id = el.id ? `#${el.id}` : ''
-      const cls = el.className ? `.${String(el.className).replace(/\s+/g, '.')}` : ''
-      return `${tag}${id}${cls}`
-    }
-    const logEvent = (label, event, phase) => {
-      const path = (event.composedPath ? event.composedPath() : []).slice(0, 5).map(summarizeTarget)
-      console.log(
-        `[sidebar debug] ${label} ${phase}`,
-        {
-          type: event.type,
-          button: event.button,
-          detail: event.detail,
-          defaultPrevented: event.defaultPrevented,
-          cancelBubble: event.cancelBubble,
-          target: summarizeTarget(event.target),
-          currentTarget: summarizeTarget(event.currentTarget),
-          path,
-        },
-      )
-    }
-    const handler = (event) => {
-      const { clientX, clientY } = event
-      const elements = document.elementsFromPoint(clientX, clientY).slice(0, 6)
-      // Log the top stack under the cursor to find click blockers.
-      console.log('[sidebar debug] click at', clientX, clientY)
-      elements.forEach((el, idx) => {
-        const tag = el.tagName?.toLowerCase()
-        const id = el.id ? `#${el.id}` : ''
-        const cls = el.className ? `.${String(el.className).replace(/\s+/g, '.')}` : ''
-        console.log(`  ${idx}: ${tag}${id}${cls}`)
-      })
-    }
-    const capture = (event) => logEvent('capture', event, event.eventPhase)
-    const bubble = (event) => logEvent('bubble', event, event.eventPhase)
-
-    // Patch preventDefault/stopPropagation to find who cancels clicks.
-    const win = window
-    if (!win.__sidebarDebugPatched) {
-      win.__sidebarDebugPatched = true
-      const origPrevent = Event.prototype.preventDefault
-      const origStop = Event.prototype.stopPropagation
-      const origStopImmediate = Event.prototype.stopImmediatePropagation
-      Event.prototype.preventDefault = function patchedPreventDefault() {
-        try {
-          const target = this.target
-          if (this.type && (this.type === 'pointerdown' || this.type === 'mousedown' || this.type === 'click')) {
-            const inPrimary = target?.closest?.('[data-sidebar="primary"]')
-            if (inPrimary) {
-              console.log('[sidebar debug] preventDefault on', this.type, 'target', summarizeTarget(target))
-              console.log(new Error('preventDefault stack').stack)
-            }
-          }
-        } catch (_e) {}
-        return origPrevent.call(this)
-      }
-      Event.prototype.stopPropagation = function patchedStopPropagation() {
-        try {
-          const target = this.target
-          if (this.type && (this.type === 'pointerdown' || this.type === 'mousedown' || this.type === 'click')) {
-            const inPrimary = target?.closest?.('[data-sidebar="primary"]')
-            if (inPrimary) {
-              console.log('[sidebar debug] stopPropagation on', this.type, 'target', summarizeTarget(target))
-              console.log(new Error('stopPropagation stack').stack)
-            }
-          }
-        } catch (_e) {}
-        return origStop.call(this)
-      }
-      Event.prototype.stopImmediatePropagation = function patchedStopImmediatePropagation() {
-        try {
-          const target = this.target
-          if (this.type && (this.type === 'pointerdown' || this.type === 'mousedown' || this.type === 'click')) {
-            const inPrimary = target?.closest?.('[data-sidebar="primary"]')
-            if (inPrimary) {
-              console.log('[sidebar debug] stopImmediatePropagation on', this.type, 'target', summarizeTarget(target))
-              console.log(new Error('stopImmediatePropagation stack').stack)
-            }
-          }
-        } catch (_e) {}
-        return origStopImmediate.call(this)
-      }
-      win.__sidebarDebugRestore = () => {
-        Event.prototype.preventDefault = origPrevent
-        Event.prototype.stopPropagation = origStop
-        Event.prototype.stopImmediatePropagation = origStopImmediate
-        win.__sidebarDebugPatched = false
-      }
-    }
-    document.addEventListener('pointerdown', handler, true)
-    document.addEventListener('pointerdown', capture, true)
-    document.addEventListener('pointerup', capture, true)
-    document.addEventListener('mousedown', capture, true)
-    document.addEventListener('mouseup', capture, true)
-    document.addEventListener('click', capture, true)
-    document.addEventListener('pointerdown', bubble, false)
-    document.addEventListener('pointerup', bubble, false)
-    document.addEventListener('mousedown', bubble, false)
-    document.addEventListener('mouseup', bubble, false)
-    document.addEventListener('click', bubble, false)
-    return () => {
-      document.removeEventListener('pointerdown', handler, true)
-      document.removeEventListener('pointerdown', capture, true)
-      document.removeEventListener('pointerup', capture, true)
-      document.removeEventListener('mousedown', capture, true)
-      document.removeEventListener('mouseup', capture, true)
-      document.removeEventListener('click', capture, true)
-      document.removeEventListener('pointerdown', bubble, false)
-      document.removeEventListener('pointerup', bubble, false)
-      document.removeEventListener('mousedown', bubble, false)
-      document.removeEventListener('mouseup', bubble, false)
-      document.removeEventListener('click', bubble, false)
-      if (window.__sidebarDebugRestore) {
-        window.__sidebarDebugRestore()
-        window.__sidebarDebugRestore = null
-      }
-    }
-  }, [])
 
   const handlePrimaryActivate = (id) => {
     setActiveView(id)
@@ -186,14 +65,29 @@ const SidebarNav = function SidebarNav({
               {navItems.find((item) => item.id === activeView)?.label || 'Menü'}
             </h2>
           </div>
-          <button
-            type="button"
-            onClick={() => setMobileNavOpen(false)}
-            className="p-2 rounded-[6px] text-[#E5E7EB] hover:bg-[#334155]"
-            title="Menü schließen"
-          >
-            <Icons.X />
-          </button>
+          <div className="flex items-center gap-2">
+            {activeView === 'tasks' && onAddTask && (
+              <button
+                type="button"
+                onClick={() => {
+                  onAddTask()
+                  setMobileNavOpen(false)
+                }}
+                className="p-2 rounded-[6px] text-[#E5E7EB] hover:bg-[#334155]"
+                title="Neue Aufgabe"
+              >
+                <Plus size={20} weight="bold" />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setMobileNavOpen(false)}
+              className="p-2 rounded-[6px] text-[#E5E7EB] hover:bg-[#334155]"
+              title="Menü schließen"
+            >
+              <Icons.X />
+            </button>
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto">
           <nav className="p-2 space-y-1 border-b border-[#1E293B]">
@@ -438,9 +332,21 @@ const SidebarNav = function SidebarNav({
           <p className="text-xs uppercase tracking-[0.08em] text-[#64748B]">
             Navigation
           </p>
-          <h2 className="text-sm font-semibold text-[#E5E7EB] mt-1">
-            {navItems.find((item) => item.id === activeView)?.label || 'Kontext'}
-          </h2>
+          <div className="flex items-center justify-between mt-1">
+            <h2 className="text-sm font-semibold text-[#E5E7EB]">
+              {navItems.find((item) => item.id === activeView)?.label || 'Kontext'}
+            </h2>
+            {activeView === 'tasks' && onAddTask && (
+              <button
+                type="button"
+                onClick={onAddTask}
+                className="p-1 rounded hover:bg-[#1E293B] text-[#E5E7EB] hover:text-white transition-colors"
+                title="Neue Aufgabe"
+              >
+                <Plus size={18} weight="bold" />
+              </button>
+            )}
+          </div>
         </div>
         <nav className="p-2 overflow-y-auto space-y-1">
           {(secondaryNavMap[activeView] || []).map((item) => {
