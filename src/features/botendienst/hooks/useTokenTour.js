@@ -198,6 +198,33 @@ export function useTokenTour(token) {
     }
   }, [token])
 
+  // Tour-Abschluss mit Notizen speichern
+  const submitTourCompletion = useCallback(async (driverNotes, vehicleIssues) => {
+    if (!token) return false
+
+    try {
+      const { data, error: rpcError } = await supabase
+        .rpc('complete_tour_by_token', {
+          tour_token: token,
+          p_driver_notes: driverNotes || null,
+          p_vehicle_issues: vehicleIssues || null,
+        })
+
+      if (rpcError) throw rpcError
+      if (data?.error) throw new Error(data.error)
+
+      // Tour-State aktualisieren
+      if (data) {
+        setTour(data)
+      }
+
+      return true
+    } catch (err) {
+      console.error('Fehler beim Abschließen der Tour:', err)
+      return false
+    }
+  }, [token])
+
   return {
     tour,
     stops,
@@ -211,5 +238,6 @@ export function useTokenTour(token) {
     addSignature,
     getStats,
     setDriverName,
+    submitTourCompletion,
   }
 }

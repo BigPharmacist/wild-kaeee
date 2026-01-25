@@ -18,6 +18,9 @@ import {
   Moped,
   Warning,
   X,
+  Trophy,
+  Car,
+  ChatText,
 } from '@phosphor-icons/react'
 import { useTokenTour } from './hooks/useTokenTour'
 
@@ -50,6 +53,7 @@ export function TokenDriverView({ token }) {
     addSignature,
     getStats,
     setDriverName: setDriverNameInDb,
+    submitTourCompletion,
   } = useTokenTour(token)
 
   const [expandedStop, setExpandedStop] = useState(null)
@@ -58,6 +62,13 @@ export function TokenDriverView({ token }) {
   const [showPhotoModal, setShowPhotoModal] = useState(null)
   const [showNotesModal, setShowNotesModal] = useState(null)
   const [actionLoading, setActionLoading] = useState(null)
+
+  // Tour-Abschluss State
+  const [showCompletionScreen, setShowCompletionScreen] = useState(false)
+  const [completionNotes, setCompletionNotes] = useState('')
+  const [vehicleIssues, setVehicleIssues] = useState('')
+  const [submittingCompletion, setSubmittingCompletion] = useState(false)
+  const [completionSubmitted, setCompletionSubmitted] = useState(false)
 
   // Fahrer-Name State
   const [customName, setCustomName] = useState('')
@@ -113,6 +124,27 @@ export function TokenDriverView({ token }) {
   }
 
   const stats = getStats()
+
+  // Prüfen ob alle Stops erledigt sind
+  const allStopsCompleted = stats.totalStops > 0 &&
+    stops.every(s => s.status === 'completed' || s.status === 'skipped')
+
+  // Auto-show completion screen when all stops are done
+  useEffect(() => {
+    if (allStopsCompleted && !completionSubmitted && !showCompletionScreen) {
+      setShowCompletionScreen(true)
+    }
+  }, [allStopsCompleted, completionSubmitted, showCompletionScreen])
+
+  // Tour-Abschluss absenden
+  const handleSubmitCompletion = async () => {
+    setSubmittingCompletion(true)
+    const success = await submitTourCompletion(completionNotes, vehicleIssues)
+    setSubmittingCompletion(false)
+    if (success) {
+      setCompletionSubmitted(true)
+    }
+  }
 
   // Theme für die öffentliche Ansicht
   const theme = {
@@ -256,6 +288,157 @@ export function TokenDriverView({ token }) {
       style: 'currency',
       currency: 'EUR',
     }).format(amount || 0)
+  }
+
+  // ============================================
+  // TOUR ABGESCHLOSSEN - Completion Screen
+  // ============================================
+  if (showCompletionScreen && allStopsCompleted) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-green-50 to-white">
+        <div className="max-w-lg mx-auto px-4 py-8">
+          {/* Erfolgsmeldung */}
+          <div className="text-center mb-8">
+            <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+              <Trophy size={40} className="text-green-600" weight="fill" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              Tour geschafft!
+            </h1>
+            <p className="text-gray-600">
+              Sie haben alle {stats.totalStops} Stops erfolgreich abgeschlossen.
+            </p>
+          </div>
+
+          {/* Zusammenfassung */}
+          <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+            <h2 className="font-semibold text-gray-900 mb-4">Zusammenfassung</h2>
+
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="bg-gray-50 rounded-xl p-4 text-center">
+                <p className="text-2xl font-bold text-gray-900">{stats.completedStops}</p>
+                <p className="text-sm text-gray-500">Zustellungen</p>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-4 text-center">
+                <p className="text-2xl font-bold text-gray-900">{stats.totalPackages}</p>
+                <p className="text-sm text-gray-500">Pakete</p>
+              </div>
+            </div>
+
+            {/* Kassierter Betrag */}
+            {stats.collectedCash > 0 && (
+              <div className="bg-green-50 rounded-xl p-4 border border-green-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Money size={24} className="text-green-600" />
+                    <span className="font-medium text-green-800">Abzurechnen</span>
+                  </div>
+                  <span className="text-2xl font-bold text-green-600">
+                    {formatCurrency(stats.collectedCash)}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Feedback Formular - nur wenn noch nicht abgesendet */}
+          {!completionSubmitted ? (
+            <div className="bg-white rounded-2xl shadow-lg p-6 space-y-4">
+              <h2 className="font-semibold text-gray-900">Feedback zur Tour</h2>
+
+              {/* Allgemeiner Kommentar */}
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                  <ChatText size={18} />
+                  Kommentar
+                  <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <textarea
+                  value={completionNotes}
+                  onChange={(e) => setCompletionNotes(e.target.value)}
+                  placeholder="z.B. Kunde hat sich beschwert, besondere Vorkommnisse..."
+                  rows={3}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 resize-none"
+                />
+              </div>
+
+              {/* Probleme mit dem Auto */}
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                  <Car size={18} />
+                  Probleme mit dem Fahrzeug
+                  <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <textarea
+                  value={vehicleIssues}
+                  onChange={(e) => setVehicleIssues(e.target.value)}
+                  placeholder="z.B. Kontrollleuchte leuchtet, Reifen platt, Kratzer am Fahrzeug..."
+                  rows={3}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-red-500 focus:ring-1 focus:ring-red-500 resize-none"
+                />
+              </div>
+
+              {/* Absenden Button */}
+              <button
+                onClick={handleSubmitCompletion}
+                disabled={submittingCompletion}
+                className={`w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-medium text-white transition-all ${
+                  submittingCompletion
+                    ? 'bg-green-400 cursor-wait'
+                    : 'bg-green-500 hover:bg-green-600 active:scale-98'
+                }`}
+              >
+                {submittingCompletion ? (
+                  <>
+                    <CircleNotch size={20} className="animate-spin" />
+                    Wird gesendet...
+                  </>
+                ) : (
+                  <>
+                    <Check size={20} weight="bold" />
+                    Tour abschließen
+                  </>
+                )}
+              </button>
+
+              {/* Zurück zu Stops */}
+              <button
+                onClick={() => setShowCompletionScreen(false)}
+                className="w-full px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-100"
+              >
+                Zurück zur Übersicht
+              </button>
+            </div>
+          ) : (
+            /* Bestätigung nach Absenden */
+            <div className="bg-white rounded-2xl shadow-lg p-6 text-center">
+              <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+                <CheckCircle size={32} className="text-green-600" weight="fill" />
+              </div>
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">
+                Vielen Dank!
+              </h2>
+              <p className="text-gray-600">
+                Ihre Rückmeldung wurde gespeichert.
+              </p>
+              {stats.collectedCash > 0 && (
+                <div className="mt-4 p-4 bg-green-50 rounded-xl border border-green-200">
+                  <p className="font-medium text-green-800">
+                    Bitte {formatCurrency(stats.collectedCash)} in der Apotheke abgeben.
+                  </p>
+                </div>
+              )}
+              <button
+                onClick={() => setShowCompletionScreen(false)}
+                className="mt-6 w-full px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-100 border border-gray-200"
+              >
+                Zurück zur Übersicht
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    )
   }
 
   const getNavigationUrl = (stop) => {
