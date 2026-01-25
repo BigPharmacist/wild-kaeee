@@ -215,7 +215,9 @@ export default function BotendienstView({
     }
   }
 
-  const handleAddStop = async (stopData) => {
+  const handleAddStop = async (stopData, options = {}) => {
+    const { skipAutoOptimize = false } = options
+
     if (selectedTour?.id) {
       // Find or create customer (ohne delivery_notes - die sind tour-spezifisch!)
       if (stopData.customer_name && !stopData.customer_id) {
@@ -239,8 +241,31 @@ export default function BotendienstView({
         stopData.stop_notes = stopData.delivery_notes
       }
 
-      await addStop(selectedTour.id, stopData)
+      const newStop = await addStop(selectedTour.id, stopData)
+
+      // Bei aktiven Touren: Automatisch Route optimieren
+      // (nicht bei Bulk-Import, dort wird am Ende optimiert)
+      if (newStop && selectedTour.status === 'active' && !skipAutoOptimize) {
+        // Kurz warten bis stops aktualisiert sind, dann optimieren
+        setTimeout(() => {
+          handleOptimizeRouteAfterAdd()
+        }, 500)
+      }
+
+      return newStop
     }
+  }
+
+  // Optimierung nach Hinzufügen eines Stops (nutzt aktuelle stops aus State)
+  const handleOptimizeRouteAfterAdd = async () => {
+    // Stops neu laden um sicher aktuellen Stand zu haben
+    if (!selectedTour?.id) return
+    await fetchStops(selectedTour.id)
+
+    // Kleine Verzögerung damit React State aktualisiert
+    setTimeout(async () => {
+      await handleOptimizeRoute()
+    }, 100)
   }
 
   // Prüft ob eine Adresse vollständig ist
@@ -314,14 +339,14 @@ export default function BotendienstView({
 
     // Prüfe ob Adresse vollständig
     if (isAddressComplete(stopData, existingCustomer)) {
-      // Adresse OK - direkt importieren
+      // Adresse OK - direkt importieren (ohne Auto-Optimierung beim Import)
       await handleAddStop({
         ...stopData,
         street: existingCustomer?.street || stopData.street,
         postal_code: existingCustomer?.postal_code || stopData.postal_code,
         city: existingCustomer?.city || stopData.city,
         phone: existingCustomer?.phone || stopData.phone,
-      })
+      }, { skipAutoOptimize: true })
 
       // Nächsten Stop verarbeiten
       processNextImportStop(stops, index + 1)
@@ -336,11 +361,11 @@ export default function BotendienstView({
   const handleValidationSave = async (correctedData) => {
     const stopData = pendingImportStops[currentValidationIndex]
 
-    // Stop mit korrigierten Daten importieren
+    // Stop mit korrigierten Daten importieren (ohne Auto-Optimierung beim Import)
     await handleAddStop({
       ...stopData,
       ...correctedData,
-    })
+    }, { skipAutoOptimize: true })
 
     // Nächsten Stop verarbeiten
     const nextIndex = currentValidationIndex + 1
@@ -351,9 +376,9 @@ export default function BotendienstView({
 
   // Handler für Validierung: Überspringen
   const handleValidationSkip = () => {
-    // Stop ohne vollständige Adresse importieren (ohne Koordinaten)
+    // Stop ohne vollständige Adresse importieren (ohne Auto-Optimierung beim Import)
     const stopData = pendingImportStops[currentValidationIndex]
-    handleAddStop(stopData)
+    handleAddStop(stopData, { skipAutoOptimize: true })
 
     // Nächsten Stop verarbeiten
     const nextIndex = currentValidationIndex + 1
@@ -385,8 +410,17 @@ export default function BotendienstView({
   }
 
   const handleOptimizeRoute = async () => {
-    if (stops.length < 2) {
-      alert('Mindestens 2 Stops für Optimierung erforderlich')
+    // Bei aktiven Touren: Nur offene Stops optimieren, erledigte behalten Position
+    const isActiveTour = selectedTour?.status === 'active'
+    const completedStops = isActiveTour
+      ? stops.filter(s => s.status === 'completed' || s.status === 'skipped')
+      : []
+    const pendingStops = isActiveTour
+      ? stops.filter(s => s.status === 'pending')
+      : stops
+
+    if (pendingStops.length < 2) {
+      alert('Mindestens 2 offene Stops für Optimierung erforderlich')
       return
     }
 
@@ -407,13 +441,17 @@ export default function BotendienstView({
         ? `${pharmacy.street}, ${pharmacy.postal_code} ${pharmacy.city}, Germany`
         : null
 
-      // Use Google Maps API via Edge Function
+      // Use Google Maps API via Edge Function - nur pending Stops optimieren
       console.log('Rufe Edge Function auf...')
       console.log('Startadresse (Apotheke):', startAddress)
-      const result = await optimizeRoute(stops, startAddress, apiKey, supabaseUrl)
+      console.log('Optimiere', pendingStops.length, 'offene Stops')
+      const result = await optimizeRoute(pendingStops, startAddress, apiKey, supabaseUrl)
       console.log('Edge Function Ergebnis:', result)
       if (result) {
-        const newOrder = result.optimizedStops.map(s => s.id)
+        // Neue Reihenfolge: Erledigte Stops zuerst, dann optimierte offene Stops
+        const completedIds = completedStops.map(s => s.id)
+        const optimizedPendingIds = result.optimizedStops.map(s => s.id)
+        const newOrder = [...completedIds, ...optimizedPendingIds]
         await reorderStops(selectedTour.id, newOrder)
 
         // Save encoded polyline and route details to database
@@ -427,7 +465,10 @@ export default function BotendienstView({
         // Update selectedTour with new route_polyline so Effect can load it
         setSelectedTour(prev => prev ? { ...prev, route_polyline: result.encodedPolyline } : prev)
 
-        alert(result.message)
+        const message = isActiveTour
+          ? `${result.message} (${pendingStops.length} offene Stops optimiert)`
+          : result.message
+        alert(message)
         return
       }
       // If optimizeRoute failed, show error
@@ -436,11 +477,17 @@ export default function BotendienstView({
       console.log('Kein API Key gefunden')
     }
 
-    // Fallback to simple optimization
-    const result = optimizeRouteSimple(stops)
-    const newOrder = result.stops.map(s => s.id)
+    // Fallback to simple optimization - nur pending Stops
+    const result = optimizeRouteSimple(pendingStops)
+    const completedIds = completedStops.map(s => s.id)
+    const optimizedPendingIds = result.stops.map(s => s.id)
+    const newOrder = [...completedIds, ...optimizedPendingIds]
     await reorderStops(selectedTour.id, newOrder)
-    alert(result.message)
+
+    const message = isActiveTour
+      ? `${result.message} (${pendingStops.length} offene Stops)`
+      : result.message
+    alert(message)
   }
 
   const handleCompleteStop = async (stopId, position) => {

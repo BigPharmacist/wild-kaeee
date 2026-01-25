@@ -56,6 +56,9 @@ export function TourDetail({
 
   const stats = getTourStats({ ...tour, stops })
 
+  // Stops können in draft und active Touren hinzugefügt werden
+  const canAddStops = ['draft', 'active'].includes(tour?.status)
+
   const formatDate = (dateStr) => {
     if (!dateStr) return ''
     const date = new Date(dateStr)
@@ -196,41 +199,51 @@ export function TourDetail({
 
         {/* Actions */}
         <div className="flex gap-2">
+          {/* PDF Import - nur bei Entwürfen */}
           {tour?.status === 'draft' && (
-            <>
-              <button
-                onClick={onOpenPdfImport}
-                className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg ${theme.surface} ${theme.border} border ${theme.textSecondary} hover:bg-gray-50`}
-              >
-                <FileText size={18} />
-                PDF Import
-              </button>
-              <button
-                onClick={onOptimizeRoute}
-                className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg ${theme.surface} ${theme.border} border ${theme.textSecondary} hover:bg-gray-50`}
-                disabled={stops.length < 2}
-              >
-                <Path size={18} />
-                Optimieren
-              </button>
-              <button
-                onClick={() => onStartTour(tour.id)}
-                disabled={actionLoading === 'starting'}
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white transition-all ${
-                  actionLoading === 'starting'
-                    ? 'bg-green-400 cursor-wait'
-                    : 'bg-green-500 hover:bg-green-600 active:scale-95'
-                }`}
-              >
-                {actionLoading === 'starting' ? (
-                  <CircleNotch size={18} className="animate-spin" />
-                ) : (
-                  <Play size={18} weight="fill" />
-                )}
-                {actionLoading === 'starting' ? 'Wird gestartet...' : 'Tour starten'}
-              </button>
-            </>
+            <button
+              onClick={onOpenPdfImport}
+              className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg ${theme.surface} ${theme.border} border ${theme.textSecondary} hover:bg-gray-50`}
+            >
+              <FileText size={18} />
+              PDF Import
+            </button>
           )}
+
+          {/* Optimieren - bei Entwürfen und aktiven Touren */}
+          {canAddStops && (
+            <button
+              onClick={onOptimizeRoute}
+              className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg ${theme.surface} ${theme.border} border ${theme.textSecondary} hover:bg-gray-50`}
+              disabled={stops.filter(s => s.status === 'pending').length < 2}
+              title={tour?.status === 'active' ? 'Offene Stops neu optimieren' : 'Route optimieren'}
+            >
+              <Path size={18} />
+              Optimieren
+            </button>
+          )}
+
+          {/* Tour starten - nur bei Entwürfen */}
+          {tour?.status === 'draft' && (
+            <button
+              onClick={() => onStartTour(tour.id)}
+              disabled={actionLoading === 'starting'}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white transition-all ${
+                actionLoading === 'starting'
+                  ? 'bg-green-400 cursor-wait'
+                  : 'bg-green-500 hover:bg-green-600 active:scale-95'
+              }`}
+            >
+              {actionLoading === 'starting' ? (
+                <CircleNotch size={18} className="animate-spin" />
+              ) : (
+                <Play size={18} weight="fill" />
+              )}
+              {actionLoading === 'starting' ? 'Wird gestartet...' : 'Tour starten'}
+            </button>
+          )}
+
+          {/* Tour abschließen - nur bei aktiven Touren */}
           {tour?.status === 'active' && (
             <button
               onClick={() => onCompleteTour(tour.id)}
@@ -333,7 +346,7 @@ export function TourDetail({
       <div className={`${theme.surface} ${theme.border} border rounded-xl`}>
         <div className="flex items-center justify-between p-4 border-b border-gray-100">
           <h2 className={`font-semibold ${theme.textPrimary}`}>Stops</h2>
-          {tour?.status === 'draft' && (
+          {canAddStops && (
             <button
               onClick={onAddStop}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-[#F59E0B] text-white hover:bg-[#D97706]"
@@ -352,7 +365,7 @@ export function TourDetail({
           <div className="text-center py-8">
             <MapPin size={32} className={`mx-auto ${theme.textMuted} mb-2`} />
             <p className={theme.textMuted}>Noch keine Stops</p>
-            {tour?.status === 'draft' && (
+            {canAddStops && (
               <div className="flex justify-center gap-2 mt-3">
                 <button
                   onClick={onAddStop}
@@ -360,13 +373,17 @@ export function TourDetail({
                 >
                   Stop manuell hinzufügen
                 </button>
-                <span className={theme.textMuted}>oder</span>
-                <button
-                  onClick={onOpenPdfImport}
-                  className="text-sm text-[#F59E0B] hover:underline"
-                >
-                  PDF importieren
-                </button>
+                {tour?.status === 'draft' && (
+                  <>
+                    <span className={theme.textMuted}>oder</span>
+                    <button
+                      onClick={onOpenPdfImport}
+                      className="text-sm text-[#F59E0B] hover:underline"
+                    >
+                      PDF importieren
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -765,6 +782,17 @@ export function TourDetail({
           </div>
         )}
       </div>
+
+      {/* Floating Action Button - Stop hinzufügen */}
+      {canAddStops && (
+        <button
+          onClick={onAddStop}
+          className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-[#F59E0B] text-white shadow-lg hover:bg-[#D97706] hover:scale-110 transition-all flex items-center justify-center z-40"
+          title="Neuen Stop hinzufügen"
+        >
+          <Plus size={28} weight="bold" />
+        </button>
+      )}
     </div>
   )
 }

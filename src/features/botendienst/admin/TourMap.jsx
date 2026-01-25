@@ -118,11 +118,35 @@ export function TourMap({
     .filter(t => t.latitude && t.longitude)
     .map(t => [parseFloat(t.latitude), parseFloat(t.longitude)])
 
-  // Create polyline connecting stops in order (from pharmacy -> stops -> pharmacy)
+  // Create polylines - split into completed and pending sections
+  const sortedStops = [...stopsWithCoords].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+
+  // Find the split point between completed and pending stops
+  const completedStops = sortedStops.filter(s => s.status === 'completed' || s.status === 'skipped')
+  const pendingStops = sortedStops.filter(s => s.status === 'pending' || s.status === 'in_progress')
+
+  // Completed route: Pharmacy -> completed stops
+  const completedPolyline = [
+    ...(pharmacyPosition ? [pharmacyPosition] : []),
+    ...completedStops.map(s => [parseFloat(s.latitude), parseFloat(s.longitude)]),
+  ]
+
+  // Pending route: Last completed (or pharmacy) -> pending stops -> pharmacy
+  const lastCompletedPosition = completedStops.length > 0
+    ? [parseFloat(completedStops[completedStops.length - 1].latitude), parseFloat(completedStops[completedStops.length - 1].longitude)]
+    : pharmacyPosition
+
+  const pendingPolyline = [
+    ...(lastCompletedPosition ? [lastCompletedPosition] : []),
+    ...pendingStops.map(s => [parseFloat(s.latitude), parseFloat(s.longitude)]),
+    ...(pharmacyPosition && pendingStops.length > 0 ? [pharmacyPosition] : []), // zurück zur Apotheke
+  ]
+
+  // Full route for fallback (when no Google route)
   const stopsPolyline = [
     ...(pharmacyPosition ? [pharmacyPosition] : []),
-    ...stopsWithCoords.map(s => [parseFloat(s.latitude), parseFloat(s.longitude)]),
-    ...(pharmacyPosition ? [pharmacyPosition] : []), // zurück zur Apotheke
+    ...sortedStops.map(s => [parseFloat(s.latitude), parseFloat(s.longitude)]),
+    ...(pharmacyPosition ? [pharmacyPosition] : []),
   ]
 
   return (
@@ -251,22 +275,37 @@ export function TourMap({
             </Marker>
           ))}
 
-          {/* Route polyline - Google Maps optimized route or fallback to straight lines */}
+          {/* Route polylines - split into completed (green) and pending (blue/amber) */}
           {routePolyline && routePolyline.length > 1 ? (
+            // Google Maps Route - show as single line (could be split later if needed)
             <Polyline
               positions={routePolyline}
               color="#4285F4"
               weight={4}
               opacity={0.9}
             />
-          ) : stopsPolyline.length > 1 && (
-            <Polyline
-              positions={stopsPolyline}
-              color="#F59E0B"
-              weight={3}
-              opacity={0.7}
-              dashArray="10, 5"
-            />
+          ) : (
+            <>
+              {/* Completed section - green, solid */}
+              {completedPolyline.length > 1 && (
+                <Polyline
+                  positions={completedPolyline}
+                  color="#22C55E"
+                  weight={4}
+                  opacity={0.8}
+                />
+              )}
+              {/* Pending section - amber, dashed */}
+              {pendingPolyline.length > 1 && (
+                <Polyline
+                  positions={pendingPolyline}
+                  color="#F59E0B"
+                  weight={3}
+                  opacity={0.7}
+                  dashArray="10, 5"
+                />
+              )}
+            </>
           )}
 
           {/* Track polyline (actual driver path) */}
@@ -316,11 +355,21 @@ export function TourMap({
             <div className="w-4 h-0.5 bg-[#4285F4] rounded" />
             <span className={theme.textMuted}>Google Maps Route</span>
           </div>
-        ) : stopsPolyline.length > 1 && (
-          <div className="flex items-center gap-1.5">
-            <div className="w-4 h-0.5 bg-amber-500 rounded" style={{ borderStyle: 'dashed' }} />
-            <span className={theme.textMuted}>Geplante Route</span>
-          </div>
+        ) : (
+          <>
+            {completedPolyline.length > 1 && (
+              <div className="flex items-center gap-1.5">
+                <div className="w-4 h-0.5 bg-green-500 rounded" />
+                <span className={theme.textMuted}>Erledigt</span>
+              </div>
+            )}
+            {pendingPolyline.length > 1 && (
+              <div className="flex items-center gap-1.5">
+                <div className="w-4 h-0.5 bg-amber-500 rounded border-dashed" />
+                <span className={theme.textMuted}>Noch offen</span>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
