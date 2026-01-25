@@ -23,13 +23,16 @@
     "dompurify": "^3.3.1",
     "jspdf": "^4.0.0",
     "leaflet": "^1.9.4",
+    "pdfjs-dist": "^5.4.530",
+    "qrcode.react": "^4.2.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-grid-layout": "^2.2.2",
     "react-image-crop": "^11.0.10",
     "react-leaflet": "^5.0.0",
     "react-markdown": "^10.1.0",
-    "remark-gfm": "^4.0.1"
+    "remark-gfm": "^4.0.1",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

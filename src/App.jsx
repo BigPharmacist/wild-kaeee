@@ -9,12 +9,12 @@ import {
   rotateImage,
 } from './lib/imageProcessing'
 import { useNavigation, useAuth, usePharmacy, useTheme, useContactsContext, useEmail, usePhotosContext, useChatContext } from './context'
-import { House, Camera, Pill, CalendarDots, CalendarBlank, ChatCircle, GearSix, EnvelopeSimple, Printer, Palette, Sparkle, DotsThree, Files, Archive, CheckSquare } from '@phosphor-icons/react'
+import { House, Camera, Pill, CalendarDots, CalendarBlank, ChatCircle, GearSix, EnvelopeSimple, Printer, Palette, Sparkle, DotsThree, Files, Archive, CheckSquare, Moped } from '@phosphor-icons/react'
 
 // Hooks müssen synchron importiert werden
 import { useFaxCounts, useUrgentFax } from './features/fax'
 import { contactScan } from './features/contacts'
-import { useWeather, usePollen, useBiowetter } from './features/dashboard'
+import { useWeather, usePollen, useBiowetter, useDashboardTasks } from './features/dashboard'
 import { useTasks } from './features/tasks'
 import { useProjects } from './features/projects'
 import { useCalendar } from './features/calendar'
@@ -48,6 +48,8 @@ const CalendarView = lazy(() => import('./features/calendar/CalendarView'))
 const NotdienstplanungView = lazy(() => import('./features/calendar/NotdienstplanungView'))
 const ColorsView = lazy(() => import('./features/colors/ColorsView'))
 const ArchivView = lazy(() => import('./features/archiv/ArchivView'))
+const BotendienstView = lazy(() => import('./features/botendienst/BotendienstView'))
+const TokenDriverView = lazy(() => import('./features/botendienst/TokenDriverView'))
 const TrackingWidget = lazy(() => import('./features/tracking/TrackingWidget'))
 const CourierMap = lazy(() => import('./features/tracking/CourierMap'))
 const CourierTable = lazy(() => import('./features/tracking/CourierTable'))
@@ -81,6 +83,8 @@ function App() {
     setRechnungenTab,
     apoTab,
     setApoTab,
+    botendienstTab,
+    setBotendienstTab,
     mobileNavOpen,
     setMobileNavOpen,
     getActiveSecondaryId,
@@ -391,6 +395,12 @@ function App() {
     aiRecommendation: biowetterAiRecommendation,
     aiRecommendationLoading: biowetterAiLoading,
   } = useBiowetter({ pharmacies, aiSettings })
+  const {
+    tasks: dashboardTasks,
+    tasksLoading: dashboardTasksLoading,
+    tasksError: dashboardTasksError,
+    tasksByDue,
+  } = useDashboardTasks({ session, currentStaff })
 
   // Chat aus Context
   const {
@@ -587,6 +597,7 @@ function App() {
     { id: 'plan', icon: () => <CalendarDots size={20} weight="regular" />, label: 'Team' },
     { id: 'calendar', icon: () => <CalendarBlank size={20} weight="regular" />, label: 'Kalender' },
     { id: 'chat', icon: () => <ChatCircle size={20} weight="regular" />, label: 'Chat' },
+    { id: 'botendienst', icon: () => <Moped size={20} weight="regular" />, label: 'Botendienst' },
     { id: 'post', icon: () => <Icons.PostHorn />, label: 'Post' },
     { id: 'dokumente', icon: () => <Files size={20} weight="regular" />, label: 'Dokumente' },
     { id: 'archiv', icon: () => <Archive size={20} weight="regular" />, label: 'Archiv' },
@@ -623,6 +634,14 @@ function App() {
       ...staff
         .filter((s) => s.auth_user_id && s.auth_user_id !== session?.user?.id)
         .map((s) => ({ id: s.auth_user_id, label: s.first_name || 'Unbekannt' })),
+    ],
+    botendienst: [
+      { id: 'overview', label: 'Übersicht' },
+      { id: 'map', label: 'Karte' },
+      { id: 'customers', label: 'Kunden' },
+      { id: 'history', label: 'Verlauf' },
+      { id: 'divider' },
+      { id: 'driver', label: 'Fahrer-Modus' },
     ],
     post: [
       { id: 'email', label: 'Email' },
@@ -1533,6 +1552,17 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeView, session, rechnungenTab])
 
+  // Token-basierter Fahrer-Zugriff (ohne Login)
+  const pathMatch = window.location.pathname.match(/^\/fahrer\/([a-f0-9-]{36})$/i)
+  if (pathMatch) {
+    const driverToken = pathMatch[1]
+    return (
+      <Suspense fallback={<LoadingSpinner message="Tour wird geladen..." />}>
+        <TokenDriverView token={driverToken} />
+      </Suspense>
+    )
+  }
+
   // Password reset view (even if logged in via invite link)
   if (authView === 'resetPassword') {
     return (
@@ -1562,55 +1592,62 @@ function App() {
 
   // Dashboard view
   if (session) {
+    // Fahrermodus: Vollbild ohne Header und Sidebar
+    const isDriverMode = activeView === 'botendienst' && botendienstTab === 'driver'
+
     return (
       <Suspense fallback={<div className="h-screen flex items-center justify-center"><LoadingSpinner message="App wird geladen..." /></div>}>
         <div className={`h-screen ${theme.bgApp} ${theme.textPrimary} flex flex-col relative overflow-hidden`}>
-          <DashboardHeader
-          theme={theme}
-          mobileNavOpen={mobileNavOpen}
-          setMobileNavOpen={setMobileNavOpen}
-          activeView={activeView}
-          settingsTab={settingsTab}
-          businessCardScanRef={businessCardScanRef}
-          cameraInputRef={cameraInputRef}
-          photoUploading={photoUploading}
-          businessCardScanning={businessCardScanning}
-          handleCameraCapture={handleCameraCapture}
-          BusinessCardScanInput={contactScan.BusinessCardScanInput}
-          handleBusinessCardScan={handleBusinessCardScan}
-          pznCameraInputRef={pznCameraInputRef}
-          handlePznCameraCapture={handlePznCameraCapture}
-          setActiveView={setActiveView}
-          Icons={Icons}
-          urgentFaxe={urgentFaxe}
-          faxCount={faxCount}
-          onUrgentFaxClick={handleUrgentFaxClick}
-        />
-
-        <div className="flex flex-1 overflow-hidden relative min-h-0">
-          <SidebarNav
+          {!isDriverMode && (
+            <DashboardHeader
             theme={theme}
             mobileNavOpen={mobileNavOpen}
             setMobileNavOpen={setMobileNavOpen}
-            navItems={navItems}
-            miscNavItem={miscNavItem}
             activeView={activeView}
+            settingsTab={settingsTab}
+            businessCardScanRef={businessCardScanRef}
+            cameraInputRef={cameraInputRef}
+            photoUploading={photoUploading}
+            businessCardScanning={businessCardScanning}
+            handleCameraCapture={handleCameraCapture}
+            BusinessCardScanInput={contactScan.BusinessCardScanInput}
+            handleBusinessCardScan={handleBusinessCardScan}
+            pznCameraInputRef={pznCameraInputRef}
+            handlePznCameraCapture={handlePznCameraCapture}
             setActiveView={setActiveView}
-            secondaryNavMap={secondaryNavMap}
-            getActiveSecondaryId={getActiveSecondaryId}
-            handleSecondarySelect={handleSecondarySelectWithArchiv}
-            unreadCounts={{ ...unreadCounts, fax: faxCount, email: emailUnreadCount, chat: chatUnreadCounts }}
             Icons={Icons}
-            UnreadBadge={UnreadBadge}
-            currentStaff={currentStaff}
-            session={session}
-            handleSignOut={handleSignOut}
-            onAddTask={openTaskModal}
-            onAddProject={openProjectModal}
+            urgentFaxe={urgentFaxe}
+            faxCount={faxCount}
+            onUrgentFaxClick={handleUrgentFaxClick}
           />
+          )}
+
+        <div className="flex flex-1 overflow-hidden relative min-h-0">
+          {!isDriverMode && (
+            <SidebarNav
+              theme={theme}
+              mobileNavOpen={mobileNavOpen}
+              setMobileNavOpen={setMobileNavOpen}
+              navItems={navItems}
+              miscNavItem={miscNavItem}
+              activeView={activeView}
+              setActiveView={setActiveView}
+              secondaryNavMap={secondaryNavMap}
+              getActiveSecondaryId={getActiveSecondaryId}
+              handleSecondarySelect={handleSecondarySelectWithArchiv}
+              unreadCounts={{ ...unreadCounts, fax: faxCount, email: emailUnreadCount, chat: chatUnreadCounts }}
+              Icons={Icons}
+              UnreadBadge={UnreadBadge}
+              currentStaff={currentStaff}
+              session={session}
+              handleSignOut={handleSignOut}
+              onAddTask={openTaskModal}
+              onAddProject={openProjectModal}
+            />
+          )}
 
           {/* Main Content */}
-          <main className="flex-1 p-4 lg:p-8 overflow-auto min-h-0">
+          <main className={`flex-1 overflow-auto min-h-0 ${isDriverMode ? '' : 'p-4 lg:p-8'}`}>
             <div className={activeView === 'chat' || activeView === 'post' ? 'w-full' : 'max-w-5xl'}>
               {activeView === 'dashboard' && (
                 <>
@@ -1655,6 +1692,10 @@ function App() {
                     biowetterAiRecommendation={biowetterAiRecommendation}
                     biowetterAiLoading={biowetterAiLoading}
                     openBiowetterModal={() => setShowBiowetterModal(true)}
+                    dashboardTasks={dashboardTasks}
+                    dashboardTasksLoading={dashboardTasksLoading}
+                    dashboardTasksError={dashboardTasksError}
+                    tasksByDue={tasksByDue}
                   />
                 </>
               )}
@@ -1716,6 +1757,18 @@ function App() {
                   activeTab={archivTab}
                   createSavedView={archivCreateSavedView}
                   deleteSavedView={archivDeleteSavedView}
+                />
+              )}
+
+              {activeView === 'botendienst' && (
+                <BotendienstView
+                  theme={theme}
+                  session={session}
+                  currentStaff={currentStaff}
+                  pharmacies={pharmacies}
+                  staff={staff}
+                  botendienstTab={botendienstTab}
+                  setBotendienstTab={setBotendienstTab}
                 />
               )}
 
@@ -4388,7 +4441,7 @@ function App() {
         )}
 
         {/* Floating AI Chat Widget */}
-        <FloatingAiChat theme={theme} />
+        <FloatingAiChat theme={theme} currentStaff={currentStaff} staff={staff} />
 
         </div>
       </Suspense>

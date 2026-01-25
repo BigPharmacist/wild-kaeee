@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { Sparkle } from '@phosphor-icons/react'
+import { Sparkle, CheckCircle, Warning, Clock } from '@phosphor-icons/react'
 
 const DashboardHome = memo(function DashboardHome({
   theme,
@@ -29,6 +29,11 @@ const DashboardHome = memo(function DashboardHome({
   biowetterAiRecommendation,
   biowetterAiLoading,
   openBiowetterModal,
+  // Tasks Widget Props
+  dashboardTasks,
+  dashboardTasksLoading,
+  dashboardTasksError,
+  tasksByDue,
 }) {
   return (
   <>
@@ -428,6 +433,159 @@ const DashboardHome = memo(function DashboardHome({
             </div>
           )
         })()}
+      </div>
+
+      {/* Tasks Widget */}
+      <div className={`${theme.panel} rounded-2xl p-4 border ${theme.border} ${theme.cardShadow} flex flex-col gap-3`}>
+        <div className="flex items-center justify-between">
+          <h3 className={`text-lg font-medium ${theme.text}`}>Aufgaben</h3>
+          <button
+            type="button"
+            onClick={() => setActiveView('tasks')}
+            className={`text-xs ${theme.accentText} hover:underline`}
+          >
+            Alle anzeigen
+          </button>
+        </div>
+
+        {dashboardTasksLoading && (
+          <p className={`text-xs ${theme.textMuted}`}>Aufgaben werden geladen...</p>
+        )}
+        {!dashboardTasksLoading && dashboardTasksError && (
+          <p className="text-rose-400 text-sm">{dashboardTasksError}</p>
+        )}
+        {!dashboardTasksLoading && !dashboardTasksError && tasksByDue && (() => {
+          const { overdue, today, tomorrow, thisWeek, noDue } = tasksByDue
+          const hasAnyTasks = overdue.length > 0 || today.length > 0 || tomorrow.length > 0 || thisWeek.length > 0 || noDue.length > 0
+
+          if (!hasAnyTasks) {
+            return (
+              <div className="flex flex-col items-center justify-center py-6 text-center">
+                <CheckCircle size={32} weight="light" className="text-[#0D9488] mb-2" />
+                <p className={theme.textMuted}>Keine offenen Aufgaben!</p>
+              </div>
+            )
+          }
+
+          const formatDueDate = (dateStr) => {
+            if (!dateStr) return ''
+            return new Date(dateStr).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' })
+          }
+
+          const TaskItem = ({ task, isOverdue = false }) => (
+            <div className="flex items-start gap-2">
+              {task.priority && (
+                <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
+                  task.priority === 'A' ? 'bg-rose-100 text-rose-700' :
+                  task.priority === 'B' ? 'bg-orange-100 text-orange-700' :
+                  task.priority === 'C' ? 'bg-amber-100 text-amber-700' :
+                  'bg-gray-100 text-gray-600'
+                }`}>
+                  {task.priority}
+                </span>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className={`text-xs ${theme.text} truncate`}>{task.text}</p>
+                {task.projects?.name && (
+                  <p className={`text-[10px] ${theme.textMuted}`}>
+                    {task.projects.name}
+                  </p>
+                )}
+              </div>
+              {isOverdue && task.due_date && (
+                <span className="text-[10px] text-rose-500 flex-shrink-0">
+                  {formatDueDate(task.due_date)}
+                </span>
+              )}
+            </div>
+          )
+
+          return (
+            <div className="space-y-4 text-sm">
+              {overdue.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Warning size={14} className="text-rose-500" />
+                    <p className="text-xs font-medium text-rose-500">Überfällig ({overdue.length})</p>
+                  </div>
+                  <div className="space-y-2 pl-0.5">
+                    {overdue.slice(0, 3).map((task) => (
+                      <TaskItem key={task.id} task={task} isOverdue />
+                    ))}
+                    {overdue.length > 3 && (
+                      <p className={`text-xs ${theme.textMuted}`}>+{overdue.length - 3} weitere</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {today.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Clock size={14} className="text-amber-500" />
+                    <p className={`text-xs font-medium text-amber-600`}>Heute ({today.length})</p>
+                  </div>
+                  <div className="space-y-2 pl-0.5">
+                    {today.slice(0, 3).map((task) => (
+                      <TaskItem key={task.id} task={task} />
+                    ))}
+                    {today.length > 3 && (
+                      <p className={`text-xs ${theme.textMuted}`}>+{today.length - 3} weitere</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {tomorrow.length > 0 && (
+                <div>
+                  <p className={`text-xs font-medium mb-2 ${theme.textSecondary}`}>Morgen ({tomorrow.length})</p>
+                  <div className="space-y-2 pl-0.5">
+                    {tomorrow.slice(0, 2).map((task) => (
+                      <TaskItem key={task.id} task={task} />
+                    ))}
+                    {tomorrow.length > 2 && (
+                      <p className={`text-xs ${theme.textMuted}`}>+{tomorrow.length - 2} weitere</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {thisWeek.length > 0 && (
+                <div>
+                  <p className={`text-xs font-medium mb-2 ${theme.textSecondary}`}>Diese Woche ({thisWeek.length})</p>
+                  <div className="space-y-2 pl-0.5">
+                    {thisWeek.slice(0, 2).map((task) => (
+                      <TaskItem key={task.id} task={task} />
+                    ))}
+                    {thisWeek.length > 2 && (
+                      <p className={`text-xs ${theme.textMuted}`}>+{thisWeek.length - 2} weitere</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {noDue.length > 0 && (
+                <div>
+                  <p className={`text-xs font-medium mb-2 ${theme.textSecondary}`}>Ohne Termin ({noDue.length})</p>
+                  <div className="space-y-2 pl-0.5">
+                    {noDue.slice(0, 3).map((task) => (
+                      <TaskItem key={task.id} task={task} />
+                    ))}
+                    {noDue.length > 3 && (
+                      <p className={`text-xs ${theme.textMuted}`}>+{noDue.length - 3} weitere</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        })()}
+        {!dashboardTasksLoading && !dashboardTasksError && dashboardTasks?.length === 0 && !tasksByDue && (
+          <div className="flex flex-col items-center justify-center py-6 text-center">
+            <CheckCircle size={32} weight="light" className="text-[#0D9488] mb-2" />
+            <p className={theme.textMuted}>Keine offenen Aufgaben!</p>
+          </div>
+        )}
       </div>
     </div>
   </>

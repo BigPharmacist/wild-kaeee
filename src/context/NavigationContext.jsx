@@ -15,6 +15,7 @@ export function NavigationProvider({ children }) {
   const [archivTab, setArchivTab] = useState(() => localStorage.getItem('nav_archivTab') || 'alle')
   const [rechnungenTab, setRechnungenTab] = useState(() => localStorage.getItem('nav_rechnungenTab') || 'alt')
   const [apoTab, setApoTab] = useState(() => localStorage.getItem('nav_apoTab') || 'amk')
+  const [botendienstTab, setBotendienstTab] = useState(() => localStorage.getItem('nav_botendienstTab') || 'overview')
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
   // Persist to localStorage
@@ -37,6 +38,10 @@ export function NavigationProvider({ children }) {
   useEffect(() => {
     localStorage.setItem('nav_apoTab', apoTab)
   }, [apoTab])
+
+  useEffect(() => {
+    localStorage.setItem('nav_botendienstTab', botendienstTab)
+  }, [botendienstTab])
 
   useEffect(() => {
     localStorage.setItem('nav_dokumenteTab', dokumenteTab)
@@ -84,8 +89,9 @@ export function NavigationProvider({ children }) {
     if (activeView === 'dokumente') return dokumenteTab
     if (activeView === 'archiv') return archivTab
     if (activeView === 'rechnungen') return rechnungenTab
+    if (activeView === 'botendienst') return botendienstTab
     return secondaryTab
-  }, [activeView, settingsTab, apoTab, chatTab, dokumenteTab, archivTab, rechnungenTab, secondaryTab])
+  }, [activeView, settingsTab, apoTab, chatTab, dokumenteTab, archivTab, rechnungenTab, botendienstTab, secondaryTab])
 
   // Handle secondary navigation selection
   const handleSecondarySelect = useCallback((id) => {
@@ -101,6 +107,8 @@ export function NavigationProvider({ children }) {
       setArchivTab(id)
     } else if (activeView === 'rechnungen') {
       setRechnungenTab(id)
+    } else if (activeView === 'botendienst') {
+      setBotendienstTab(id)
     } else {
       setSecondaryTab(id)
     }
@@ -112,7 +120,7 @@ export function NavigationProvider({ children }) {
       isInitialMount.current = false
       return
     }
-    if (activeView === 'settings' || activeView === 'apo' || activeView === 'chat' || activeView === 'dokumente') return
+    if (activeView === 'settings' || activeView === 'apo' || activeView === 'chat' || activeView === 'dokumente' || activeView === 'botendienst') return
     const nextItems = secondaryNavMap[activeView] || []
     if (nextItems.length) {
       setSecondaryTab(nextItems[0].id)
@@ -129,6 +137,7 @@ export function NavigationProvider({ children }) {
     archivTab,
     rechnungenTab,
     apoTab,
+    botendienstTab,
     mobileNavOpen,
 
     // Setters
@@ -140,6 +149,7 @@ export function NavigationProvider({ children }) {
     setArchivTab,
     setRechnungenTab,
     setApoTab,
+    setBotendienstTab,
     setMobileNavOpen,
 
     // Helpers
@@ -155,6 +165,7 @@ export function NavigationProvider({ children }) {
     archivTab,
     rechnungenTab,
     apoTab,
+    botendienstTab,
     mobileNavOpen,
     getActiveSecondaryId,
     handleSecondarySelect,

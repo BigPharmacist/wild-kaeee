@@ -27,7 +27,125 @@ const DEFAULT_SYSTEM_PROMPT = `Du bist ein hilfreicher KI-Assistent für eine de
 Du antwortest auf Deutsch, freundlich und prägnant.
 Du kannst bei allgemeinen Fragen helfen, Texte formulieren, Ideen geben und Probleme analysieren.
 Du hast Zugang zum Internet und kannst aktuelle Informationen suchen.
+
+Du kannst auch Aufgaben verwalten:
+- "list_tasks" zeigt offene Aufgaben an (optional mit Filter)
+- "create_task" erstellt neue Aufgaben
+- "update_task" bearbeitet bestehende Aufgaben
+
+Wenn der Nutzer nach Aufgaben fragt oder welche erstellen möchte, nutze die entsprechenden Tools.
+
+**Wichtig für die Darstellung von Aufgaben:**
+- Gruppiere Aufgaben nach Projekten, wenn sie einem Projekt zugeordnet sind
+- Präsentiere projektbezogene Aufgaben so: "Für das Projekt **[Projektname]** sind folgende Aufgaben offen: ..."
+- Aufgaben ohne Projekt liste separat unter "Allgemeine Aufgaben" oder "Sonstige Aufgaben" auf
+- Erwähne bei jeder Aufgabe die Priorität (falls vorhanden) und das Fälligkeitsdatum
+- Sortiere nach Priorität (A = höchste) und dann nach Fälligkeit
+
 Halte deine Antworten kurz und praktisch, außer der Nutzer bittet um ausführlichere Erklärungen.`
+
+// Tool-Definitionen für den Mistral Agent
+const TASK_TOOLS = [
+  { type: 'web_search' },
+  {
+    type: 'function',
+    function: {
+      name: 'list_projects',
+      description: 'Listet alle verfügbaren Projekte auf. Projekte sind Kategorien für Aufgaben mit eigenem Namen, Beschreibung und Farbe.',
+      parameters: {
+        type: 'object',
+        properties: {
+          include_archived: {
+            type: 'boolean',
+            description: 'Auch archivierte Projekte anzeigen'
+          }
+        }
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'list_tasks',
+      description: 'Listet alle offenen Aufgaben auf. Kann nach Priorität, Projekt oder Fälligkeit gefiltert werden.',
+      parameters: {
+        type: 'object',
+        properties: {
+          priority: {
+            type: 'string',
+            enum: ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'],
+            description: 'Filter nach Priorität (A-Z)'
+          },
+          project_id: {
+            type: 'string',
+            description: 'Filter nach Projekt-ID (UUID)'
+          },
+          due_filter: {
+            type: 'string',
+            enum: ['today', 'week', 'overdue'],
+            description: 'Filter nach Fälligkeit'
+          },
+          include_completed: {
+            type: 'boolean',
+            description: 'Auch erledigte Tasks anzeigen'
+          }
+        }
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'create_task',
+      description: 'Erstellt eine neue Aufgabe. Kann einem Projekt, Mitarbeitern oder Gruppen zugewiesen werden.',
+      parameters: {
+        type: 'object',
+        properties: {
+          text: { type: 'string', description: 'Aufgabenbeschreibung (Pflicht)' },
+          priority: {
+            type: 'string',
+            enum: ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'],
+            description: 'Priorität A-Z (A=höchste)'
+          },
+          due_date: { type: 'string', description: 'Fälligkeitsdatum im Format YYYY-MM-DD' },
+          recurrence: { type: 'string', description: 'Wiederholung: 1d, 2w, 1m (Tage/Wochen/Monate)' },
+          project_id: { type: 'string', description: 'Projekt-ID (UUID) - nutze list_projects um verfügbare Projekte zu sehen' },
+          project_name: { type: 'string', description: 'Projektname für neues Projekt, falls project_id nicht angegeben' },
+          assigned_user_ids: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Array von Mitarbeiter-IDs für die Zuweisung (aus dem Kontext)'
+          },
+          assigned_groups: {
+            type: 'array',
+            items: { type: 'string', enum: ['APO', 'PTA', 'PKA'] },
+            description: 'Array von Gruppen: APO, PTA, PKA'
+          }
+        },
+        required: ['text']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'update_task',
+      description: 'Bearbeitet eine bestehende Aufgabe.',
+      parameters: {
+        type: 'object',
+        properties: {
+          task_id: { type: 'string', description: 'ID der Aufgabe (Pflicht)' },
+          text: { type: 'string', description: 'Neuer Aufgabentext' },
+          priority: { type: 'string', description: 'Neue Priorität A-Z' },
+          due_date: { type: 'string', description: 'Neues Fälligkeitsdatum YYYY-MM-DD' },
+          recurrence: { type: 'string', description: 'Neue Wiederholung' },
+          project: { type: 'string', description: 'Neuer Projektname' }
+        },
+        required: ['task_id']
+      }
+    }
+  }
+]
 
 // Größen-Limits
 const MIN_WIDTH = 320
@@ -37,7 +155,7 @@ const MAX_HEIGHT = 800
 const DEFAULT_WIDTH = 380
 const DEFAULT_HEIGHT = 520
 
-export default function FloatingAiChat({ theme }) {
+export default function FloatingAiChat({ theme, currentStaff, staff = [] }) {
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
@@ -83,9 +201,9 @@ export default function FloatingAiChat({ theme }) {
       body: JSON.stringify({
         model: 'mistral-large-latest',
         name: 'Kaeee-Assistent',
-        description: 'KI-Assistent für die Kaeee Apotheken-App mit Web-Suche',
+        description: 'KI-Assistent für die Kaeee Apotheken-App mit Web-Suche und Aufgabenverwaltung',
         instructions: prompt,
-        tools: [{ type: 'web_search' }],
+        tools: TASK_TOOLS,
         completion_args: {
           temperature: 0.7,
         },
@@ -231,33 +349,261 @@ export default function FloatingAiChat({ theme }) {
     }
   }, [isResizing])
 
+  // Tool-Call Handler für Task-Funktionen
+  const handleToolCall = async (toolName, args) => {
+    switch (toolName) {
+      case 'list_projects': {
+        // Projekte aus Supabase laden
+        let query = supabase.from('projects').select('*')
+
+        if (!args?.include_archived) {
+          query = query.eq('status', 'active')
+        }
+
+        const { data, error } = await query.order('name')
+
+        if (error) return { error: error.message }
+
+        const formattedProjects = data.map(p => ({
+          id: p.id,
+          name: p.name,
+          description: p.description || null,
+          color: p.color,
+          status: p.status,
+          deadline: p.deadline || null
+        }))
+
+        return { projects: formattedProjects, count: data.length }
+      }
+
+      case 'list_tasks': {
+        // Tasks mit Projektinfos aus Supabase laden
+        let query = supabase.from('tasks').select('*, projects(id, name, color)')
+
+        if (!args?.include_completed) {
+          query = query.eq('completed', false)
+        }
+        if (args?.priority) {
+          query = query.eq('priority', args.priority)
+        }
+        if (args?.project_id) {
+          query = query.eq('project_id', args.project_id)
+        }
+
+        // Filter nach Fälligkeit
+        if (args?.due_filter) {
+          const today = new Date()
+          today.setHours(0, 0, 0, 0)
+          const todayStr = today.toISOString().substring(0, 10)
+
+          if (args.due_filter === 'today') {
+            query = query.eq('due_date', todayStr)
+          } else if (args.due_filter === 'overdue') {
+            query = query.lt('due_date', todayStr)
+          } else if (args.due_filter === 'week') {
+            const weekEnd = new Date(today)
+            weekEnd.setDate(weekEnd.getDate() + 7)
+            query = query.gte('due_date', todayStr).lte('due_date', weekEnd.toISOString().substring(0, 10))
+          }
+        }
+
+        const { data, error } = await query.order('priority').order('due_date')
+
+        if (error) return { error: error.message }
+
+        // Benutzergruppe aus Rolle ableiten (ApothekerIn → APO, PTA → PTA, PKA → PKA)
+        const roleToGroup = {
+          'ApothekerIn': 'APO',
+          'Apotheker': 'APO',
+          'Apothekerin': 'APO',
+          'PTA': 'PTA',
+          'PKA': 'PKA'
+        }
+        const userGroup = currentStaff?.role ? roleToGroup[currentStaff.role] : null
+        const staffId = currentStaff?.id || null
+        const authUserId = currentStaff?.auth_user_id || null
+
+        // Client-seitig filtern: nur Tasks, die dem Benutzer zugewiesen sind
+        const filteredTasks = currentStaff?.id ? data.filter(task => {
+          // Direkt zugewiesen (Staff-ID oder Auth-User-ID)
+          if (staffId && task.assigned_to === staffId) return true
+          if (authUserId && task.assigned_to === authUserId) return true
+          // Im assigned_users Array (JSONB)
+          if (staffId && Array.isArray(task.assigned_users) && task.assigned_users.includes(staffId)) return true
+          if (authUserId && Array.isArray(task.assigned_users) && task.assigned_users.includes(authUserId)) return true
+          // Gruppe zugewiesen (assigned_to_group Textfeld)
+          if (userGroup && task.assigned_to_group === userGroup) return true
+          // Im assigned_groups Array (JSONB)
+          if (userGroup && Array.isArray(task.assigned_groups) && task.assigned_groups.includes(userGroup)) return true
+          return false
+        }) : data
+
+        // Tasks formatieren für LLM - mit Projektname aus der Relation
+        const formattedTasks = filteredTasks.map(t => ({
+          id: t.id,
+          text: t.text,
+          priority: t.priority || 'keine',
+          due_date: t.due_date || 'keine',
+          recurrence: t.recurrence || null,
+          project_id: t.project_id || null,
+          project_name: t.projects?.name || null
+        }))
+
+        return { tasks: formattedTasks, count: filteredTasks.length }
+      }
+
+      case 'create_task': {
+        if (!args?.text) {
+          return { error: 'Aufgabentext ist erforderlich' }
+        }
+
+        if (!currentStaff?.id) {
+          return { error: 'Kein Benutzer angemeldet' }
+        }
+
+        // Projekt-ID ermitteln: entweder übergeben oder neues Projekt erstellen
+        let projectId = args.project_id || null
+        let projectName = null
+
+        if (!projectId && args.project_name) {
+          // Prüfen ob Projekt mit diesem Namen existiert
+          const { data: existingProject } = await supabase
+            .from('projects')
+            .select('id, name')
+            .ilike('name', args.project_name)
+            .single()
+
+          if (existingProject) {
+            projectId = existingProject.id
+            projectName = existingProject.name
+          } else {
+            // Neues Projekt erstellen
+            const { data: newProject, error: projectError } = await supabase
+              .from('projects')
+              .insert({
+                name: args.project_name,
+                created_by: currentStaff.id
+              })
+              .select('id, name')
+              .single()
+
+            if (projectError) return { error: `Projekt konnte nicht erstellt werden: ${projectError.message}` }
+            projectId = newProject.id
+            projectName = newProject.name
+          }
+        }
+
+        // Zuweisungen verarbeiten
+        const assignedUsers = args.assigned_user_ids && args.assigned_user_ids.length > 0
+          ? args.assigned_user_ids
+          : [currentStaff.id]  // Standardmäßig dem Ersteller zuweisen
+
+        const assignedGroups = args.assigned_groups || []
+
+        const { error } = await supabase.from('tasks').insert({
+          text: args.text,
+          priority: args.priority || null,
+          due_date: args.due_date || null,
+          recurrence: args.recurrence || null,
+          project_id: projectId,
+          created_by: currentStaff.id,
+          assigned_to: assignedUsers[0] || currentStaff.id,
+          assigned_users: assignedUsers,
+          assigned_groups: assignedGroups
+        })
+
+        if (error) return { error: error.message }
+
+        // Rückmeldung mit Zuweisungsinfo
+        let resultInfo = `Aufgabe "${args.text}" wurde erstellt`
+        if (projectName) {
+          resultInfo += ` im Projekt "${projectName}"`
+        }
+        if (args.assigned_user_ids?.length > 0 || args.assigned_groups?.length > 0) {
+          const userNames = args.assigned_user_ids?.map(id => {
+            const s = staff.find(m => m.id === id)
+            return s ? `${s.first_name} ${s.last_name}` : id
+          }) || []
+          const parts = [...userNames, ...(args.assigned_groups || [])]
+          resultInfo += ` und zugewiesen an: ${parts.join(', ')}`
+        } else {
+          resultInfo += ' und dir zugewiesen'
+        }
+
+        return { success: true, message: resultInfo }
+      }
+
+      case 'update_task': {
+        if (!args?.task_id) {
+          return { error: 'Task-ID ist erforderlich' }
+        }
+
+        const updates = {}
+        if (args.text) updates.text = args.text
+        if (args.priority) updates.priority = args.priority
+        if (args.due_date) updates.due_date = args.due_date
+        if (args.recurrence) updates.recurrence = args.recurrence
+        if (args.project_id) updates.project_id = args.project_id
+        updates.updated_at = new Date().toISOString()
+
+        const { error } = await supabase
+          .from('tasks')
+          .update(updates)
+          .eq('id', args.task_id)
+
+        if (error) return { error: error.message }
+        return { success: true, message: 'Aufgabe wurde aktualisiert' }
+      }
+
+      default:
+        return { error: `Unbekanntes Tool: ${toolName}` }
+    }
+  }
+
   // Antwort aus Conversations API parsen
   const parseConversationResponse = (data) => {
     let textContent = ''
     let sources = []
+    let toolCalls = []
 
     // Durch alle Outputs iterieren
     const outputs = data.outputs || []
     for (const output of outputs) {
-      if (output.type === 'message.output' && output.content) {
-        // Content kann ein Array von Teilen sein
-        for (const part of output.content) {
-          if (part.type === 'text') {
-            textContent += part.text || ''
-          } else if (part.type === 'tool_reference') {
-            // Web-Search Quellen
-            if (part.url) {
-              sources.push({
-                title: part.title || part.url,
-                url: part.url,
-              })
+      // Function Call Output (Mistral Agents API Format)
+      if (output.type === 'function.call') {
+        const args = typeof output.arguments === 'string'
+          ? JSON.parse(output.arguments || '{}')
+          : (output.arguments || {})
+        toolCalls.push({
+          id: output.tool_call_id || output.id,
+          name: output.name,
+          arguments: args
+        })
+      }
+      // Message Output mit Text und Quellen
+      else if (output.type === 'message.output' && output.content) {
+        // Content kann ein String oder ein Array von Teilen sein
+        if (typeof output.content === 'string') {
+          textContent += output.content
+        } else if (Array.isArray(output.content)) {
+          for (const part of output.content) {
+            if (part.type === 'text') {
+              textContent += part.text || ''
+            } else if (part.type === 'tool_reference') {
+              // Web-Search Quellen
+              if (part.url) {
+                sources.push({
+                  title: part.title || part.url,
+                  url: part.url,
+                })
+              }
             }
           }
         }
       }
     }
 
-    return { text: textContent.trim(), sources }
+    return { text: textContent.trim(), sources, toolCalls }
   }
 
   const sendMessage = async (e) => {
@@ -273,39 +619,115 @@ export default function FloatingAiChat({ theme }) {
     setIsLoading(true)
 
     try {
-      // Conversations API aufrufen
-      const response = await fetch(MISTRAL_CONVERSATIONS_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          agent_id: agentId,
-          inputs: [
-            {
-              role: 'user',
-              content: userMessage,
-            },
-          ],
-          stream: false,
-        }),
-      })
+      let conversationId = null
+      let finalText = ''
+      let finalSources = []
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.message || errorData.error?.message || `API-Fehler: ${response.status}`)
+      // Benutzerkontext für Mistral erstellen
+      const staffList = staff.length > 0
+        ? staff.map(s => `- ${s.first_name || ''} ${s.last_name || ''} (ID: ${s.id}, Rolle: ${s.role || 'unbekannt'})`).join('\n')
+        : 'Keine Mitarbeiter verfügbar'
+
+      const userContext = `[KONTEXT]
+Aktueller Benutzer: ${currentStaff ? `${currentStaff.first_name || ''} ${currentStaff.last_name || ''} (ID: ${currentStaff.id})` : 'Unbekannt'}
+
+Verfügbare Mitarbeiter:
+${staffList}
+
+Verfügbare Gruppen für Zuweisungen:
+- APO (Apotheker/innen)
+- PTA (Pharmazeutisch-technische Assistenten)
+- PKA (Pharmazeutisch-kaufmännische Angestellte)
+[/KONTEXT]
+
+`
+
+      // Erste Anfrage mit User-Nachricht (inkl. Benutzerkontext)
+      let currentInputs = [{ role: 'user', content: userContext + userMessage }]
+
+      // Loop für Tool-Calls (max 5 Iterationen)
+      for (let i = 0; i < 5; i++) {
+        // Für Folge-Anfragen den append-Endpoint verwenden
+        const isFollowUp = conversationId !== null
+        const url = isFollowUp
+          ? `${MISTRAL_CONVERSATIONS_URL}/${conversationId}`
+          : MISTRAL_CONVERSATIONS_URL
+
+        const requestBody = isFollowUp
+          ? {
+              inputs: currentInputs,
+              stream: false
+            }
+          : {
+              agent_id: agentId,
+              inputs: currentInputs,
+              stream: false
+            }
+
+        console.log(`Request ${i + 1} to ${url}:`, JSON.stringify(requestBody, null, 2))
+
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify(requestBody),
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          console.error('API Error:', errorData)
+          throw new Error(errorData.message || errorData.error?.message || `API-Fehler: ${response.status}`)
+        }
+
+        const data = await response.json()
+        console.log('Mistral API Response:', JSON.stringify(data, null, 2))
+
+        // Conversation ID für Folge-Anfragen speichern
+        if (data.conversation_id) {
+          conversationId = data.conversation_id
+        }
+
+        const { text, sources, toolCalls } = parseConversationResponse(data)
+        console.log('Parsed response - text:', text, 'toolCalls:', toolCalls)
+
+        // Keine Tool-Calls mehr → fertig
+        if (!toolCalls || toolCalls.length === 0) {
+          finalText = text
+          finalSources = sources
+          break
+        }
+
+        console.log('Tool-Calls erhalten:', toolCalls)
+
+        // Tool-Calls ausführen und Ergebnisse sammeln
+        currentInputs = []
+        for (const tc of toolCalls) {
+          console.log(`Führe Tool aus: ${tc.name}`, tc.arguments)
+          const result = await handleToolCall(tc.name, tc.arguments)
+          console.log(`Tool-Ergebnis für ${tc.name}:`, result)
+
+          // Mistral Conversations API Format: function.result
+          currentInputs.push({
+            object: 'entry',
+            type: 'function.result',
+            tool_call_id: tc.id,
+            result: JSON.stringify(result)
+          })
+        }
       }
 
-      const data = await response.json()
-      const { text, sources } = parseConversationResponse(data)
-
-      if (text) {
+      console.log('Final result - text:', finalText, 'sources:', finalSources)
+      if (finalText) {
         setMessages(prev => [...prev, {
           role: 'assistant',
-          content: text,
-          sources: sources.length > 0 ? sources : null,
+          content: finalText,
+          sources: finalSources.length > 0 ? finalSources : null,
         }])
+      } else {
+        console.warn('Keine Text-Antwort vom Assistenten erhalten')
+        setError('Keine Antwort vom Assistenten erhalten')
       }
     } catch (err) {
       console.error('Mistral API Fehler:', err)
