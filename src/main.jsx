@@ -1,30 +1,37 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { QueryClientProvider } from '@tanstack/react-query'
+import { RouterProvider } from '@tanstack/react-router'
 import './index.css'
-import App from './App.jsx'
-import { NavigationProvider, AuthProvider, PharmacyProvider, ThemeProvider, ContactsProvider, EmailProvider, PhotosProvider, ChatProvider } from './context'
+import { queryClient } from './lib/queryClient'
+import { router } from './app/router'
+import { NavigationProvider, AuthProvider, PharmacyProvider, StaffProvider, ThemeProvider, ContactsProvider, EmailProvider, PhotosProvider, ChatProvider } from './context'
 import { ErrorBoundary } from './shared/ui'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ErrorBoundary>
-      <ThemeProvider>
-        <AuthProvider>
-          <PharmacyProvider>
-            <ContactsProvider>
-              <EmailProvider>
-                <PhotosProvider>
-                  <NavigationProvider>
-                    <ChatProvider>
-                      <App />
-                    </ChatProvider>
-                  </NavigationProvider>
-                </PhotosProvider>
-              </EmailProvider>
-            </ContactsProvider>
-          </PharmacyProvider>
-        </AuthProvider>
-      </ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <AuthProvider>
+            <PharmacyProvider>
+              <StaffProvider>
+                <ContactsProvider>
+                  <EmailProvider>
+                    <PhotosProvider>
+                      <NavigationProvider>
+                        <ChatProvider>
+                          <RouterProvider router={router} />
+                        </ChatProvider>
+                      </NavigationProvider>
+                    </PhotosProvider>
+                  </EmailProvider>
+                </ContactsProvider>
+              </StaffProvider>
+            </PharmacyProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
     </ErrorBoundary>
   </StrictMode>,
 )

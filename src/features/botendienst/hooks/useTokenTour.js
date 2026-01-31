@@ -225,6 +225,31 @@ export function useTokenTour(token) {
     }
   }, [token])
 
+  // Feierabend - Arbeitszeit beenden
+  const endDriverShift = useCallback(async () => {
+    if (!token) return false
+
+    try {
+      const { data, error: rpcError } = await supabase
+        .rpc('end_driver_shift_by_token', {
+          tour_token: token,
+        })
+
+      if (rpcError) throw rpcError
+      if (data?.error) throw new Error(data.error)
+
+      // Tour-State aktualisieren
+      if (data) {
+        setTour(data)
+      }
+
+      return true
+    } catch (err) {
+      console.error('Fehler beim Beenden der Schicht:', err)
+      return false
+    }
+  }, [token])
+
   return {
     tour,
     stops,
@@ -239,5 +264,6 @@ export function useTokenTour(token) {
     getStats,
     setDriverName,
     submitTourCompletion,
+    endDriverShift,
   }
 }

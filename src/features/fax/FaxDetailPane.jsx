@@ -42,15 +42,20 @@ function formatDateTime(dateString) {
 
 function getLocalPdfUrl(fax) {
   // Extrahiere den Pfad aus der externen storage_url und nutze lokale Supabase
+  let url = null
   if (fax.storage_url) {
     const match = fax.storage_url.match(/\/storage\/v1\/object\/public\/(.+)$/)
     if (match) {
-      return `${supabaseUrl}/storage/v1/object/public/${match[1]}`
+      url = `${supabaseUrl}/storage/v1/object/public/${match[1]}`
     }
   }
   // Fallback auf storage_path
-  if (fax.storage_path) {
-    return `${supabaseUrl}/storage/v1/object/public/${fax.storage_path}`
+  if (!url && fax.storage_path) {
+    url = `${supabaseUrl}/storage/v1/object/public/${fax.storage_path}`
+  }
+  // Chrome PDF-Viewer Parameter: Toolbar und Sidebar ausblenden
+  if (url) {
+    return `${url}#toolbar=0&navpanes=0`
   }
   return null
 }

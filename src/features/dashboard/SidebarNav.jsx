@@ -106,7 +106,7 @@ const SidebarNav = function SidebarNav({
         <div className="flex-1 overflow-y-auto">
           <nav className="p-2 space-y-1 border-b border-[#1E293B]">
             {navItems.map((item) => {
-              const totalApoUnread = item.id === 'apo' ? unreadCounts.amk + unreadCounts.recall + unreadCounts.lav : 0
+              const totalApoUnread = item.id === 'apo' ? unreadCounts.amk + unreadCounts.recall + unreadCounts.lav + (unreadCounts.rhb || 0) : 0
               const totalPostUnread = item.id === 'post' ? (unreadCounts.fax || 0) + (unreadCounts.email || 0) : 0
               const totalChatUnread = item.id === 'chat' && unreadCounts.chat
                 ? Object.values(unreadCounts.chat).reduce((sum, n) => sum + n, 0)
@@ -241,7 +241,7 @@ const SidebarNav = function SidebarNav({
       <div className="h-full flex flex-col">
         <nav className="py-3 space-y-1 flex flex-col items-center flex-1 pl-1">
           {navItems.map((item) => {
-            const totalApoUnread = item.id === 'apo' ? unreadCounts.amk + unreadCounts.recall + unreadCounts.lav : 0
+            const totalApoUnread = item.id === 'apo' ? unreadCounts.amk + unreadCounts.recall + unreadCounts.lav + (unreadCounts.rhb || 0) : 0
             const totalPostUnread = item.id === 'post' ? (unreadCounts.fax || 0) + (unreadCounts.email || 0) : 0
             const totalChatUnread = item.id === 'chat' && unreadCounts.chat
               ? Object.values(unreadCounts.chat).reduce((sum, n) => sum + n, 0)

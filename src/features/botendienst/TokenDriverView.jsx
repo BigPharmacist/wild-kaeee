@@ -21,6 +21,8 @@ import {
   Trophy,
   Car,
   ChatText,
+  Clock,
+  SignOut,
 } from '@phosphor-icons/react'
 import { useTokenTour } from './hooks/useTokenTour'
 
@@ -54,6 +56,7 @@ export function TokenDriverView({ token }) {
     getStats,
     setDriverName: setDriverNameInDb,
     submitTourCompletion,
+    endDriverShift,
   } = useTokenTour(token)
 
   const [expandedStop, setExpandedStop] = useState(null)
@@ -69,6 +72,8 @@ export function TokenDriverView({ token }) {
   const [vehicleIssues, setVehicleIssues] = useState('')
   const [submittingCompletion, setSubmittingCompletion] = useState(false)
   const [completionSubmitted, setCompletionSubmitted] = useState(false)
+  const [shiftEnded, setShiftEnded] = useState(false)
+  const [endingShift, setEndingShift] = useState(false)
 
   // Fahrer-Name State
   const [customName, setCustomName] = useState('')
@@ -144,6 +149,35 @@ export function TokenDriverView({ token }) {
     if (success) {
       setCompletionSubmitted(true)
     }
+  }
+
+  // Feierabend - Schicht beenden
+  const handleEndShift = async () => {
+    setEndingShift(true)
+    const success = await endDriverShift()
+    setEndingShift(false)
+    if (success) {
+      setShiftEnded(true)
+    }
+  }
+
+  // Prüfen ob Schicht bereits beendet (aus DB)
+  const isShiftEnded = shiftEnded || !!tour?.driver_ended_at
+
+  // Arbeitszeit berechnen
+  const getWorkingTime = () => {
+    const startTime = tour?.driver_started_at
+    const endTime = tour?.driver_ended_at || (shiftEnded ? new Date().toISOString() : null)
+
+    if (!startTime || !endTime) return null
+
+    const start = new Date(startTime)
+    const end = new Date(endTime)
+    const diffMs = end - start
+    const hours = Math.floor(diffMs / (1000 * 60 * 60))
+    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
+
+    return { hours, minutes, start, end }
   }
 
   // Theme für die öffentliche Ansicht
@@ -428,6 +462,76 @@ export function TokenDriverView({ token }) {
                   </p>
                 </div>
               )}
+
+              {/* Feierabend Section */}
+              {!isShiftEnded ? (
+                <div className="mt-6 pt-6 border-t border-gray-200">
+                  <p className="text-sm text-gray-500 mb-3">
+                    Wenn Sie fertig sind, bestätigen Sie hier Ihren Feierabend:
+                  </p>
+                  <button
+                    onClick={handleEndShift}
+                    disabled={endingShift}
+                    className={`w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-medium text-white transition-all ${
+                      endingShift
+                        ? 'bg-amber-400 cursor-wait'
+                        : 'bg-amber-500 hover:bg-amber-600 active:scale-98'
+                    }`}
+                  >
+                    {endingShift ? (
+                      <>
+                        <CircleNotch size={20} className="animate-spin" />
+                        Wird gespeichert...
+                      </>
+                    ) : (
+                      <>
+                        <SignOut size={20} weight="bold" />
+                        Feierabend
+                      </>
+                    )}
+                  </button>
+                </div>
+              ) : (
+                /* Arbeitszeit-Zusammenfassung */
+                <div className="mt-6 pt-6 border-t border-gray-200">
+                  <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
+                    <div className="flex items-center justify-center gap-2 mb-3">
+                      <Clock size={20} className="text-amber-600" />
+                      <span className="font-semibold text-amber-800">Arbeitszeit</span>
+                    </div>
+                    {(() => {
+                      const workTime = getWorkingTime()
+                      if (!workTime) return null
+                      return (
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between text-gray-600">
+                            <span>Beginn:</span>
+                            <span className="font-medium">
+                              {workTime.start.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-gray-600">
+                            <span>Ende:</span>
+                            <span className="font-medium">
+                              {workTime.end.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr
+                            </span>
+                          </div>
+                          <div className="pt-2 border-t border-amber-200 flex justify-between">
+                            <span className="font-medium text-amber-800">Dauer:</span>
+                            <span className="font-bold text-amber-800">
+                              {workTime.hours}h {workTime.minutes}min
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    })()}
+                  </div>
+                  <p className="mt-4 text-sm text-gray-500">
+                    Gute Heimfahrt!
+                  </p>
+                </div>
+              )}
+
               <button
                 onClick={() => setShowCompletionScreen(false)}
                 className="mt-6 w-full px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-100 border border-gray-200"

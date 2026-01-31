@@ -1,6 +1,5 @@
 import { createContext, useContext, useEffect, useMemo } from 'react'
 import { usePharmacies } from '../features/settings/usePharmacies'
-import { useStaff } from '../features/settings/useStaff'
 import { useAuth } from './AuthContext'
 
 const PharmacyContext = createContext(null)
@@ -25,48 +24,15 @@ export function PharmacyProvider({ children }) {
     handleEditSubmit,
   } = usePharmacies()
 
-  const {
-    staff,
-    filteredStaff,
-    staffLoading,
-    staffMessage,
-    editingStaff,
-    staffForm,
-    staffSaveLoading,
-    staffSaveMessage,
-    staffInviteLoading,
-    staffInviteMessage,
-    staffAvatarFile,
-    staffAvatarPreview,
-    currentStaff,
-    staffByAuthId,
-    showExited,
-    staffViewMode,
-    fetchStaff,
-    openStaffModal,
-    closeStaffModal,
-    handleStaffInput,
-    handleStaffAvatarChange,
-    linkCurrentUser,
-    handleStaffSubmit,
-    handleSendInvite,
-    setShowExited,
-    setStaffViewMode,
-    isExited,
-    toggleTrackingEnabled,
-  } = useStaff({ session, pharmacies })
-
   // Daten laden wenn Session vorhanden
   useEffect(() => {
     if (session) {
       fetchPharmacies()
-      fetchStaff()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session])
 
   const value = useMemo(() => ({
-    // Pharmacies
     pharmacies,
     pharmaciesLoading,
     pharmaciesMessage,
@@ -81,38 +47,7 @@ export function PharmacyProvider({ children }) {
     openEditModal,
     closeEditModal,
     handleEditSubmit,
-
-    // Staff
-    staff,
-    filteredStaff,
-    staffLoading,
-    staffMessage,
-    editingStaff,
-    staffForm,
-    staffSaveLoading,
-    staffSaveMessage,
-    staffInviteLoading,
-    staffInviteMessage,
-    staffAvatarFile,
-    staffAvatarPreview,
-    currentStaff,
-    staffByAuthId,
-    showExited,
-    staffViewMode,
-    fetchStaff,
-    openStaffModal,
-    closeStaffModal,
-    handleStaffInput,
-    handleStaffAvatarChange,
-    linkCurrentUser,
-    handleStaffSubmit,
-    handleSendInvite,
-    setShowExited,
-    setStaffViewMode,
-    isExited,
-    toggleTrackingEnabled,
   }), [
-    // Pharmacies
     pharmacies,
     pharmaciesLoading,
     pharmaciesMessage,
@@ -127,35 +62,6 @@ export function PharmacyProvider({ children }) {
     openEditModal,
     closeEditModal,
     handleEditSubmit,
-    // Staff
-    staff,
-    filteredStaff,
-    staffLoading,
-    staffMessage,
-    editingStaff,
-    staffForm,
-    staffSaveLoading,
-    staffSaveMessage,
-    staffInviteLoading,
-    staffInviteMessage,
-    staffAvatarFile,
-    staffAvatarPreview,
-    currentStaff,
-    staffByAuthId,
-    showExited,
-    staffViewMode,
-    fetchStaff,
-    openStaffModal,
-    closeStaffModal,
-    handleStaffInput,
-    handleStaffAvatarChange,
-    linkCurrentUser,
-    handleStaffSubmit,
-    handleSendInvite,
-    setShowExited,
-    setStaffViewMode,
-    isExited,
-    toggleTrackingEnabled,
   ])
 
   return (
@@ -165,10 +71,29 @@ export function PharmacyProvider({ children }) {
   )
 }
 
+/**
+ * Hook für vollständigen Pharmacy-Context Zugriff
+ */
 export function usePharmacy() {
   const context = useContext(PharmacyContext)
   if (!context) {
     throw new Error('usePharmacy must be used within PharmacyProvider')
   }
   return context
+}
+
+/**
+ * Leichtgewichtiger Hook nur für Pharmacy-Daten (ohne Modal-State)
+ * Verwendet von StaffContext und anderen Contexts
+ */
+export function usePharmacyData() {
+  const context = useContext(PharmacyContext)
+  if (!context) {
+    throw new Error('usePharmacyData must be used within PharmacyProvider')
+  }
+  return {
+    pharmacies: context.pharmacies,
+    pharmaciesLoading: context.pharmaciesLoading,
+    pharmacyLookup: context.pharmacyLookup,
+  }
 }

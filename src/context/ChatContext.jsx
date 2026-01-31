@@ -1,14 +1,14 @@
 import { createContext, useContext, useMemo } from 'react'
 import { useChat, useChatUnreadCounts } from '../features/chat'
 import { useAuth } from './AuthContext'
-import { usePharmacy } from './PharmacyContext'
+import { useStaff } from './StaffContext'
 import { useNavigation } from './NavigationContext'
 
 const ChatContext = createContext(null)
 
 export function ChatProvider({ children }) {
   const { session } = useAuth()
-  const { staff } = usePharmacy()
+  const { staff } = useStaff()
   const { activeView, chatTab } = useNavigation()
 
   const directChatUserId = chatTab === 'group' ? null : chatTab
