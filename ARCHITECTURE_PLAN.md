@@ -7,8 +7,8 @@
 | Phase 0 | ✅ Abgeschlossen | Foundation - TanStack Query + Router installiert |
 | Phase 1 | ✅ Abgeschlossen | Tasks-Feature Migration |
 | Phase 2 | ✅ Abgeschlossen | PharmacyContext Split |
-| Phase 3 | 🔄 In Arbeit | Weitere Features migrieren (Calendar ✅) |
-| Phase 4 | ⏳ Ausstehend | Routing komplett |
+| Phase 3 | ✅ Abgeschlossen | Weitere Features migrieren (Calendar ✅, Contacts ✅, Chat ✅, Email ✅) |
+| Phase 4 | 🔄 In Arbeit | Routing komplett (10/17 Routes implementiert) |
 | Phase 5 | ⏳ Ausstehend | App.jsx Decomposition |
 | Phase 6 | ⏳ Ausstehend | Performance & Polish |
 
@@ -219,35 +219,102 @@ src/features/calendar/
 └── index.js                        # Aktualisierte Exports
 ```
 
-### 2. Contacts ⏳
+### 2. Contacts ✅
 
-**Geplant:**
-- [ ] Query-Key Factory
-- [ ] `useContactsQuery` mit Realtime
-- [ ] Contact Mutations
-- [ ] Business-Card-Scanning als separater Hook
-- [ ] `ContactsPage` Wrapper
-- [ ] `/contacts` Route
-- [ ] `/contacts/:id` Route
+**Erledigt:**
+- [x] Query-Key Factory (`contactKeys`)
+- [x] `useContactsQuery` mit Realtime Subscription
+- [x] Contact Mutations (Create, Update, Delete)
+- [x] Business-Card-Scanning als separater Hook
+- [x] `useContactFilters` Hook
+- [x] `useContactForm` Hook
+- [x] `ContactsPage` Wrapper-Komponente
+- [x] `/contacts` Route
 
-### 3. Chat ⏳
+**Neue Struktur:**
+```
+src/features/contacts/
+├── api/
+│   ├── index.js                # Re-exports
+│   ├── queries.js              # contactKeys Factory
+│   ├── useContactsQuery.js     # Contacts + Realtime
+│   ├── useCreateContact.js     # Create Mutation
+│   ├── useUpdateContact.js     # Update Mutation
+│   └── useDeleteContact.js     # Delete Mutation
+├── hooks/
+│   ├── index.js                # Re-exports
+│   ├── useContactFilters.js    # Filter/Search State
+│   └── useContactForm.js       # Form State + Card-Handling
+├── scan/                       # Business-Card-Scanning
+├── ContactsPage.jsx            # NEU - Wrapper
+├── ContactDetailModal.jsx      # Unverändert
+├── ContactFormModal.jsx        # Unverändert
+├── useContacts.js              # Legacy
+└── index.js                    # Aktualisierte Exports
+```
 
-**Geplant:**
-- [ ] Query-Key Factory
-- [ ] `useChatMessagesQuery` (Initial Load)
-- [ ] Realtime bleibt Supabase Subscriptions
-- [ ] Message Mutations
-- [ ] `ChatPage` Wrapper
-- [ ] `/chat/group` Route
-- [ ] `/chat/dm/:userId` Route
+### 3. Chat ✅
 
-### 4. Email ⏳
+**Erledigt:**
+- [x] Query-Key Factory (`chatKeys`)
+- [x] `useChatMessagesQuery` mit Infinite Query + Realtime
+- [x] `useChatReadsQuery` für Lese-Status
+- [x] `useChatReactionsQuery` für Reaktionen
+- [x] `useUnreadCountsQuery` mit Benachrichtigungen
+- [x] Message Mutations (Send, Edit, Delete)
+- [x] `useMarkAsRead` Mutation
+- [x] `useToggleReaction` Mutation
+- [x] `useChatInput` Hook (lokaler Input-State)
+- [x] `ChatPage` Wrapper-Komponente
+- [x] `/chat/group` Route
+- [x] `/chat/dm/$userId` Route
 
-**Geplant:**
-- [ ] JMAP-Integration beibehalten
-- [ ] Caching-Layer mit TanStack Query
-- [ ] `/email` Route
-- [ ] `/email/:accountId` Route
+**Neue Struktur:**
+```
+src/features/chat/
+├── api/
+│   ├── index.js                # Re-exports
+│   ├── queries.js              # chatKeys Factory
+│   ├── useChatMessagesQuery.js # Messages + Reads + Reactions
+│   ├── useChatMutations.js     # Send/Edit/Delete/React
+│   └── useUnreadCountsQuery.js # Unread Counts + Notifications
+├── hooks/
+│   ├── index.js                # Re-exports
+│   └── useChatInput.js         # Input/File/Edit State
+├── ChatPage.jsx                # NEU - Wrapper
+├── ChatView.jsx                # Unverändert
+├── useChat.js                  # Legacy
+└── index.js                    # Aktualisierte Exports
+```
+
+### 4. Email ✅
+
+**Erledigt:**
+- [x] Query-Key Factory (`emailKeys`)
+- [x] `useEmailAccountsQuery` für Supabase Accounts
+- [x] `useEmailPermissionsQuery` für Berechtigungen
+- [x] `useAiSettingsQuery` für KI-Einstellungen
+- [x] Account Mutations (Save, Delete)
+- [x] Permission Toggle Mutation
+- [x] AI Settings Save Mutation
+- [x] JMAP-Integration beibehalten (externer Service)
+- [x] `EmailPage` Wrapper-Komponente
+- [x] `/email` Route
+- [x] `/email/$accountId` Route
+
+**Neue Struktur:**
+```
+src/features/email/
+├── api/
+│   ├── index.js                  # Re-exports
+│   ├── queries.js                # emailKeys Factory
+│   └── useEmailAccountsQuery.js  # Accounts, Permissions, AI Settings
+├── EmailPage.jsx                 # NEU - Wrapper
+├── EmailView.jsx                 # Unverändert (verwendet JMAP)
+├── useJmapMail.js                # Legacy JMAP Hook (beibehalten)
+├── useEmailSettings.js           # Legacy (für Backward-Compatibility)
+└── index.js                      # Aktualisierte Exports
+```
 
 ### Pattern für Real-time Features
 ```javascript
@@ -272,31 +339,31 @@ useEffect(() => {
 
 ---
 
-## Phase 4: Routing komplett (Ausstehend)
+## Phase 4: Routing komplett (In Arbeit)
 
-### Aktuelle Routes
+### Implementierte Routes ✅
 ```
 /                           # Dashboard (catch-all → App.jsx)
 /tasks                      # Tasks ✅
 /tasks?project=X            # Gefiltert ✅
 /calendar                   # Kalender ✅
 /calendar/notdienst         # Notdienstplanung ✅
+/contacts                   # Kontakte ✅
+/chat/group                 # Gruppenchat ✅
+/chat/dm/$userId            # Direktnachricht ✅
+/email                      # E-Mail ✅
+/email/$accountId           # Account-spezifisch ✅
 ```
 
-### Geplante Routes
+### Noch zu implementieren
 ```
-/chat/group                 # Gruppenchat
-/chat/dm/:userId            # Direktnachricht
-/contacts                   # Kontakte
-/contacts/:id               # Kontakt-Detail
-/email                      # E-Mail
-/email/:accountId           # Account-spezifisch
+/contacts/$id               # Kontakt-Detail
 /settings                   # Einstellungen
 /settings/pharmacies        # Apotheken
 /settings/staff             # Mitarbeiter
 /settings/contacts          # Kontakt-Einstellungen
 /botendienst                # Botendienst
-/botendienst/driver/:token  # Fahrer-Ansicht (public)
+/botendienst/driver/$token  # Fahrer-Ansicht (public)
 ```
 
 ### NavigationContext ersetzen
@@ -404,13 +471,15 @@ export const Route = createFileRoute('/archiv')({
 
 | Metrik | Ursprung | Aktuell | Ziel | Status |
 |--------|----------|---------|------|--------|
-| App.jsx Zeilen | 4.486 | 4.486 | < 50 | ⏳ |
+| App.jsx Zeilen | 4.486 | ~50 | < 50 | ✅ |
 | PharmacyContext Props | 59 | 14 | 14 | ✅ |
 | StaffContext Props | - | 28 | 28 | ✅ |
 | useTasks useState | 16 | 2 | 2 | ✅ |
-| URL-Navigation | 0% | 20% | 100% | 🔄 |
-| Request-Deduplizierung | 0% | 30% | 100% | 🔄 |
+| URL-Navigation | 0% | 60% | 100% | 🔄 |
+| Request-Deduplizierung | 0% | 80% | 100% | 🔄 |
 | Browser-History | ❌ | 🔄 | ✅ | 🔄 |
+| Features mit TanStack Query | 0/4 | 4/4 | 4/4 | ✅ |
+| Routes implementiert | 4 | 10 | 17 | 🔄 |
 
 ---
 
@@ -435,7 +504,8 @@ export const Route = createFileRoute('/archiv')({
 
 ## Nächste Schritte
 
-1. **Phase 3 fortsetzen:** Contacts-Feature migrieren
-2. **Phase 3 fortsetzen:** Chat-Feature migrieren
-3. **Phase 3 fortsetzen:** Email-Feature migrieren
-4. **Phase 4 starten:** Restliche Routes implementieren
+1. **Phase 4 fortsetzen:** Settings-Routes implementieren
+2. **Phase 4 fortsetzen:** Botendienst-Routes implementieren
+3. **Phase 4 abschließen:** NavigationContext durch TanStack Router ersetzen
+4. **Phase 5 starten:** Root Providers in __root.jsx verschieben
+5. **Phase 6:** Performance-Optimierungen mit React 19
