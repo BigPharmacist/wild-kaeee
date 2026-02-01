@@ -1,5 +1,5 @@
-import { memo } from 'react'
-import { Sparkle, CheckCircle, Warning, Clock } from '@phosphor-icons/react'
+import { memo, useState } from 'react'
+import { Sparkle, CheckCircle, Warning, Clock, CaretLeft, CaretRight } from '@phosphor-icons/react'
 
 const DashboardHome = memo(function DashboardHome({
   theme,
@@ -34,7 +34,14 @@ const DashboardHome = memo(function DashboardHome({
   dashboardTasksLoading,
   dashboardTasksError,
   tasksByDue,
+  // Plan Widget Props
+  planData,
+  planLoading,
+  planError,
 }) {
+  // State für Team-Widget Datum (Offset von heute: 0 = heute, 1 = morgen, -1 = gestern)
+  const [planDayOffset, setPlanDayOffset] = useState(0)
+
   return (
   <>
     <h2 className="text-2xl lg:text-3xl font-semibold mb-6 tracking-tight">Dashboard</h2>
@@ -145,10 +152,11 @@ const DashboardHome = memo(function DashboardHome({
           endOfWeek.setDate(today.getDate() + (today.getDay() === 0 ? 0 : daysUntilSunday))
           const endOfWeekStr = `${endOfWeek.getFullYear()}-${String(endOfWeek.getMonth() + 1).padStart(2, '0')}-${String(endOfWeek.getDate()).padStart(2, '0')}`
 
-          // Notdienst-Kalender ausfiltern
+          // Notdienst-Kalender ausfiltern (nur für "Diese Woche" und "Nächste 5")
           const isNotNotdienst = (e) => e.calendarName !== 'Notdienst'
 
-          const todayEvents = dashboardEvents.filter((e) => e.start_time.substring(0, 10) === todayStr && isNotNotdienst(e))
+          // Heute: ALLE Events inkl. Notdienst
+          const todayEvents = dashboardEvents.filter((e) => e.start_time.substring(0, 10) === todayStr)
           const weekEvents = dashboardEvents.filter((e) => {
             const eventDate = e.start_time.substring(0, 10)
             return eventDate > todayStr && eventDate <= endOfWeekStr && isNotNotdienst(e)
@@ -585,6 +593,204 @@ const DashboardHome = memo(function DashboardHome({
             <CheckCircle size={32} weight="light" className="text-[#0D9488] mb-2" />
             <p className={theme.textMuted}>Keine offenen Aufgaben!</p>
           </div>
+        )}
+      </div>
+
+      {/* Team Widget - Dienstplan */}
+      <div className={`${theme.panel} rounded-2xl p-4 border ${theme.border} ${theme.cardShadow} flex flex-col gap-3`}>
+        <div className="flex items-center justify-between">
+          <h3 className={`text-lg font-medium ${theme.text}`}>Team</h3>
+          <button
+            type="button"
+            onClick={() => setActiveView('plan')}
+            className={`text-xs ${theme.accentText} hover:underline`}
+          >
+            Vollständiger Plan
+          </button>
+        </div>
+
+        {planLoading && (
+          <p className={`text-xs ${theme.textMuted}`}>Dienstplan wird geladen...</p>
+        )}
+        {!planLoading && planError && (
+          <p className="text-rose-400 text-sm">{planError}</p>
+        )}
+        {!planLoading && !planError && planData && (() => {
+          // Alle verfügbaren Tage sortiert nach Datum
+          const availableDates = Object.keys(planData.days).sort((a, b) => {
+            const [dA, mA, yA] = a.split('.').map(Number)
+            const [dB, mB, yB] = b.split('.').map(Number)
+            return new Date(yA, mA - 1, dA) - new Date(yB, mB - 1, dB)
+          })
+
+          if (availableDates.length === 0) {
+            return <p className={`text-sm ${theme.textMuted}`}>Keine Plandaten verfügbar.</p>
+          }
+
+          // Heute als Referenz
+          const today = new Date()
+          today.setHours(0, 0, 0, 0)
+          const todayStr = today.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+
+          // Finde Startindex: heute oder der nächstgelegene Zukunftstag
+          let startIndex = availableDates.findIndex(dateStr => dateStr === todayStr)
+          if (startIndex === -1) {
+            // Heute nicht verfügbar - finde nächsten Tag >= heute
+            startIndex = availableDates.findIndex(dateStr => {
+              const [d, m, y] = dateStr.split('.').map(Number)
+              return new Date(y, m - 1, d) >= today
+            })
+            if (startIndex === -1) startIndex = availableDates.length - 1 // Fallback: letzter Tag
+          }
+
+          // planDayOffset ist jetzt relativ zum Startindex
+          let currentIndex = startIndex + planDayOffset
+          if (currentIndex < 0) currentIndex = 0
+          if (currentIndex >= availableDates.length) currentIndex = availableDates.length - 1
+
+          const selectedDateStr = availableDates[currentIndex]
+          const dayData = planData.days[selectedDateStr]
+
+          const hasPrevDay = currentIndex > 0
+          const hasNextDay = currentIndex < availableDates.length - 1
+
+          // Label berechnen
+          const [d, m, y] = selectedDateStr.split('.').map(Number)
+          const selectedDate = new Date(y, m - 1, d)
+          const isToday = selectedDateStr === todayStr
+
+          const diffDays = Math.round((selectedDate - today) / (1000 * 60 * 60 * 24))
+          const dayLabel = isToday ? 'Heute' : diffDays === 1 ? 'Morgen' : diffDays === -1 ? 'Gestern' : selectedDate.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' })
+
+          const START_HOUR = 7
+          const END_HOUR = 19
+          const TOTAL_HOURS = END_HOUR - START_HOUR
+          const hours = [7, 10, 13, 16, 19]
+
+          const parseTime = (timeStr) => {
+            if (!timeStr) return null
+            const [h, m] = timeStr.split(':').map(Number)
+            return h + m / 60
+          }
+
+          const getBarStyle = (start, end) => {
+            let displayStart = Math.max(START_HOUR, Math.min(END_HOUR, start))
+            let displayEnd = Math.max(START_HOUR, Math.min(END_HOUR, end <= start ? END_HOUR : end))
+
+            const left = ((displayStart - START_HOUR) / TOTAL_HOURS) * 100
+            const width = ((displayEnd - displayStart) / TOTAL_HOURS) * 100
+
+            return { left: `${left}%`, width: `${Math.max(0, width)}%` }
+          }
+
+          // Nur anwesende Mitarbeiter filtern (haben Arbeitszeit und sind nicht abwesend)
+          const presentByGroup = Object.entries(dayData.groups).map(([groupName, employees]) => {
+            const present = employees.filter((emp) => {
+              const startTime = parseTime(emp.workStart)
+              const endTime = parseTime(emp.workStop)
+              const hasWork = startTime !== null && endTime !== null && emp.workStart !== emp.workStop
+              const isAbsent = emp.status === 'Urlaub' || emp.status === 'Krank'
+              return hasWork && !isAbsent
+            })
+            return { groupName, present }
+          }).filter(g => g.present.length > 0)
+
+          const totalPresent = presentByGroup.reduce((sum, g) => sum + g.present.length, 0)
+
+          if (totalPresent === 0) {
+            return (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setPlanDayOffset(o => o - 1)}
+                    disabled={!hasPrevDay}
+                    className={`p-1 rounded ${hasPrevDay ? theme.bgHover + ' ' + theme.text : theme.textMuted + ' opacity-40 cursor-not-allowed'}`}
+                  >
+                    <CaretLeft size={16} />
+                  </button>
+                  <span className={`text-xs font-medium ${isToday ? theme.accentText : theme.textSecondary}`}>{dayLabel}</span>
+                  <button
+                    type="button"
+                    onClick={() => setPlanDayOffset(o => o + 1)}
+                    disabled={!hasNextDay}
+                    className={`p-1 rounded ${hasNextDay ? theme.bgHover + ' ' + theme.text : theme.textMuted + ' opacity-40 cursor-not-allowed'}`}
+                  >
+                    <CaretRight size={16} />
+                  </button>
+                </div>
+                <p className={`text-sm ${theme.textMuted} text-center`}>Niemand im Dienst.</p>
+              </div>
+            )
+          }
+
+          const showGroupNames = presentByGroup.length > 1
+
+          return (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setPlanDayOffset(o => o - 1)}
+                  disabled={!hasPrevDay}
+                  className={`p-1 rounded ${hasPrevDay ? theme.bgHover + ' ' + theme.text : theme.textMuted + ' opacity-40 cursor-not-allowed'}`}
+                >
+                  <CaretLeft size={16} />
+                </button>
+                <span className={`text-xs font-medium ${isToday ? theme.accentText : theme.textSecondary}`}>{dayLabel}</span>
+                <button
+                  type="button"
+                  onClick={() => setPlanDayOffset(o => o + 1)}
+                  disabled={!hasNextDay}
+                  className={`p-1 rounded ${hasNextDay ? theme.bgHover + ' ' + theme.text : theme.textMuted + ' opacity-40 cursor-not-allowed'}`}
+                >
+                  <CaretRight size={16} />
+                </button>
+              </div>
+              <div className="flex justify-between text-[9px] text-[#94A3B8] mb-1">
+                {hours.map((h) => (
+                  <span key={h}>{h}</span>
+                ))}
+              </div>
+
+              {presentByGroup.map(({ groupName, present }) => (
+                <div key={groupName}>
+                  {showGroupNames && (
+                    <p className={`text-[10px] font-medium mb-1 ${theme.textMuted}`}>{groupName}</p>
+                  )}
+                  <div className="space-y-1">
+                    {present.map((emp, idx) => {
+                      const startTime = parseTime(emp.workStart)
+                      const endTime = parseTime(emp.workStop)
+
+                      return (
+                        <div
+                          key={`${emp.firstName}-${emp.lastName}-${idx}`}
+                          className="relative h-5 rounded bg-[#F1F5F9]"
+                        >
+                          <div
+                            className="absolute top-0.5 bottom-0.5 bg-[#334155] rounded flex items-center justify-center overflow-hidden"
+                            style={getBarStyle(startTime, endTime)}
+                          >
+                            <span className="text-[9px] font-medium text-white truncate px-1">
+                              {emp.firstName}
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+
+              <p className={`text-[10px] ${theme.textMuted} pt-1`}>
+                {totalPresent} Mitarbeiter heute anwesend
+              </p>
+            </div>
+          )
+        })()}
+        {!planLoading && !planError && !planData && (
+          <p className={theme.textMuted}>Keine Dienstplandaten verfügbar.</p>
         )}
       </div>
     </div>

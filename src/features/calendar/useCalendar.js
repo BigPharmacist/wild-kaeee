@@ -170,24 +170,52 @@ export default function useCalendar({ session, activeView }) {
       return
     }
 
-    const { data: eventsData, error } = await supabase
+    // Notdienst-Kalender-ID ermitteln
+    const notdienstCalendar = calendarsList.find((c) => c.name === 'Notdienst')
+    const notdienstCalendarId = notdienstCalendar?.id
+
+    // 1. Events der nächsten 7 Tage (für Heute/Diese Woche)
+    const { data: weekEventsData } = await supabase
       .from('calendar_events')
       .select('id, title, start_time, end_time, all_day, calendar_id, location')
       .gte('start_time', today.toISOString())
       .lte('start_time', endOfWeek.toISOString())
       .order('start_time')
 
-    if (!error && eventsData) {
-      const enrichedEvents = eventsData.map((event) => {
-        const cal = calendarsList.find((c) => c.id === event.calendar_id)
-        return {
-          ...event,
-          calendarName: cal?.name || '',
-          calendarColor: cal?.color || '#0D9488',
-        }
-      })
-      setDashboardEvents(enrichedEvents)
+    // 2. Nächste 5 Nicht-Notdienst-Termine (ohne Zeitlimit)
+    let nextFiveQuery = supabase
+      .from('calendar_events')
+      .select('id, title, start_time, end_time, all_day, calendar_id, location')
+      .gte('start_time', today.toISOString())
+      .order('start_time')
+      .limit(20) // Mehr holen, falls Notdienst-Events dabei sind
+
+    if (notdienstCalendarId) {
+      nextFiveQuery = nextFiveQuery.neq('calendar_id', notdienstCalendarId)
     }
+
+    const { data: nextEventsData } = await nextFiveQuery
+
+    // Events zusammenführen (Duplikate vermeiden)
+    const weekEvents = weekEventsData || []
+    const nextEvents = nextEventsData || []
+    const allEventIds = new Set(weekEvents.map((e) => e.id))
+    const uniqueNextEvents = nextEvents.filter((e) => !allEventIds.has(e.id))
+    const combinedEvents = [...weekEvents, ...uniqueNextEvents]
+
+    const enrichedEvents = combinedEvents.map((event) => {
+      const cal = calendarsList.find((c) => c.id === event.calendar_id)
+      return {
+        ...event,
+        calendarName: cal?.name || '',
+        calendarColor: cal?.color || '#0D9488',
+      }
+    })
+
+    // Nach start_time sortieren
+    enrichedEvents.sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
+
+    setDashboardEvents(enrichedEvents)
     setDashboardEventsLoading(false)
   }
 
