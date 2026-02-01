@@ -79,6 +79,7 @@ export function createSecondaryNavMap({
     ],
     dokumente: [
       { id: 'briefe', label: 'Briefe' },
+      { id: 'word', label: 'Word' },
       { id: 'alle', label: 'Alle Dokumente' },
       { id: 'rechnungen', label: 'Rechnungen' },
       { id: 'vertraege', label: 'Verträge' },

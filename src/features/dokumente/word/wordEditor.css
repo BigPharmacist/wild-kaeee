@@ -1,0 +1,88 @@
+/* Umo Editor Styles isolieren */
+.umo-editor-container {
+  /* Container fills parent completely */
+  width: 100%;
+  height: 100%;
+  min-height: 600px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* Tailwind-Konflikte vermeiden */
+.umo-editor-container * {
+  box-sizing: border-box;
+}
+
+/* Editor fills container */
+.umo-editor-container > div {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+}
+
+/* Fix focus and click issues in editor content area */
+.umo-editor-container .ProseMirror {
+  outline: none;
+  cursor: text;
+  min-height: 100%;
+}
+
+.umo-editor-container .ProseMirror:focus {
+  outline: none;
+}
+
+/* Ensure the editor content area is clickable and captures events */
+.umo-editor-container .umo-editor__main,
+.umo-editor-container .umo-editor__body,
+.umo-editor-container .umo-page,
+.umo-editor-container .umo-page__content,
+.umo-editor-container .umo-editor {
+  cursor: text;
+  position: relative;
+}
+
+/* Ensure all interactive elements work */
+.umo-editor-container * {
+  pointer-events: auto;
+}
+
+/* Prevent click events from escaping the editor */
+.umo-editor-container {
+  isolation: isolate;
+}
+
+/* Fix pointer events for toolbar and menus */
+.umo-editor-container button,
+.umo-editor-container [role="button"],
+.umo-editor-container .umo-toolbar,
+.umo-editor-container .umo-toolbar *,
+.umo-editor-container .t-popup,
+.umo-editor-container .t-popup *,
+.umo-editor-container .t-dropdown,
+.umo-editor-container .t-dropdown * {
+  pointer-events: auto !important;
+}
+
+/* Ensure dropdowns and popups appear above everything */
+.umo-editor-container .t-popup,
+.umo-editor-container .t-dropdown,
+.umo-editor-container .t-popup__content {
+  z-index: 9999 !important;
+}
+
+/* Reset Tailwind button styles inside editor */
+.umo-editor-container button {
+  background-color: initial;
+  border: initial;
+  padding: initial;
+  margin: initial;
+  font-size: initial;
+  line-height: initial;
+  cursor: pointer;
+}
+
+/* Optional: Theme-Anpassungen für Kaeee */
+.umo-editor-container .umo-toolbar {
+  border-radius: 0;
+}

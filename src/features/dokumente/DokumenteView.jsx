@@ -1,14 +1,21 @@
 import PagedBriefEditor from './PagedBriefEditor'
+import { WordView } from './word'
 
 const DokumenteView = ({
   theme,
   dokumenteTab,
   pharmacies,
   aiSettings,
+  currentPharmacyId,
 }) => {
   // Briefe-Tab hat eigenes Layout
   if (dokumenteTab === 'briefe') {
     return <PagedBriefEditor theme={theme} pharmacies={pharmacies} aiSettings={aiSettings} />
+  }
+
+  // Word-Tab hat eigenes Layout
+  if (dokumenteTab === 'word') {
+    return <WordView theme={theme} pharmacies={pharmacies} currentPharmacyId={currentPharmacyId} />
   }
 
   return (

@@ -671,7 +671,7 @@ function DashboardLayout() {
   }, [session, activeView, secondaryTab])
 
   useEffect(() => {
-    if (session && activeView === 'plan' && !planData && !planLoading && !planError) {
+    if (session && (activeView === 'plan' || activeView === 'dashboard') && !planData && !planLoading && !planError) {
       fetchPlanData()
     }
   }, [activeView, session, planData, planLoading, planError])
@@ -997,7 +997,7 @@ function DashboardLayout() {
 
           {/* Main Content */}
           <main className={`flex-1 overflow-auto min-h-0 ${isDriverMode ? '' : 'p-4 lg:p-8'}`}>
-            <div className={activeView === 'chat' || activeView === 'post' ? 'w-full' : 'max-w-5xl'}>
+            <div className={activeView === 'chat' || activeView === 'post' || activeView === 'dokumente' ? 'w-full' : 'max-w-5xl'}>
               {activeView === 'dashboard' && (
                 <>
                   {canTrack && (
@@ -1045,6 +1045,9 @@ function DashboardLayout() {
                     dashboardTasksLoading={dashboardTasksLoading}
                     dashboardTasksError={dashboardTasksError}
                     tasksByDue={tasksByDue}
+                    planData={planData}
+                    planLoading={planLoading}
+                    planError={planError}
                   />
                 </>
               )}
@@ -1284,6 +1287,7 @@ function DashboardLayout() {
                   dokumenteTab={dokumenteTab}
                   pharmacies={pharmacies}
                   aiSettings={aiSettings}
+                  currentPharmacyId={pharmacies?.[0]?.id || null}
                 />
               )}
 
