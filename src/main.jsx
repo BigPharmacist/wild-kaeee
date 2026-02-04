@@ -6,7 +6,7 @@ import './index.css'
 import { queryClient } from './lib/queryClient'
 import { router } from './app/router'
 import { NavigationProvider, AuthProvider, PharmacyProvider, StaffProvider, ThemeProvider, ContactsProvider, EmailProvider, PhotosProvider, ChatProvider } from './context'
-import { ErrorBoundary } from './shared/ui'
+import { ErrorBoundary, ConnectionStatus } from './shared/ui'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -22,6 +22,7 @@ createRoot(document.getElementById('root')).render(
                       <NavigationProvider>
                         <ChatProvider>
                           <RouterProvider router={router} />
+                          <ConnectionStatus />
                         </ChatProvider>
                       </NavigationProvider>
                     </PhotosProvider>

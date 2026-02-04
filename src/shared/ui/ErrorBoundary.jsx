@@ -4,40 +4,45 @@ import { Component } from 'react'
  * Error Boundary - Fängt JavaScript-Fehler in Child-Komponenten ab
  * und zeigt eine Fallback-UI anstatt die ganze App abstürzen zu lassen.
  *
- * Verwendung:
- * <ErrorBoundary>
- *   <MeineKomponente />
- * </ErrorBoundary>
- *
- * Mit eigenem Fallback:
- * <ErrorBoundary fallback={<MeinFallback />}>
- *   <MeineKomponente />
- * </ErrorBoundary>
+ * Features:
+ * - Erkennt Chunk-Load-Fehler und bietet automatischen Retry
+ * - Zeigt benutzerfreundliche Fehlermeldungen
+ * - Unterstützt benutzerdefinierte Fallback-UI
  */
 class ErrorBoundary extends Component {
   constructor(props) {
     super(props)
-    this.state = { hasError: false, error: null, errorInfo: null }
+    this.state = { hasError: false, error: null, errorInfo: null, isChunkError: false }
   }
 
   static getDerivedStateFromError(error) {
-    // State aktualisieren, damit beim nächsten Render die Fallback-UI angezeigt wird
-    return { hasError: true, error }
+    // Prüfen ob es ein Chunk-Load-Fehler ist (lazy import fehlgeschlagen)
+    const isChunkError = error?.name === 'ChunkLoadError' ||
+      error?.message?.includes('Loading chunk') ||
+      error?.message?.includes('Failed to fetch dynamically imported module') ||
+      error?.message?.includes('Unable to preload CSS')
+
+    return { hasError: true, error, isChunkError }
   }
 
   componentDidCatch(error, errorInfo) {
-    // Fehler loggen (hier könnte auch ein Error-Reporting-Service angebunden werden)
     console.error('ErrorBoundary hat einen Fehler gefangen:', error)
     console.error('Komponenten-Stack:', errorInfo.componentStack)
-
     this.setState({ errorInfo })
-
-    // Optional: Fehler an externen Service senden
-    // reportError(error, errorInfo)
   }
 
   handleReset = () => {
-    this.setState({ hasError: false, error: null, errorInfo: null })
+    this.setState({ hasError: false, error: null, errorInfo: null, isChunkError: false })
+  }
+
+  handleReload = () => {
+    // Bei Chunk-Fehlern: Cache leeren und neu laden
+    if ('caches' in window) {
+      caches.keys().then(names => {
+        names.forEach(name => caches.delete(name))
+      })
+    }
+    window.location.reload()
   }
 
   render() {
@@ -47,7 +52,40 @@ class ErrorBoundary extends Component {
         return this.props.fallback
       }
 
-      // Standard Fallback-UI
+      // Spezielle UI für Chunk-Load-Fehler (Netzwerkprobleme)
+      if (this.state.isChunkError) {
+        return (
+          <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-lg max-w-lg w-full p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+                  </svg>
+                </div>
+                <h2 className="text-xl font-semibold text-[#1E293B]">
+                  Verbindungsproblem
+                </h2>
+              </div>
+
+              <p className="text-[#64748B] mb-4">
+                Ein Teil der App konnte nicht geladen werden. Möglicherweise gibt es ein Netzwerkproblem oder die App wurde aktualisiert.
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={this.handleReload}
+                  className="flex-1 px-4 py-2.5 bg-[#F59E0B] hover:bg-[#D97706] text-white font-medium rounded-lg transition-colors"
+                >
+                  App neu laden
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      }
+
+      // Standard Fallback-UI für andere Fehler
       return (
         <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-lg max-w-lg w-full p-6">
@@ -66,7 +104,7 @@ class ErrorBoundary extends Component {
               Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es erneut oder lade die Seite neu.
             </p>
 
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            {import.meta.env.DEV && this.state.error && (
               <details className="mb-4">
                 <summary className="text-sm text-[#94A3B8] cursor-pointer hover:text-[#64748B]">
                   Technische Details anzeigen
@@ -86,7 +124,7 @@ class ErrorBoundary extends Component {
                 Erneut versuchen
               </button>
               <button
-                onClick={() => window.location.reload()}
+                onClick={this.handleReload}
                 className="flex-1 px-4 py-2.5 bg-[#E2E8F0] hover:bg-[#CBD5E1] text-[#1E293B] font-medium rounded-lg transition-colors"
               >
                 Seite neu laden

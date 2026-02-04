@@ -198,6 +198,18 @@ export function AuthProvider({ children }) {
     handleSignOut,
   ])
 
+  // Loading-Spinner während der Initialisierung anzeigen
+  if (initializing) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-10 h-10 border-4 border-[#F59E0B] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-[#64748B]">Anmeldung wird geprüft...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <AuthContext.Provider value={value}>
       {children}
