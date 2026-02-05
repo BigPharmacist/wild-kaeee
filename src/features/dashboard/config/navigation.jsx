@@ -118,6 +118,7 @@ export function createSecondaryNavMap({
       { id: 'contacts', label: 'Kontakte' },
       { id: 'email', label: 'E-Mail' },
       { id: 'ai-chat', label: 'KI-Chat' },
+      ...(currentStaff?.is_admin ? [{ id: 'news', label: 'News' }] : []),
       ...(currentStaff?.is_admin ? [{ id: 'tracking', label: 'Tracking' }] : []),
       ...(currentStaff?.is_admin ? [{ id: 'admin', label: 'Admin' }] : []),
     ],

@@ -1,22 +1,28 @@
-const AuthView = ({
-  authView,
-  onAuthViewChange,
-  email,
-  setEmail,
-  password,
-  setPassword,
-  newPassword,
-  setNewPassword,
-  confirmPassword,
-  setConfirmPassword,
-  loading,
-  message,
-  successMessage,
-  handleSignIn,
-  handleForgotPassword,
-  handleResetPassword,
-  theme,
-}) => (
+import { useTheme } from '../../context/ThemeContext'
+import { useAuth } from '../../context/AuthContext'
+
+const AuthView = () => {
+  const { theme } = useTheme()
+  const {
+    authView,
+    handleAuthViewChange: onAuthViewChange,
+    email,
+    setEmail,
+    password,
+    setPassword,
+    newPassword,
+    setNewPassword,
+    confirmPassword,
+    setConfirmPassword,
+    loading,
+    message,
+    successMessage,
+    handleSignIn,
+    handleForgotPassword,
+    handleResetPassword,
+  } = useAuth()
+
+  return (
   <div className={`min-h-screen ${theme.bg} ${theme.text} flex items-center justify-center p-4 relative overflow-hidden`}>
     <div className={`${theme.panel} p-6 sm:p-8 rounded-2xl border ${theme.border} ${theme.cardShadow} max-w-sm w-full`}>
       <div className="flex justify-between items-center mb-8">
@@ -181,6 +187,7 @@ const AuthView = ({
       )}
     </div>
   </div>
-)
+  )
+}
 
 export default AuthView

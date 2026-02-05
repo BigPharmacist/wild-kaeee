@@ -37,7 +37,18 @@ const UmoEditorWrapper = memo(({
     }
 
     currentDocIdRef.current = documentId
-    const initialContent = typeof content === 'string' ? content : ''
+    let initialContent = ''
+    if (content !== undefined && content !== null) {
+      if (typeof content === 'string') {
+        try {
+          initialContent = JSON.parse(content)
+        } catch (e) {
+          initialContent = content
+        }
+      } else {
+        initialContent = content
+      }
+    }
 
     // Small delay to ensure DOM is ready
     const timeoutId = setTimeout(() => {
@@ -50,17 +61,6 @@ const UmoEditorWrapper = memo(({
               await onSaveRef.current(editorContent.json)
             }
           }
-        },
-        mounted() {
-          // Add click handler to page content area only
-          this.$nextTick(() => {
-            const pageContent = this.$el?.querySelector('.ProseMirror')
-            if (pageContent) {
-              pageContent.addEventListener('mousedown', (e) => {
-                e.stopPropagation()
-              })
-            }
-          })
         },
         render() {
           return h(UmoEditor, {
@@ -76,10 +76,43 @@ const UmoEditorWrapper = memo(({
 
       app.mount(containerRef.current)
       appRef.current = app
+
+      const toolbar = containerRef.current?.querySelector('.umo-toolbar')
+      const editorSurface = containerRef.current?.querySelector('.ProseMirror')
+      const isToolbarButton = (target) => {
+        if (!target) return false
+        if (target.closest('input, textarea, select, [contenteditable="true"]')) return false
+        return !!target.closest('button, [role="button"], .t-button, .umo-toolbar-actions-button')
+      }
+      const handleToolbarMouseDown = (event) => {
+        if (isToolbarButton(event.target)) {
+          event.preventDefault()
+        }
+      }
+      const handleToolbarClick = (event) => {
+        if (isToolbarButton(event.target)) {
+          editorSurface?.focus()
+        }
+      }
+      if (toolbar) {
+        toolbar.addEventListener('mousedown', handleToolbarMouseDown)
+        toolbar.addEventListener('click', handleToolbarClick)
+      }
+      const cleanupToolbarHandlers = () => {
+        if (toolbar) {
+          toolbar.removeEventListener('mousedown', handleToolbarMouseDown)
+          toolbar.removeEventListener('click', handleToolbarClick)
+        }
+      }
+      appRef.current.__umoCleanup = cleanupToolbarHandlers
     }, 100)
 
     return () => {
       clearTimeout(timeoutId)
+      if (appRef.current?.__umoCleanup) {
+        appRef.current.__umoCleanup()
+        delete appRef.current.__umoCleanup
+      }
     }
   }, [documentId, content, isDarkMode])
 

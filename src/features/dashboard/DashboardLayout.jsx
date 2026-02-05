@@ -14,7 +14,7 @@ import { Printer, Sparkle } from '@phosphor-icons/react'
 // Hooks
 import { useFaxCounts, useUrgentFax } from '../fax'
 import { contactScan } from '../contacts'
-import { useWeather, usePollen, useBiowetter, useDashboardTasks } from '../dashboard'
+import { useWeather, usePollen, useBiowetter, useDashboardTasks, useNews } from '../dashboard'
 import { useTasks } from '../tasks'
 import { useProjects } from '../projects'
 import { useCalendar } from '../calendar'
@@ -408,6 +408,26 @@ function DashboardLayout() {
     tasksError: dashboardTasksError,
     tasksByDue,
   } = useDashboardTasks({ session, currentStaff })
+
+  const {
+    news,
+    newsLoading,
+    newsError,
+    allNews,
+    fetchAllNews,
+    createNews,
+    updateNews,
+    deleteNews,
+    newsSaving,
+    newsSaveError,
+  } = useNews({ session, currentStaff })
+
+  // News für Admin laden wenn Settings-Tab 'news' ist
+  useEffect(() => {
+    if (activeView === 'settings' && settingsTab === 'news' && currentStaff?.is_admin) {
+      fetchAllNews()
+    }
+  }, [activeView, settingsTab, currentStaff?.is_admin, fetchAllNews])
 
   // Chat aus Context
   const {
@@ -1048,6 +1068,11 @@ function DashboardLayout() {
                     planData={planData}
                     planLoading={planLoading}
                     planError={planError}
+                    news={news}
+                    newsLoading={newsLoading}
+                    newsError={newsError}
+                    ReactMarkdown={ReactMarkdown}
+                    remarkGfm={remarkGfm}
                   />
                 </>
               )}
@@ -1504,6 +1529,14 @@ function DashboardLayout() {
                   locationsLoading={locationsLoading}
                   fetchCourierLocations={fetchCourierLocations}
                   CourierTable={CourierTable}
+                  allNews={allNews}
+                  fetchAllNews={fetchAllNews}
+                  newsLoading={newsLoading}
+                  createNews={createNews}
+                  updateNews={updateNews}
+                  deleteNews={deleteNews}
+                  newsSaving={newsSaving}
+                  newsSaveError={newsSaveError}
                 />
               )}
             </div>

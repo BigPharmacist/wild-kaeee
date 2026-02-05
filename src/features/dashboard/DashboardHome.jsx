@@ -1,5 +1,6 @@
 import { memo, useState } from 'react'
 import { Sparkle, CheckCircle, Warning, Clock, CaretLeft, CaretRight } from '@phosphor-icons/react'
+import NewsWidget from './NewsWidget'
 
 const DashboardHome = memo(function DashboardHome({
   theme,
@@ -38,6 +39,12 @@ const DashboardHome = memo(function DashboardHome({
   planData,
   planLoading,
   planError,
+  // News Widget Props
+  news,
+  newsLoading,
+  newsError,
+  ReactMarkdown,
+  remarkGfm,
 }) {
   // State für Team-Widget Datum (Offset von heute: 0 = heute, 1 = morgen, -1 = gestern)
   const [planDayOffset, setPlanDayOffset] = useState(0)
@@ -46,6 +53,7 @@ const DashboardHome = memo(function DashboardHome({
   <>
     <h2 className="text-2xl lg:text-3xl font-semibold mb-6 tracking-tight">Dashboard</h2>
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {/* 1. Wetter */}
       <div className={`${theme.panel} rounded-2xl p-5 border ${theme.border} ${theme.cardShadow}`}>
         <div className="flex items-center justify-between mb-4">
           <h3 className={`text-lg font-medium ${theme.text}`}>Wetter</h3>
@@ -126,6 +134,215 @@ const DashboardHome = memo(function DashboardHome({
         )}
       </div>
 
+      {/* 2. Team Widget - Dienstplan */}
+      <div className={`${theme.panel} rounded-2xl p-4 border ${theme.border} ${theme.cardShadow} flex flex-col gap-3`}>
+        <div className="flex items-center justify-between">
+          <h3 className={`text-lg font-medium ${theme.text}`}>Team</h3>
+          <button
+            type="button"
+            onClick={() => setActiveView('plan')}
+            className={`text-xs ${theme.accentText} hover:underline`}
+          >
+            Vollständiger Plan
+          </button>
+        </div>
+
+        {planLoading && (
+          <p className={`text-xs ${theme.textMuted}`}>Dienstplan wird geladen...</p>
+        )}
+        {!planLoading && planError && (
+          <p className="text-rose-400 text-sm">{planError}</p>
+        )}
+        {!planLoading && !planError && planData && (() => {
+          // Alle verfügbaren Tage sortiert nach Datum
+          const availableDates = Object.keys(planData.days).sort((a, b) => {
+            const [dA, mA, yA] = a.split('.').map(Number)
+            const [dB, mB, yB] = b.split('.').map(Number)
+            return new Date(yA, mA - 1, dA) - new Date(yB, mB - 1, dB)
+          })
+
+          if (availableDates.length === 0) {
+            return <p className={`text-sm ${theme.textMuted}`}>Keine Plandaten verfügbar.</p>
+          }
+
+          // Heute als Referenz
+          const today = new Date()
+          today.setHours(0, 0, 0, 0)
+          const todayStr = today.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+
+          // Finde Startindex: heute oder der nächstgelegene Zukunftstag
+          let startIndex = availableDates.findIndex(dateStr => dateStr === todayStr)
+          if (startIndex === -1) {
+            // Heute nicht verfügbar - finde nächsten Tag >= heute
+            startIndex = availableDates.findIndex(dateStr => {
+              const [d, m, y] = dateStr.split('.').map(Number)
+              return new Date(y, m - 1, d) >= today
+            })
+            if (startIndex === -1) startIndex = availableDates.length - 1 // Fallback: letzter Tag
+          }
+
+          // planDayOffset ist jetzt relativ zum Startindex
+          let currentIndex = startIndex + planDayOffset
+          if (currentIndex < 0) currentIndex = 0
+          if (currentIndex >= availableDates.length) currentIndex = availableDates.length - 1
+
+          const selectedDateStr = availableDates[currentIndex]
+          const dayData = planData.days[selectedDateStr]
+
+          const hasPrevDay = currentIndex > 0
+          const hasNextDay = currentIndex < availableDates.length - 1
+
+          // Label berechnen
+          const [d, m, y] = selectedDateStr.split('.').map(Number)
+          const selectedDate = new Date(y, m - 1, d)
+          const isToday = selectedDateStr === todayStr
+
+          const diffDays = Math.round((selectedDate - today) / (1000 * 60 * 60 * 24))
+          const dayLabel = isToday ? 'Heute' : diffDays === 1 ? 'Morgen' : diffDays === -1 ? 'Gestern' : selectedDate.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' })
+
+          const START_HOUR = 7
+          const END_HOUR = 19
+          const TOTAL_HOURS = END_HOUR - START_HOUR
+          const hours = [7, 10, 13, 16, 19]
+
+          const parseTime = (timeStr) => {
+            if (!timeStr) return null
+            const [h, min] = timeStr.split(':').map(Number)
+            return h + min / 60
+          }
+
+          const getBarStyle = (start, end) => {
+            let displayStart = Math.max(START_HOUR, Math.min(END_HOUR, start))
+            let displayEnd = Math.max(START_HOUR, Math.min(END_HOUR, end <= start ? END_HOUR : end))
+
+            const left = ((displayStart - START_HOUR) / TOTAL_HOURS) * 100
+            const width = ((displayEnd - displayStart) / TOTAL_HOURS) * 100
+
+            return { left: `${left}%`, width: `${Math.max(0, width)}%` }
+          }
+
+          // Nur anwesende Mitarbeiter filtern (haben Arbeitszeit und sind nicht abwesend)
+          const presentByGroup = Object.entries(dayData.groups).map(([groupName, employees]) => {
+            const present = employees.filter((emp) => {
+              const startTime = parseTime(emp.workStart)
+              const endTime = parseTime(emp.workStop)
+              const hasWork = startTime !== null && endTime !== null && emp.workStart !== emp.workStop
+              const isAbsent = emp.status === 'Urlaub' || emp.status === 'Krank'
+              return hasWork && !isAbsent
+            })
+            return { groupName, present }
+          }).filter(g => g.present.length > 0)
+
+          const totalPresent = presentByGroup.reduce((sum, g) => sum + g.present.length, 0)
+
+          if (totalPresent === 0) {
+            return (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setPlanDayOffset(o => o - 1)}
+                    disabled={!hasPrevDay}
+                    className={`p-1 rounded ${hasPrevDay ? theme.bgHover + ' ' + theme.text : theme.textMuted + ' opacity-40 cursor-not-allowed'}`}
+                  >
+                    <CaretLeft size={16} />
+                  </button>
+                  <span className={`text-xs font-medium ${isToday ? theme.accentText : theme.textSecondary}`}>{dayLabel}</span>
+                  <button
+                    type="button"
+                    onClick={() => setPlanDayOffset(o => o + 1)}
+                    disabled={!hasNextDay}
+                    className={`p-1 rounded ${hasNextDay ? theme.bgHover + ' ' + theme.text : theme.textMuted + ' opacity-40 cursor-not-allowed'}`}
+                  >
+                    <CaretRight size={16} />
+                  </button>
+                </div>
+                <p className={`text-sm ${theme.textMuted} text-center`}>Niemand im Dienst.</p>
+              </div>
+            )
+          }
+
+          const showGroupNames = presentByGroup.length > 1
+
+          return (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setPlanDayOffset(o => o - 1)}
+                  disabled={!hasPrevDay}
+                  className={`p-1 rounded ${hasPrevDay ? theme.bgHover + ' ' + theme.text : theme.textMuted + ' opacity-40 cursor-not-allowed'}`}
+                >
+                  <CaretLeft size={16} />
+                </button>
+                <span className={`text-xs font-medium ${isToday ? theme.accentText : theme.textSecondary}`}>{dayLabel}</span>
+                <button
+                  type="button"
+                  onClick={() => setPlanDayOffset(o => o + 1)}
+                  disabled={!hasNextDay}
+                  className={`p-1 rounded ${hasNextDay ? theme.bgHover + ' ' + theme.text : theme.textMuted + ' opacity-40 cursor-not-allowed'}`}
+                >
+                  <CaretRight size={16} />
+                </button>
+              </div>
+              <div className="flex justify-between text-[9px] text-[#94A3B8] mb-1">
+                {hours.map((h) => (
+                  <span key={h}>{h}</span>
+                ))}
+              </div>
+
+              {presentByGroup.map(({ groupName, present }) => (
+                <div key={groupName}>
+                  {showGroupNames && (
+                    <p className={`text-[10px] font-medium mb-1 ${theme.textMuted}`}>{groupName}</p>
+                  )}
+                  <div className="space-y-1">
+                    {present.map((emp, idx) => {
+                      const startTime = parseTime(emp.workStart)
+                      const endTime = parseTime(emp.workStop)
+
+                      return (
+                        <div
+                          key={`${emp.firstName}-${emp.lastName}-${idx}`}
+                          className="relative h-5 rounded bg-[#F1F5F9]"
+                        >
+                          <div
+                            className="absolute top-0.5 bottom-0.5 bg-[#334155] rounded flex items-center justify-center overflow-hidden"
+                            style={getBarStyle(startTime, endTime)}
+                          >
+                            <span className="text-[9px] font-medium text-white truncate px-1">
+                              {emp.firstName}
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+
+              <p className={`text-[10px] ${theme.textMuted} pt-1`}>
+                {totalPresent} Mitarbeiter heute anwesend
+              </p>
+            </div>
+          )
+        })()}
+        {!planLoading && !planError && !planData && (
+          <p className={theme.textMuted}>Keine Dienstplandaten verfügbar.</p>
+        )}
+      </div>
+
+      {/* 3. News */}
+      <NewsWidget
+        theme={theme}
+        news={news}
+        newsLoading={newsLoading}
+        newsError={newsError}
+        ReactMarkdown={ReactMarkdown}
+        remarkGfm={remarkGfm}
+      />
+
+      {/* 4. Termine */}
       <div className={`${theme.panel} rounded-2xl p-4 border ${theme.border} ${theme.cardShadow} flex flex-col gap-3`}>
         <div className="flex items-center justify-between">
           <h3 className={`text-lg font-medium ${theme.text}`}>Termine</h3>
@@ -233,217 +450,7 @@ const DashboardHome = memo(function DashboardHome({
         })()}
       </div>
 
-      <div className={`${theme.panel} rounded-2xl p-5 border ${theme.border} ${theme.cardShadow}`}>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className={`text-lg font-medium ${theme.text}`}>Pollenflug</h3>
-          {pollenRegion && (
-            <span className={`text-xs ${theme.textMuted}`}>
-              {pollenRegion.replace(/_/g, ' ')}
-            </span>
-          )}
-        </div>
-
-        {pollenLoading && (
-          <p className={`text-sm ${theme.textMuted}`}>Pollendaten werden geladen...</p>
-        )}
-        {!pollenLoading && pollenError && (
-          <p className="text-rose-400 text-sm">{pollenError}</p>
-        )}
-        {!pollenLoading && !pollenError && pollenData && pollenData.pollen && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between mb-1">
-              <span></span>
-              <div className="flex gap-1 text-xs text-[#6B7280]">
-                <span className="w-16 text-center">Heute</span>
-                <span className="w-16 text-center">Morgen</span>
-              </div>
-            </div>
-            {pollenData.pollen
-              .filter(p => p.today?.severity !== '-1' && p.today?.severity !== undefined)
-              .sort((a, b) => {
-                const order = { '3': 0, '2-3': 1, '2': 2, '1-2': 3, '1': 4, '0-1': 5, '0': 6 }
-                return (order[a.today?.severity] ?? 7) - (order[b.today?.severity] ?? 7)
-              })
-              .map(pollen => (
-                <div key={pollen.name} className="flex items-center justify-between">
-                  <span className={`text-sm ${theme.text}`}>
-                    {pollenNames[pollen.name] || pollen.name}
-                  </span>
-                  <div className="flex gap-1">
-                    <span
-                      className={`text-xs w-16 text-center py-0.5 rounded ${severityColors[pollen.today?.severity] || 'bg-gray-100'}`}
-                    >
-                      {severityLabels[pollen.today?.severity] || pollen.today?.severity}
-                    </span>
-                    <span
-                      className={`text-xs w-16 text-center py-0.5 rounded ${pollen.tomorrow?.severity && pollen.tomorrow.severity !== '-1' ? severityColors[pollen.tomorrow?.severity] || 'bg-gray-100' : 'bg-transparent'}`}
-                    >
-                      {pollen.tomorrow?.severity && pollen.tomorrow.severity !== '-1'
-                        ? (severityLabels[pollen.tomorrow?.severity] || pollen.tomorrow?.severity)
-                        : '–'}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            {pollenData.pollen.filter(p => p.today?.severity !== '-1' && p.today?.severity !== undefined).length === 0 && (
-              <p className={`text-sm ${theme.textMuted}`}>Aktuell keine Pollenbelastung.</p>
-            )}
-          </div>
-        )}
-        {!pollenLoading && !pollenError && !pollenData && (
-          <p className={theme.textMuted}>Keine Pollendaten verfügbar.</p>
-        )}
-      </div>
-
-      <div
-        className={`${theme.panel} rounded-2xl p-5 border ${theme.border} ${theme.cardShadow} cursor-pointer hover:border-[#4C8BF5] transition-colors overflow-hidden`}
-        onClick={openBiowetterModal}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <h3 className={`text-lg font-medium ${theme.text}`}>Biowetter</h3>
-          {biowetterZone && (
-            <span className={`text-xs ${theme.textMuted}`}>
-              Zone {biowetterZone}
-            </span>
-          )}
-        </div>
-
-        {biowetterLoading && (
-          <p className={`text-sm ${theme.textMuted}`}>Biowetter wird geladen...</p>
-        )}
-        {!biowetterLoading && biowetterError && (
-          <p className="text-rose-400 text-sm">{biowetterError}</p>
-        )}
-        {!biowetterLoading && !biowetterError && getBiowetterForecasts && (() => {
-          const forecasts = getBiowetterForecasts()
-          if (!forecasts || !forecasts.slots) {
-            return <p className={theme.textMuted}>Keine Biowetter-Daten verfügbar.</p>
-          }
-
-          // Nur verfügbare Slots filtern
-          const availableSlots = forecasts.slots.filter(slot => slot.available)
-
-          // Alle Effekte aus verfügbaren Slots sammeln (nur mit Belastung)
-          const allEffectLabels = new Map()
-          const slotEffectsMap = availableSlots.map(slot => {
-            const effectMap = new Map()
-            slot.effects.forEach(e => {
-              allEffectLabels.set(e.label, e.label)
-              effectMap.set(e.label, e)
-            })
-            return effectMap
-          })
-
-          const effectList = Array.from(allEffectLabels.keys())
-          const hasAnyEffects = effectList.length > 0
-
-          // Wochentage berechnen
-          const weekdayNames = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
-          const today = new Date()
-          const getWeekday = (daysFromNow) => weekdayNames[(today.getDay() + daysFromNow) % 7]
-
-          // Tage für Header gruppieren (nur mit verfügbaren Slots)
-          const days = [
-            { label: getWeekday(0), slots: availableSlots.filter(s => s.dayLabel === 'Heute') },
-            { label: getWeekday(1), slots: availableSlots.filter(s => s.dayLabel === 'Morgen') },
-            { label: getWeekday(2), slots: availableSlots.filter(s => s.dayLabel === 'Überm.') },
-          ].filter(day => day.slots.length > 0)
-
-          return (
-            <div className="space-y-3">
-              {hasAnyEffects ? (
-                <>
-                  {/* Tabelle mit durchgängigen Trennlinien */}
-                  <div className="flex min-w-0 overflow-hidden">
-                    {/* Labels-Spalte */}
-                    <div className="flex-1 min-w-0 mr-2">
-                      <div className="h-5" /> {/* Platz für Tage-Header */}
-                      <div className="h-4 mb-1" /> {/* Platz für VM/NM-Header */}
-                      <div className="space-y-1">
-                        {effectList.map((label) => (
-                          <div key={label} className="h-4 flex items-center">
-                            <span className={`text-xs ${theme.text} truncate`}>{label}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    {/* Tages-Spalten */}
-                    {days.map((day, dayIdx) => (
-                      <div
-                        key={day.label}
-                        className={`flex-shrink-0 ${dayIdx > 0 ? 'border-l border-[#E5E7EB] pl-1 ml-1' : ''}`}
-                      >
-                        {/* Tages-Header */}
-                        <div className="h-5 flex justify-center items-center">
-                          <span className="text-[10px] text-[#6B7280]">{day.label}</span>
-                        </div>
-                        {/* VM/NM-Header */}
-                        <div className="h-4 mb-1 flex gap-px justify-center items-center">
-                          {day.slots.map((slot) => (
-                            <div key={slot.key} className="w-[18px] text-center">
-                              <span className="text-[8px] text-[#9CA3AF]">{slot.label}</span>
-                            </div>
-                          ))}
-                        </div>
-                        {/* Werte */}
-                        <div className="space-y-1">
-                          {effectList.map((label) => (
-                            <div key={label} className="h-4 flex gap-px justify-center items-center">
-                              {day.slots.map((slot) => {
-                                const slotIdx = availableSlots.findIndex(s => s.key === slot.key)
-                                const effect = slotEffectsMap[slotIdx]?.get(label)
-                                return (
-                                  <div key={slot.key} className="w-[18px] flex justify-center items-center">
-                                    {effect ? (
-                                      <span
-                                        className={`w-3 h-3 rounded-sm ${effect.dotColor}`}
-                                        title={`${slot.dayLabel} ${slot.label}: ${effect.value}`}
-                                      />
-                                    ) : (
-                                      <span className="w-3 h-3 rounded-sm bg-[#27AE60]" title={`${slot.dayLabel} ${slot.label}: kein Einfluss`} />
-                                    )}
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <p className={`text-sm ${theme.textMuted}`}>Kein Einfluss erwartet.</p>
-              )}
-
-              {/* KI-Empfehlung (gekürzt) */}
-              <div className={`pt-3 border-t ${theme.border}`}>
-                {biowetterAiLoading ? (
-                  <div className="flex items-center gap-2">
-                    <Sparkle size={16} weight="fill" className="text-[#9CA3AF] animate-pulse" />
-                    <p className={`text-xs ${theme.textMuted} italic`}>...</p>
-                  </div>
-                ) : biowetterAiRecommendation ? (
-                  <div className="flex items-start gap-2">
-                    <Sparkle size={16} weight="fill" className="text-violet-500 flex-shrink-0 mt-0.5" />
-                    <p className={`text-xs ${theme.textMuted} line-clamp-2`}>
-                      {biowetterAiRecommendation.split('.')[0]}.
-                    </p>
-                  </div>
-                ) : null}
-              </div>
-
-              {biowetterLastUpdate && (
-                <p className={`text-xs ${theme.textMuted} mt-2`}>
-                  Stand: {biowetterLastUpdate}
-                </p>
-              )}
-            </div>
-          )
-        })()}
-      </div>
-
-      {/* Tasks Widget */}
+      {/* 4. Aufgaben */}
       <div className={`${theme.panel} rounded-2xl p-4 border ${theme.border} ${theme.cardShadow} flex flex-col gap-3`}>
         <div className="flex items-center justify-between">
           <h3 className={`text-lg font-medium ${theme.text}`}>Aufgaben</h3>
@@ -596,201 +603,215 @@ const DashboardHome = memo(function DashboardHome({
         )}
       </div>
 
-      {/* Team Widget - Dienstplan */}
-      <div className={`${theme.panel} rounded-2xl p-4 border ${theme.border} ${theme.cardShadow} flex flex-col gap-3`}>
-        <div className="flex items-center justify-between">
-          <h3 className={`text-lg font-medium ${theme.text}`}>Team</h3>
-          <button
-            type="button"
-            onClick={() => setActiveView('plan')}
-            className={`text-xs ${theme.accentText} hover:underline`}
-          >
-            Vollständiger Plan
-          </button>
+      {/* 5. Biowetter */}
+      <div
+        className={`${theme.panel} rounded-2xl p-5 border ${theme.border} ${theme.cardShadow} cursor-pointer hover:border-[#4C8BF5] transition-colors overflow-hidden`}
+        onClick={openBiowetterModal}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className={`text-lg font-medium ${theme.text}`}>Biowetter</h3>
+          {biowetterZone && (
+            <span className={`text-xs ${theme.textMuted}`}>
+              Zone {biowetterZone}
+            </span>
+          )}
         </div>
 
-        {planLoading && (
-          <p className={`text-xs ${theme.textMuted}`}>Dienstplan wird geladen...</p>
+        {biowetterLoading && (
+          <p className={`text-sm ${theme.textMuted}`}>Biowetter wird geladen...</p>
         )}
-        {!planLoading && planError && (
-          <p className="text-rose-400 text-sm">{planError}</p>
+        {!biowetterLoading && biowetterError && (
+          <p className="text-rose-400 text-sm">{biowetterError}</p>
         )}
-        {!planLoading && !planError && planData && (() => {
-          // Alle verfügbaren Tage sortiert nach Datum
-          const availableDates = Object.keys(planData.days).sort((a, b) => {
-            const [dA, mA, yA] = a.split('.').map(Number)
-            const [dB, mB, yB] = b.split('.').map(Number)
-            return new Date(yA, mA - 1, dA) - new Date(yB, mB - 1, dB)
+        {!biowetterLoading && !biowetterError && getBiowetterForecasts && (() => {
+          const forecasts = getBiowetterForecasts()
+          if (!forecasts || !forecasts.slots) {
+            return <p className={theme.textMuted}>Keine Biowetter-Daten verfügbar.</p>
+          }
+
+          // Nur verfügbare Slots filtern
+          const availableSlots = forecasts.slots.filter(slot => slot.available)
+
+          // Alle Effekte aus verfügbaren Slots sammeln (nur mit Belastung)
+          const allEffectLabels = new Map()
+          const slotEffectsMap = availableSlots.map(slot => {
+            const effectMap = new Map()
+            slot.effects.forEach(e => {
+              allEffectLabels.set(e.label, e.label)
+              effectMap.set(e.label, e)
+            })
+            return effectMap
           })
 
-          if (availableDates.length === 0) {
-            return <p className={`text-sm ${theme.textMuted}`}>Keine Plandaten verfügbar.</p>
-          }
+          const effectList = Array.from(allEffectLabels.keys())
+          const hasAnyEffects = effectList.length > 0
 
-          // Heute als Referenz
+          // Wochentage berechnen
+          const weekdayNames = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
           const today = new Date()
-          today.setHours(0, 0, 0, 0)
-          const todayStr = today.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+          const getWeekday = (daysFromNow) => weekdayNames[(today.getDay() + daysFromNow) % 7]
 
-          // Finde Startindex: heute oder der nächstgelegene Zukunftstag
-          let startIndex = availableDates.findIndex(dateStr => dateStr === todayStr)
-          if (startIndex === -1) {
-            // Heute nicht verfügbar - finde nächsten Tag >= heute
-            startIndex = availableDates.findIndex(dateStr => {
-              const [d, m, y] = dateStr.split('.').map(Number)
-              return new Date(y, m - 1, d) >= today
-            })
-            if (startIndex === -1) startIndex = availableDates.length - 1 // Fallback: letzter Tag
-          }
-
-          // planDayOffset ist jetzt relativ zum Startindex
-          let currentIndex = startIndex + planDayOffset
-          if (currentIndex < 0) currentIndex = 0
-          if (currentIndex >= availableDates.length) currentIndex = availableDates.length - 1
-
-          const selectedDateStr = availableDates[currentIndex]
-          const dayData = planData.days[selectedDateStr]
-
-          const hasPrevDay = currentIndex > 0
-          const hasNextDay = currentIndex < availableDates.length - 1
-
-          // Label berechnen
-          const [d, m, y] = selectedDateStr.split('.').map(Number)
-          const selectedDate = new Date(y, m - 1, d)
-          const isToday = selectedDateStr === todayStr
-
-          const diffDays = Math.round((selectedDate - today) / (1000 * 60 * 60 * 24))
-          const dayLabel = isToday ? 'Heute' : diffDays === 1 ? 'Morgen' : diffDays === -1 ? 'Gestern' : selectedDate.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' })
-
-          const START_HOUR = 7
-          const END_HOUR = 19
-          const TOTAL_HOURS = END_HOUR - START_HOUR
-          const hours = [7, 10, 13, 16, 19]
-
-          const parseTime = (timeStr) => {
-            if (!timeStr) return null
-            const [h, m] = timeStr.split(':').map(Number)
-            return h + m / 60
-          }
-
-          const getBarStyle = (start, end) => {
-            let displayStart = Math.max(START_HOUR, Math.min(END_HOUR, start))
-            let displayEnd = Math.max(START_HOUR, Math.min(END_HOUR, end <= start ? END_HOUR : end))
-
-            const left = ((displayStart - START_HOUR) / TOTAL_HOURS) * 100
-            const width = ((displayEnd - displayStart) / TOTAL_HOURS) * 100
-
-            return { left: `${left}%`, width: `${Math.max(0, width)}%` }
-          }
-
-          // Nur anwesende Mitarbeiter filtern (haben Arbeitszeit und sind nicht abwesend)
-          const presentByGroup = Object.entries(dayData.groups).map(([groupName, employees]) => {
-            const present = employees.filter((emp) => {
-              const startTime = parseTime(emp.workStart)
-              const endTime = parseTime(emp.workStop)
-              const hasWork = startTime !== null && endTime !== null && emp.workStart !== emp.workStop
-              const isAbsent = emp.status === 'Urlaub' || emp.status === 'Krank'
-              return hasWork && !isAbsent
-            })
-            return { groupName, present }
-          }).filter(g => g.present.length > 0)
-
-          const totalPresent = presentByGroup.reduce((sum, g) => sum + g.present.length, 0)
-
-          if (totalPresent === 0) {
-            return (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <button
-                    type="button"
-                    onClick={() => setPlanDayOffset(o => o - 1)}
-                    disabled={!hasPrevDay}
-                    className={`p-1 rounded ${hasPrevDay ? theme.bgHover + ' ' + theme.text : theme.textMuted + ' opacity-40 cursor-not-allowed'}`}
-                  >
-                    <CaretLeft size={16} />
-                  </button>
-                  <span className={`text-xs font-medium ${isToday ? theme.accentText : theme.textSecondary}`}>{dayLabel}</span>
-                  <button
-                    type="button"
-                    onClick={() => setPlanDayOffset(o => o + 1)}
-                    disabled={!hasNextDay}
-                    className={`p-1 rounded ${hasNextDay ? theme.bgHover + ' ' + theme.text : theme.textMuted + ' opacity-40 cursor-not-allowed'}`}
-                  >
-                    <CaretRight size={16} />
-                  </button>
-                </div>
-                <p className={`text-sm ${theme.textMuted} text-center`}>Niemand im Dienst.</p>
-              </div>
-            )
-          }
-
-          const showGroupNames = presentByGroup.length > 1
+          // Tage für Header gruppieren (nur mit verfügbaren Slots)
+          const days = [
+            { label: getWeekday(0), slots: availableSlots.filter(s => s.dayLabel === 'Heute') },
+            { label: getWeekday(1), slots: availableSlots.filter(s => s.dayLabel === 'Morgen') },
+            { label: getWeekday(2), slots: availableSlots.filter(s => s.dayLabel === 'Überm.') },
+          ].filter(day => day.slots.length > 0)
 
           return (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={() => setPlanDayOffset(o => o - 1)}
-                  disabled={!hasPrevDay}
-                  className={`p-1 rounded ${hasPrevDay ? theme.bgHover + ' ' + theme.text : theme.textMuted + ' opacity-40 cursor-not-allowed'}`}
-                >
-                  <CaretLeft size={16} />
-                </button>
-                <span className={`text-xs font-medium ${isToday ? theme.accentText : theme.textSecondary}`}>{dayLabel}</span>
-                <button
-                  type="button"
-                  onClick={() => setPlanDayOffset(o => o + 1)}
-                  disabled={!hasNextDay}
-                  className={`p-1 rounded ${hasNextDay ? theme.bgHover + ' ' + theme.text : theme.textMuted + ' opacity-40 cursor-not-allowed'}`}
-                >
-                  <CaretRight size={16} />
-                </button>
-              </div>
-              <div className="flex justify-between text-[9px] text-[#94A3B8] mb-1">
-                {hours.map((h) => (
-                  <span key={h}>{h}</span>
-                ))}
-              </div>
-
-              {presentByGroup.map(({ groupName, present }) => (
-                <div key={groupName}>
-                  {showGroupNames && (
-                    <p className={`text-[10px] font-medium mb-1 ${theme.textMuted}`}>{groupName}</p>
-                  )}
-                  <div className="space-y-1">
-                    {present.map((emp, idx) => {
-                      const startTime = parseTime(emp.workStart)
-                      const endTime = parseTime(emp.workStop)
-
-                      return (
-                        <div
-                          key={`${emp.firstName}-${emp.lastName}-${idx}`}
-                          className="relative h-5 rounded bg-[#F1F5F9]"
-                        >
-                          <div
-                            className="absolute top-0.5 bottom-0.5 bg-[#334155] rounded flex items-center justify-center overflow-hidden"
-                            style={getBarStyle(startTime, endTime)}
-                          >
-                            <span className="text-[9px] font-medium text-white truncate px-1">
-                              {emp.firstName}
-                            </span>
+            <div className="space-y-3">
+              {hasAnyEffects ? (
+                <>
+                  {/* Tabelle mit durchgängigen Trennlinien */}
+                  <div className="flex min-w-0 overflow-hidden">
+                    {/* Labels-Spalte */}
+                    <div className="flex-1 min-w-0 mr-2">
+                      <div className="h-5" /> {/* Platz für Tage-Header */}
+                      <div className="h-4 mb-1" /> {/* Platz für VM/NM-Header */}
+                      <div className="space-y-1">
+                        {effectList.map((label) => (
+                          <div key={label} className="h-4 flex items-center">
+                            <span className={`text-xs ${theme.text} truncate`}>{label}</span>
                           </div>
+                        ))}
+                      </div>
+                    </div>
+                    {/* Tages-Spalten */}
+                    {days.map((day, dayIdx) => (
+                      <div
+                        key={day.label}
+                        className={`flex-shrink-0 ${dayIdx > 0 ? 'border-l border-[#E5E7EB] pl-1 ml-1' : ''}`}
+                      >
+                        {/* Tages-Header */}
+                        <div className="h-5 flex justify-center items-center">
+                          <span className="text-[10px] text-[#6B7280]">{day.label}</span>
                         </div>
-                      )
-                    })}
+                        {/* VM/NM-Header */}
+                        <div className="h-4 mb-1 flex gap-px justify-center items-center">
+                          {day.slots.map((slot) => (
+                            <div key={slot.key} className="w-[18px] text-center">
+                              <span className="text-[8px] text-[#9CA3AF]">{slot.label}</span>
+                            </div>
+                          ))}
+                        </div>
+                        {/* Werte */}
+                        <div className="space-y-1">
+                          {effectList.map((label) => (
+                            <div key={label} className="h-4 flex gap-px justify-center items-center">
+                              {day.slots.map((slot) => {
+                                const slotIdx = availableSlots.findIndex(s => s.key === slot.key)
+                                const effect = slotEffectsMap[slotIdx]?.get(label)
+                                return (
+                                  <div key={slot.key} className="w-[18px] flex justify-center items-center">
+                                    {effect ? (
+                                      <span
+                                        className={`w-3 h-3 rounded-sm ${effect.dotColor}`}
+                                        title={`${slot.dayLabel} ${slot.label}: ${effect.value}`}
+                                      />
+                                    ) : (
+                                      <span className="w-3 h-3 rounded-sm bg-[#27AE60]" title={`${slot.dayLabel} ${slot.label}: kein Einfluss`} />
+                                    )}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </div>
-              ))}
+                </>
+              ) : (
+                <p className={`text-sm ${theme.textMuted}`}>Kein Einfluss erwartet.</p>
+              )}
 
-              <p className={`text-[10px] ${theme.textMuted} pt-1`}>
-                {totalPresent} Mitarbeiter heute anwesend
-              </p>
+              {/* KI-Empfehlung (gekürzt) */}
+              <div className={`pt-3 border-t ${theme.border}`}>
+                {biowetterAiLoading ? (
+                  <div className="flex items-center gap-2">
+                    <Sparkle size={16} weight="fill" className="text-[#9CA3AF] animate-pulse" />
+                    <p className={`text-xs ${theme.textMuted} italic`}>...</p>
+                  </div>
+                ) : biowetterAiRecommendation ? (
+                  <div className="flex items-start gap-2">
+                    <Sparkle size={16} weight="fill" className="text-violet-500 flex-shrink-0 mt-0.5" />
+                    <p className={`text-xs ${theme.textMuted} line-clamp-2`}>
+                      {biowetterAiRecommendation.split('.')[0]}.
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+
+              {biowetterLastUpdate && (
+                <p className={`text-xs ${theme.textMuted} mt-2`}>
+                  Stand: {biowetterLastUpdate}
+                </p>
+              )}
             </div>
           )
         })()}
-        {!planLoading && !planError && !planData && (
-          <p className={theme.textMuted}>Keine Dienstplandaten verfügbar.</p>
+      </div>
+
+      {/* 6. Pollenflug */}
+      <div className={`${theme.panel} rounded-2xl p-5 border ${theme.border} ${theme.cardShadow}`}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className={`text-lg font-medium ${theme.text}`}>Pollenflug</h3>
+          {pollenRegion && (
+            <span className={`text-xs ${theme.textMuted}`}>
+              {pollenRegion.replace(/_/g, ' ')}
+            </span>
+          )}
+        </div>
+
+        {pollenLoading && (
+          <p className={`text-sm ${theme.textMuted}`}>Pollendaten werden geladen...</p>
+        )}
+        {!pollenLoading && pollenError && (
+          <p className="text-rose-400 text-sm">{pollenError}</p>
+        )}
+        {!pollenLoading && !pollenError && pollenData && pollenData.pollen && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between mb-1">
+              <span></span>
+              <div className="flex gap-1 text-xs text-[#6B7280]">
+                <span className="w-16 text-center">Heute</span>
+                <span className="w-16 text-center">Morgen</span>
+              </div>
+            </div>
+            {pollenData.pollen
+              .filter(p => p.today?.severity !== '-1' && p.today?.severity !== undefined)
+              .sort((a, b) => {
+                const order = { '3': 0, '2-3': 1, '2': 2, '1-2': 3, '1': 4, '0-1': 5, '0': 6 }
+                return (order[a.today?.severity] ?? 7) - (order[b.today?.severity] ?? 7)
+              })
+              .map(pollen => (
+                <div key={pollen.name} className="flex items-center justify-between">
+                  <span className={`text-sm ${theme.text}`}>
+                    {pollenNames[pollen.name] || pollen.name}
+                  </span>
+                  <div className="flex gap-1">
+                    <span
+                      className={`text-xs w-16 text-center py-0.5 rounded ${severityColors[pollen.today?.severity] || 'bg-gray-100'}`}
+                    >
+                      {severityLabels[pollen.today?.severity] || pollen.today?.severity}
+                    </span>
+                    <span
+                      className={`text-xs w-16 text-center py-0.5 rounded ${pollen.tomorrow?.severity && pollen.tomorrow.severity !== '-1' ? severityColors[pollen.tomorrow?.severity] || 'bg-gray-100' : 'bg-transparent'}`}
+                    >
+                      {pollen.tomorrow?.severity && pollen.tomorrow.severity !== '-1'
+                        ? (severityLabels[pollen.tomorrow?.severity] || pollen.tomorrow?.severity)
+                        : '–'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            {pollenData.pollen.filter(p => p.today?.severity !== '-1' && p.today?.severity !== undefined).length === 0 && (
+              <p className={`text-sm ${theme.textMuted}`}>Aktuell keine Pollenbelastung.</p>
+            )}
+          </div>
+        )}
+        {!pollenLoading && !pollenError && !pollenData && (
+          <p className={theme.textMuted}>Keine Pollendaten verfügbar.</p>
         )}
       </div>
     </div>

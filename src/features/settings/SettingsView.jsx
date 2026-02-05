@@ -1,4 +1,5 @@
 import ChatSettingsSection from './ChatSettingsSection'
+import NewsSettingsSection from './NewsSettingsSection'
 
 const SettingsView = ({
   theme,
@@ -63,6 +64,15 @@ const SettingsView = ({
   locationsLoading,
   fetchCourierLocations,
   CourierTable,
+  // News Props
+  allNews,
+  fetchAllNews,
+  newsLoading,
+  createNews,
+  updateNews,
+  deleteNews,
+  newsSaving,
+  newsSaveError,
 }) => (
   <>
     <h2 className="text-2xl lg:text-3xl font-semibold mb-6 tracking-tight">Einstellungen</h2>
@@ -621,6 +631,21 @@ const SettingsView = ({
 
       {settingsTab === 'ai-chat' && (
         <ChatSettingsSection theme={theme} />
+      )}
+
+      {settingsTab === 'news' && (
+        <NewsSettingsSection
+          theme={theme}
+          allNews={allNews}
+          fetchAllNews={fetchAllNews}
+          newsLoading={newsLoading}
+          createNews={createNews}
+          updateNews={updateNews}
+          deleteNews={deleteNews}
+          newsSaving={newsSaving}
+          newsSaveError={newsSaveError}
+          currentStaff={currentStaff}
+        />
       )}
 
       {settingsTab === 'admin' && (

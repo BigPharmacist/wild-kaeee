@@ -42,26 +42,9 @@
   position: relative;
 }
 
-/* Ensure all interactive elements work */
-.umo-editor-container * {
-  pointer-events: auto;
-}
-
 /* Prevent click events from escaping the editor */
 .umo-editor-container {
   isolation: isolate;
-}
-
-/* Fix pointer events for toolbar and menus */
-.umo-editor-container button,
-.umo-editor-container [role="button"],
-.umo-editor-container .umo-toolbar,
-.umo-editor-container .umo-toolbar *,
-.umo-editor-container .t-popup,
-.umo-editor-container .t-popup *,
-.umo-editor-container .t-dropdown,
-.umo-editor-container .t-dropdown * {
-  pointer-events: auto !important;
 }
 
 /* Ensure dropdowns and popups appear above everything */
@@ -69,17 +52,6 @@
 .umo-editor-container .t-dropdown,
 .umo-editor-container .t-popup__content {
   z-index: 9999 !important;
-}
-
-/* Reset Tailwind button styles inside editor */
-.umo-editor-container button {
-  background-color: initial;
-  border: initial;
-  padding: initial;
-  margin: initial;
-  font-size: initial;
-  line-height: initial;
-  cursor: pointer;
 }
 
 /* Optional: Theme-Anpassungen für Kaeee */

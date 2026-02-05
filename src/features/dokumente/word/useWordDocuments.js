@@ -40,8 +40,10 @@ export const useWordDocuments = (pharmacyId) => {
   // Dokument speichern
   const saveDocument = async (id, content, title) => {
     const updateData = {
-      content,
       updated_at: new Date().toISOString()
+    }
+    if (content !== undefined) {
+      updateData.content = content
     }
     if (title !== undefined) {
       updateData.title = title

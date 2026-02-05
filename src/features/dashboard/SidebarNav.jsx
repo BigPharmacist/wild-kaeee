@@ -22,7 +22,17 @@ const SidebarNav = function SidebarNav({
   onAddProject, // Callback to open project modal
 }) {
   const [showLogoutMenu, setShowLogoutMenu] = useState(false)
+  const [mobileSecondaryView, setMobileSecondaryView] = useState(null) // null = primär, sonst ID des Hauptpunkts
   const logoutMenuRef = useRef(null)
+
+  // Reset secondary panel when mobile nav closes
+  useEffect(() => {
+    if (!mobileNavOpen) {
+      // Kleine Verzögerung damit die Animation smooth bleibt
+      const timer = setTimeout(() => setMobileSecondaryView(null), 300)
+      return () => clearTimeout(timer)
+    }
+  }, [mobileNavOpen])
 
   // Schließe Menü bei Klick außerhalb
   useEffect(() => {
@@ -55,44 +65,24 @@ const SidebarNav = function SidebarNav({
         mobile-nav-drawer
         ${theme.sidebarBg} text-white fixed inset-y-0 left-0 z-50 w-[85%] max-w-[320px]
         transform ${mobileNavOpen ? 'translate-x-0 duration-200' : '-translate-x-full duration-700'} transition-transform ease-out
-        lg:hidden
+        lg:hidden overflow-hidden
       `}
     >
-      <div className="h-full flex flex-col">
-        <div className="px-4 pt-4 pb-3 border-b border-[#1E293B] flex items-center justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-[0.08em] text-[#64748B]">Navigation</p>
-            <h2 className="text-sm font-semibold text-[#E5E7EB] mt-1">
-              {navItems.find((item) => item.id === activeView)?.label || 'Menü'}
-            </h2>
-          </div>
-          <div className="flex items-center gap-2">
-            {activeView === 'tasks' && onAddProject && (
-              <button
-                type="button"
-                onClick={() => {
-                  onAddProject()
-                  setMobileNavOpen(false)
-                }}
-                className="p-2 rounded-[6px] text-[#E5E7EB] hover:bg-[#334155]"
-                title="Neues Projekt"
-              >
-                <FolderPlus size={20} weight="bold" />
-              </button>
-            )}
-            {activeView === 'tasks' && onAddTask && (
-              <button
-                type="button"
-                onClick={() => {
-                  onAddTask()
-                  setMobileNavOpen(false)
-                }}
-                className="p-2 rounded-[6px] text-[#E5E7EB] hover:bg-[#334155]"
-                title="Neue Aufgabe"
-              >
-                <Plus size={20} weight="bold" />
-              </button>
-            )}
+      {/* Zwei-Panel Container */}
+      <div
+        className="h-full flex transition-transform duration-300 ease-out"
+        style={{
+          width: '200%',
+          transform: mobileSecondaryView ? 'translateX(-50%)' : 'translateX(0)',
+        }}
+      >
+        {/* Panel 1: Primäre Navigation */}
+        <div className="w-1/2 h-full flex flex-col">
+          <div className="px-4 pt-4 pb-3 border-b border-[#1E293B] flex items-center justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.08em] text-[#64748B]">Navigation</p>
+              <h2 className="text-sm font-semibold text-[#E5E7EB] mt-1">Menü</h2>
+            </div>
             <button
               type="button"
               onClick={() => setMobileNavOpen(false)}
@@ -102,102 +92,87 @@ const SidebarNav = function SidebarNav({
               <Icons.X />
             </button>
           </div>
-        </div>
-        <div className="flex-1 overflow-y-auto">
-          <nav className="p-2 space-y-1 border-b border-[#1E293B]">
-            {navItems.map((item) => {
-              const totalApoUnread = item.id === 'apo' ? unreadCounts.amk + unreadCounts.recall + unreadCounts.lav + (unreadCounts.rhb || 0) : 0
-              const totalPostUnread = item.id === 'post' ? (unreadCounts.fax || 0) + (unreadCounts.email || 0) : 0
-              const totalChatUnread = item.id === 'chat' && unreadCounts.chat
-                ? Object.values(unreadCounts.chat).reduce((sum, n) => sum + n, 0)
-                : 0
-              const hasUnread = totalApoUnread > 0 || totalPostUnread > 0 || totalChatUnread > 0
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-[6px] text-sm font-medium transition-colors ${
-                    activeView === item.id ? 'bg-[#334155] text-white' : 'text-[#E5E7EB] hover:bg-[#334155]'
-                  }`}
-                  onClick={() => handlePrimaryActivate(item.id)}
-                >
-                  <div className="relative">
-                    <item.icon />
-                    {hasUnread && (
-                      <span className="absolute -top-1 -right-1 w-2 h-2 bg-[#FF6500] rounded-full pointer-events-none" />
-                    )}
-                  </div>
-                  <span className="flex-1">{item.label}</span>
-                  {totalApoUnread > 0 && (
-                    <span className="text-xs text-[#FF8533]">({totalApoUnread})</span>
-                  )}
-                  {totalPostUnread > 0 && (
-                    <span className="text-xs text-[#FF8533]">({totalPostUnread})</span>
-                  )}
-                  {totalChatUnread > 0 && (
-                    <span className="text-xs text-[#FF8533]">({totalChatUnread})</span>
-                  )}
-                </button>
-              )
-            })}
-            {/* Sonstiges in Mobile-Nav */}
-            <button
-              type="button"
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-[6px] text-sm font-medium transition-colors ${
-                activeView === miscNavItem.id ? 'bg-[#334155] text-white' : 'text-[#E5E7EB] hover:bg-[#334155]'
-              }`}
-              onClick={() => handlePrimaryActivate(miscNavItem.id)}
-            >
-              <miscNavItem.icon />
-              <span className="flex-1">{miscNavItem.label}</span>
-            </button>
-          </nav>
 
-          <nav className="p-2 space-y-1 flex-1">
-            {(secondaryNavMap[activeView] || []).map((item) => {
-              // Divider als visueller Trenner
-              if (item.id === 'divider') {
+          <div className="flex-1 overflow-y-auto">
+            <nav className="p-2 space-y-0.5">
+              {navItems.map((item) => {
+                const totalApoUnread = item.id === 'apo' ? unreadCounts.amk + unreadCounts.recall + unreadCounts.lav + (unreadCounts.rhb || 0) : 0
+                const totalPostUnread = item.id === 'post' ? (unreadCounts.fax || 0) + (unreadCounts.email || 0) : 0
+                const totalChatUnread = item.id === 'chat' && unreadCounts.chat
+                  ? Object.values(unreadCounts.chat).reduce((sum, n) => sum + n, 0)
+                  : 0
+                const hasUnread = totalApoUnread > 0 || totalPostUnread > 0 || totalChatUnread > 0
+                const isActive = activeView === item.id
+                const hasSecondary = secondaryNavMap[item.id]?.length > 0
+
                 return (
-                  <div key="divider" className="border-t border-[#5E647A] my-2" />
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-[6px] text-sm font-medium transition-colors ${
+                      isActive ? 'bg-[#334155] text-white' : 'text-[#E5E7EB] hover:bg-[#334155]'
+                    }`}
+                    onClick={() => {
+                      if (hasSecondary) {
+                        // Hat Unterpunkte -> Sekundärpanel öffnen
+                        handlePrimaryActivate(item.id)
+                        setMobileSecondaryView(item.id)
+                      } else {
+                        // Keine Unterpunkte -> direkt auswählen und schließen
+                        handlePrimaryActivate(item.id)
+                        setMobileNavOpen(false)
+                      }
+                    }}
+                  >
+                    <div className="relative">
+                      <item.icon />
+                      {hasUnread && (
+                        <span className="absolute -top-1 -right-1 w-2 h-2 bg-[#FF6500] rounded-full pointer-events-none" />
+                      )}
+                    </div>
+                    <span className="flex-1 text-left">{item.label}</span>
+                    {totalApoUnread > 0 && (
+                      <span className="text-xs text-[#FF8533]">({totalApoUnread})</span>
+                    )}
+                    {totalPostUnread > 0 && (
+                      <span className="text-xs text-[#FF8533]">({totalPostUnread})</span>
+                    )}
+                    {totalChatUnread > 0 && (
+                      <span className="text-xs text-[#FF8533]">({totalChatUnread})</span>
+                    )}
+                    {hasSecondary && (
+                      <Icons.ChevronRight />
+                    )}
+                  </button>
                 )
-              }
+              })}
 
-              const isActive = getActiveSecondaryId() === item.id
-              const badgeCount = activeView === 'apo'
-                ? unreadCounts[item.id] || 0
-                : activeView === 'post'
-                  ? (item.id === 'fax' ? unreadCounts.fax : item.id === 'email' ? unreadCounts.email : 0) || 0
-                  : activeView === 'chat' && unreadCounts.chat
-                    ? (item.id === 'group' ? unreadCounts.chat.group : unreadCounts.chat[item.id]) || 0
-                    : 0
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  className={`w-full flex items-center gap-2 text-left px-3 py-2.5 rounded-[6px] text-sm font-medium border-l-4 transition-colors overflow-hidden ${
-                    isActive
-                      ? theme.secondaryActive
-                      : 'border-transparent text-[#E5E7EB] hover:bg-[#334155] hover:text-white'
-                  }`}
-                  onClick={() => {
-                    handleSecondarySelect(item.id)
+              {/* Sonstiges */}
+              <button
+                type="button"
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-[6px] text-sm font-medium transition-colors ${
+                  activeView === miscNavItem.id ? 'bg-[#334155] text-white' : 'text-[#E5E7EB] hover:bg-[#334155]'
+                }`}
+                onClick={() => {
+                  const hasSecondary = secondaryNavMap[miscNavItem.id]?.length > 0
+                  handlePrimaryActivate(miscNavItem.id)
+                  if (hasSecondary) {
+                    setMobileSecondaryView(miscNavItem.id)
+                  } else {
                     setMobileNavOpen(false)
-                  }}
-                >
-                  {item.color && (
-                    <span
-                      className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: item.color }}
-                    />
-                  )}
-                  <span className="flex-1 min-w-0 truncate">{item.label}</span>
-                  <UnreadBadge count={badgeCount} />
-                </button>
-              )
-            })}
-          </nav>
+                  }
+                }}
+              >
+                <miscNavItem.icon />
+                <span className="flex-1 text-left">{miscNavItem.label}</span>
+                {secondaryNavMap[miscNavItem.id]?.length > 0 && (
+                  <Icons.ChevronRight />
+                )}
+              </button>
+            </nav>
+          </div>
 
-          {/* Avatar mit Logout für Mobile */}
+          {/* Avatar mit Logout für Mobile - Panel 1 */}
           <div className="p-4 border-t border-[#334155]">
             <div className="flex items-center gap-3">
               {currentStaff?.avatar_url ? (
@@ -232,6 +207,111 @@ const SidebarNav = function SidebarNav({
               <Icons.Logout />
               Abmelden
             </button>
+          </div>
+        </div>
+
+        {/* Panel 2: Sekundäre Navigation */}
+        <div className="w-1/2 h-full flex flex-col bg-[#334155]">
+          <div className="px-4 pt-4 pb-3 border-b border-[#1E293B] flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setMobileSecondaryView(null)}
+              className="p-2 -ml-2 rounded-[6px] text-[#E5E7EB] hover:bg-[#1E293B]"
+              title="Zurück"
+            >
+              <Icons.ChevronLeft />
+            </button>
+            <div className="flex-1">
+              <p className="text-xs uppercase tracking-[0.08em] text-[#64748B]">
+                {navItems.find((item) => item.id === mobileSecondaryView)?.label ||
+                  (mobileSecondaryView === miscNavItem.id ? miscNavItem.label : '')}
+              </p>
+              <h2 className="text-sm font-semibold text-[#E5E7EB] mt-0.5">Auswählen</h2>
+            </div>
+            {mobileSecondaryView === 'tasks' && (
+              <div className="flex items-center gap-1">
+                {onAddProject && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onAddProject()
+                      setMobileNavOpen(false)
+                    }}
+                    className="p-2 rounded-[6px] text-[#E5E7EB] hover:bg-[#1E293B]"
+                    title="Neues Projekt"
+                  >
+                    <FolderPlus size={20} weight="bold" />
+                  </button>
+                )}
+                {onAddTask && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onAddTask()
+                      setMobileNavOpen(false)
+                    }}
+                    className="p-2 rounded-[6px] text-[#E5E7EB] hover:bg-[#1E293B]"
+                    title="Neue Aufgabe"
+                  >
+                    <Plus size={20} weight="bold" />
+                  </button>
+                )}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => setMobileNavOpen(false)}
+              className="p-2 rounded-[6px] text-[#E5E7EB] hover:bg-[#1E293B]"
+              title="Menü schließen"
+            >
+              <Icons.X />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto">
+            <nav className="p-2 space-y-0.5">
+              {(secondaryNavMap[mobileSecondaryView] || []).map((subItem, idx) => {
+                if (subItem.id === 'divider') {
+                  return (
+                    <div key={`divider-${idx}`} className="border-t border-[#5E647A] my-2" />
+                  )
+                }
+
+                const isSubActive = getActiveSecondaryId() === subItem.id
+                const badgeCount = mobileSecondaryView === 'apo'
+                  ? unreadCounts[subItem.id] || 0
+                  : mobileSecondaryView === 'post'
+                    ? (subItem.id === 'fax' ? unreadCounts.fax : subItem.id === 'email' ? unreadCounts.email : 0) || 0
+                    : mobileSecondaryView === 'chat' && unreadCounts.chat
+                      ? (subItem.id === 'group' ? unreadCounts.chat.group : unreadCounts.chat[subItem.id]) || 0
+                      : 0
+
+                return (
+                  <button
+                    key={subItem.id}
+                    type="button"
+                    className={`w-full flex items-center gap-2 text-left px-3 py-2.5 rounded-[6px] text-sm transition-colors overflow-hidden ${
+                      isSubActive
+                        ? 'bg-[#1E293B] text-[#FEF3C7] font-medium'
+                        : 'text-[#E5E7EB] hover:bg-[#1E293B]/50 hover:text-white'
+                    }`}
+                    onClick={() => {
+                      handleSecondarySelect(subItem.id)
+                      setMobileNavOpen(false)
+                    }}
+                  >
+                    {subItem.color && (
+                      <span
+                        className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: subItem.color }}
+                      />
+                    )}
+                    <span className="flex-1 min-w-0 truncate">{subItem.label}</span>
+                    <UnreadBadge count={badgeCount} />
+                  </button>
+                )
+              })}
+            </nav>
           </div>
         </div>
       </div>
