@@ -45,7 +45,7 @@ const DashboardHeader = () => {
         </button>
         <img src="/logo.png" alt="Kaeee" className="h-8" />
 
-        <div className="hidden lg:block absolute left-[17rem]">
+        <div className="hidden lg:block absolute left-[17.5rem]">
           <SplitFlapDisplay
             charCount={32}
             interval={30000}

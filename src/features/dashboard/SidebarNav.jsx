@@ -358,9 +358,9 @@ const SidebarNav = function SidebarNav() {
       </div>
     </aside>
 
-    <aside data-sidebar="primary" className={`hidden lg:flex flex-shrink-0 ${theme.sidebarBg} w-12 min-w-[3rem] max-w-[3rem] overflow-visible h-full relative z-[45] pointer-events-auto`}>
+    <aside data-sidebar="primary" className={`hidden lg:flex flex-shrink-0 ${theme.sidebarBg} w-14 min-w-[3.5rem] max-w-[3.5rem] overflow-visible h-full relative z-[45] pointer-events-auto`}>
       <div className="h-full flex flex-col">
-        <nav className="py-3 space-y-1 flex flex-col items-center flex-1 pl-1">
+        <nav className="py-2 space-y-0 flex flex-col items-center flex-1 pl-1">
           {navItems.map((item) => {
             const totalApoUnread = item.id === 'pharma' ? unreadCounts.amk + unreadCounts.recall + unreadCounts.lav + (unreadCounts.rhb || 0) : 0
             const totalPostUnread = item.id === 'post' ? (unreadCounts.fax || 0) + (unreadCounts.email || 0) + (unreadCounts.gesund || 0) : 0
@@ -369,22 +369,25 @@ const SidebarNav = function SidebarNav() {
               : 0
             const hasUnread = totalApoUnread > 0 || totalPostUnread > 0 || totalChatUnread > 0
             return (
-              <div key={item.id} className="relative">
+              <div key={item.id} className="relative w-full flex justify-center">
                 {activeView === item.id && (
                   <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] bg-[#F59E0B] rounded-r pointer-events-none z-10" />
                 )}
                 <button
                   type="button"
-                  className={`w-10 h-10 flex items-center justify-center mx-auto rounded-[6px] transition-colors relative ${theme.sidebarText} ${
+                  className={`w-12 flex flex-col items-center justify-center gap-0.5 py-1.5 mx-auto rounded-[6px] transition-colors relative ${theme.sidebarText} ${
                     activeView === item.id ? theme.sidebarActive : theme.sidebarHover
                   }`}
                   onClick={() => handlePrimaryActivate(item.id)}
                   title={`${item.label}${totalApoUnread > 0 ? ` (${totalApoUnread})` : ''}${totalPostUnread > 0 ? ` (${totalPostUnread})` : ''}${totalChatUnread > 0 ? ` (${totalChatUnread})` : ''}`}
                 >
-                  <span className="pointer-events-none"><item.icon /></span>
-                  {hasUnread && (
-                    <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-[#FF6500] rounded-full border-2 border-[#1E293B] pointer-events-none" />
-                  )}
+                  <span className="pointer-events-none relative">
+                    <item.icon />
+                    {hasUnread && (
+                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#FF6500] rounded-full border-2 border-[#1E293B] pointer-events-none" />
+                    )}
+                  </span>
+                  <span className="text-[9px] leading-tight truncate w-full text-center pointer-events-none">{item.shortLabel}</span>
                 </button>
               </div>
             )
@@ -399,13 +402,14 @@ const SidebarNav = function SidebarNav() {
             )}
             <button
               type="button"
-              className={`w-10 h-10 flex items-center justify-center mx-auto rounded-[6px] transition-colors relative ${theme.sidebarText} ${
+              className={`w-12 flex flex-col items-center justify-center gap-0.5 py-1.5 mx-auto rounded-[6px] transition-colors relative ${theme.sidebarText} ${
                 activeView === miscNavItem.id ? theme.sidebarActive : theme.sidebarHover
               }`}
               onClick={() => handlePrimaryActivate(miscNavItem.id)}
               title={miscNavItem.label}
             >
               <span className="pointer-events-none"><miscNavItem.icon /></span>
+              <span className="text-[9px] leading-tight truncate w-full text-center pointer-events-none">{miscNavItem.shortLabel}</span>
             </button>
           </div>
         </div>

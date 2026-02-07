@@ -5,21 +5,21 @@ import { Icons } from '../../../shared/ui'
  * Navigation items configuration
  */
 export const navItems = [
-  { id: 'dashboard', icon: () => <House size={20} weight="regular" />, label: 'Dashboard' },
-  { id: 'post', icon: () => <Icons.PostHorn />, label: 'Post' },
-  { id: 'planung', icon: () => <CalendarDots size={20} weight="regular" />, label: 'Planung' },
-  { id: 'tasks', icon: () => <CheckSquare size={20} weight="regular" />, label: 'Aufgaben' },
-  { id: 'chat', icon: () => <ChatCircle size={20} weight="regular" />, label: 'Chat' },
-  { id: 'botendienst', icon: () => <Moped size={20} weight="regular" />, label: 'Botendienst' },
-  { id: 'pharma', icon: () => <Pill size={20} weight="regular" />, label: 'Pharma-Info' },
-  { id: 'dokumente', icon: () => <Files size={20} weight="regular" />, label: 'Dokumente' },
-  { id: 'settings', icon: () => <GearSix size={20} weight="regular" />, label: 'Einstellungen' },
+  { id: 'dashboard', icon: () => <House size={20} weight="regular" />, label: 'Dashboard', shortLabel: 'Home' },
+  { id: 'post', icon: () => <Icons.PostHorn />, label: 'Post', shortLabel: 'Post' },
+  { id: 'planung', icon: () => <CalendarDots size={20} weight="regular" />, label: 'Planung', shortLabel: 'Plan' },
+  { id: 'tasks', icon: () => <CheckSquare size={20} weight="regular" />, label: 'Aufgaben', shortLabel: 'Tasks' },
+  { id: 'chat', icon: () => <ChatCircle size={20} weight="regular" />, label: 'Chat', shortLabel: 'Chat' },
+  { id: 'botendienst', icon: () => <Moped size={20} weight="regular" />, label: 'Botendienst', shortLabel: 'Boten' },
+  { id: 'pharma', icon: () => <Pill size={20} weight="regular" />, label: 'Pharma-Info', shortLabel: 'Pharma' },
+  { id: 'dokumente', icon: () => <Files size={20} weight="regular" />, label: 'Dokumente', shortLabel: 'Doku' },
+  { id: 'settings', icon: () => <GearSix size={20} weight="regular" />, label: 'Einstellungen', shortLabel: 'Settings' },
 ]
 
 /**
  * Misc navigation item (separate, above avatar)
  */
-export const miscNavItem = { id: 'misc', icon: () => <DotsThree size={20} weight="bold" />, label: 'Sonstiges' }
+export const miscNavItem = { id: 'misc', icon: () => <DotsThree size={20} weight="bold" />, label: 'Sonstiges', shortLabel: 'Sonst.' }
 
 /**
  * Creates the secondary navigation map based on dynamic data
