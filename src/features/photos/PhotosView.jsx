@@ -18,7 +18,7 @@ const PhotosView = ({
       {secondaryTab === 'visitenkarten' ? 'Visitenkarten' : 'Fotos'}
     </h2>
 
-    {(secondaryTab === 'uploads' || secondaryTab === 'ocr') && (
+    {secondaryTab === 'ocr' && (
       <>
         {photosLoading ? (
           <p className={theme.textMuted}>Fotos werden geladen...</p>

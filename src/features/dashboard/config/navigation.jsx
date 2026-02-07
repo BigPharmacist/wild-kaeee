@@ -107,11 +107,9 @@ export function createSecondaryNavMap({
       { id: 'neu', label: 'Neu' },
     ],
     misc: [
-      { id: 'uploads', label: 'Uploads' },
       { id: 'ocr', label: 'OCR' },
       { id: 'visitenkarten', label: 'Visitenkarten' },
       { id: 'colors', label: 'Farben' },
-      { id: 'card-enhance', label: 'Karten-Test' },
     ],
     settings: [
       { id: 'pharmacies', label: 'Apotheken' },

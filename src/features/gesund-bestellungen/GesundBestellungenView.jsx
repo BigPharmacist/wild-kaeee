@@ -444,14 +444,23 @@ function OrderDetailPopup({ order, theme, onClose, getViewUrl, printFile }) {
 }
 
 function isUnseen(order) {
-  if (!order.seen_at) return true
-  if (order.updated_at && new Date(order.updated_at) > new Date(order.seen_at)) return true
-  return false
+  return !order.seen_at
 }
 
 export default function GesundBestellungenView({ theme }) {
   const { ordersByDay, loading, refreshing, refresh, getViewUrl, printFile, markSeen } = useGesundBestellungen()
   const [selectedOrder, setSelectedOrder] = useState(null)
+  const today = new Date().toISOString().split('T')[0]
+  const [expandedDays, setExpandedDays] = useState(new Set([today]))
+
+  const toggleDay = (date) => {
+    setExpandedDays(prev => {
+      const next = new Set(prev)
+      if (next.has(date)) next.delete(date)
+      else next.add(date)
+      return next
+    })
+  }
 
   const handleOpenOrder = (order) => {
     setSelectedOrder(order)
@@ -493,11 +502,33 @@ export default function GesundBestellungenView({ theme }) {
             </div>
           ) : (
             <div className="space-y-8">
-              {ordersByDay.map(({ date, orders }) => (
+              {ordersByDay.map(({ date, orders }) => {
+                const collapsed = !expandedDays.has(date)
+                const unseenCount = orders.filter(isUnseen).length
+                return (
                 <div key={date}>
-                  <h2 className={`text-lg font-semibold mb-4 ${theme.text}`}>
-                    {formatDayHeading(date)}
-                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => toggleDay(date)}
+                    className={`flex items-center gap-2 mb-4 group cursor-pointer`}
+                  >
+                    <svg
+                      className={`w-4 h-4 ${theme.textMuted} transition-transform ${collapsed ? '-rotate-90' : ''}`}
+                      fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                    <h2 className={`text-lg font-semibold ${theme.text}`}>
+                      {formatDayHeading(date)}
+                    </h2>
+                    <span className={`text-sm ${theme.textMuted}`}>({orders.length})</span>
+                    {unseenCount > 0 && (
+                      <span className="flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-red-500 rounded-full">
+                        {unseenCount}
+                      </span>
+                    )}
+                  </button>
+                  {!collapsed && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {orders.map((order) => {
                       const unseen = isUnseen(order)
@@ -574,8 +605,10 @@ export default function GesundBestellungenView({ theme }) {
                       </div>
                     )})}
                   </div>
+                  )}
                 </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>

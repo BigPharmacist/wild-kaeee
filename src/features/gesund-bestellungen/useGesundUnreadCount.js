@@ -5,32 +5,20 @@ const POLLING_INTERVAL = 30000
 
 /**
  * Hook für Gesund.de ungelesene Bestellungen
- * Unseen = seen_at IS NULL OR updated_at > seen_at
+ * Unseen = seen_at IS NULL (nur neue Bestellungen, nicht Statusänderungen)
  */
 export default function useGesundUnreadCount() {
   const [count, setCount] = useState(0)
   const channelRef = useRef(null)
 
   const fetchCount = useCallback(async () => {
-    // Query 1: Noch nie gesehen (seen_at IS NULL)
-    const { count: c1, error: e1 } = await supabase
+    const { count: c1, error } = await supabase
       .from('gesund_orders')
       .select('id', { count: 'exact', head: true })
       .is('seen_at', null)
 
-    // Query 2: Seit letztem Öffnen aktualisiert (updated_at > seen_at)
-    // PostgREST kann keine Spalte-gegen-Spalte-Vergleiche, daher client-seitig
-    const { data: seenOrders, error: e2 } = await supabase
-      .from('gesund_orders')
-      .select('id, updated_at, seen_at')
-      .not('seen_at', 'is', null)
-
-    const c2 = !e2
-      ? (seenOrders || []).filter(o => new Date(o.updated_at) > new Date(o.seen_at)).length
-      : 0
-
-    if (!e1) {
-      setCount((c1 || 0) + c2)
+    if (!error) {
+      setCount(c1 || 0)
     }
   }, [])
 
@@ -59,7 +47,7 @@ export default function useGesundUnreadCount() {
     const channel = supabase
       .channel(`gesund_orders_unread_${Date.now()}`)
       .on('postgres_changes', {
-        event: '*',
+        event: 'INSERT',
         schema: 'public',
         table: 'gesund_orders',
       }, () => {
