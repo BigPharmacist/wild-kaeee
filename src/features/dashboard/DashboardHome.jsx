@@ -1,53 +1,88 @@
-import { memo, useState } from 'react'
+import { memo, useState, lazy, Suspense } from 'react'
 import { Sparkle, CheckCircle, Warning, Clock, CaretLeft, CaretRight } from '@phosphor-icons/react'
+import { useTheme, useAuth, usePharmacy, useStaff, useEmail, useNavigation } from '../../context'
+import { Icons } from '../../shared/ui'
+import { useWeather, usePollen, useBiowetter, useDashboardTasks, useNews } from '../dashboard'
+import useDashboardEvents from './useDashboardEvents'
+import usePlanData from './usePlanData'
 import NewsWidget from './NewsWidget'
 
-const DashboardHome = memo(function DashboardHome({
-  theme,
-  openWeatherModal,
-  weatherLoading,
-  weatherError,
-  weatherData,
-  weatherLocation,
-  weatherDescription,
-  WeatherIcon, // eslint-disable-line no-unused-vars -- used as component
-  Icons, // eslint-disable-line no-unused-vars -- used as Icons.X etc
-  dashboardEventsLoading,
-  dashboardEvents,
-  setActiveView,
-  pollenData,
-  pollenLoading,
-  pollenError,
-  pollenRegion,
-  pollenNames,
-  severityLabels,
-  severityColors,
-  biowetterLoading,
-  biowetterError,
-  biowetterZone,
-  getBiowetterForecasts,
-  biowetterLastUpdate,
-  biowetterAiRecommendation,
-  biowetterAiLoading,
-  openBiowetterModal,
-  // Tasks Widget Props
-  dashboardTasks,
-  dashboardTasksLoading,
-  dashboardTasksError,
-  tasksByDue,
-  // Plan Widget Props
-  planData,
-  planLoading,
-  planError,
-  // News Widget Props
-  news,
-  newsLoading,
-  newsError,
-  ReactMarkdown,
-  remarkGfm,
-}) {
-  // State für Team-Widget Datum (Offset von heute: 0 = heute, 1 = morgen, -1 = gestern)
+const WeatherModal = lazy(() => import('./modals/WeatherModal'))
+const BiowetterModal = lazy(() => import('./modals/BiowetterModal'))
+const ReactMarkdown = lazy(() => import('react-markdown'))
+import remarkGfm from 'remark-gfm'
+
+const DashboardHome = memo(function DashboardHome() {
+  const { theme } = useTheme()
+  const { session } = useAuth()
+  const { pharmacies } = usePharmacy()
+  const { currentStaff } = useStaff()
+  const { aiSettings } = useEmail()
+  const { setActiveView } = useNavigation()
+
+  // Dashboard-eigene Hooks
+  const {
+    weatherLocation,
+    weatherInput,
+    weatherData,
+    weatherLoading,
+    weatherError,
+    weatherModalOpen,
+    setWeatherLocation,
+    setWeatherInput,
+    weatherDescription,
+    WeatherIcon,
+    openWeatherModal,
+    closeWeatherModal,
+  } = useWeather({ pharmacies })
+
+  const {
+    pollenData,
+    pollenLoading,
+    pollenError,
+    pollenRegion,
+    pollenNames,
+    severityLabels,
+    severityColors,
+  } = usePollen({ pharmacies })
+
+  const {
+    biowetterLoading,
+    biowetterError,
+    biowetterZone,
+    getForecasts: getBiowetterForecasts,
+    lastUpdate: biowetterLastUpdate,
+    aiRecommendation: biowetterAiRecommendation,
+    aiRecommendationLoading: biowetterAiLoading,
+  } = useBiowetter({ pharmacies, aiSettings })
+
+  const {
+    tasks: dashboardTasks,
+    tasksLoading: dashboardTasksLoading,
+    tasksError: dashboardTasksError,
+    tasksByDue,
+  } = useDashboardTasks({ session, currentStaff })
+
+  const {
+    news,
+    newsLoading,
+    newsError,
+  } = useNews({ session, currentStaff })
+
+  const {
+    dashboardEvents,
+    dashboardEventsLoading,
+  } = useDashboardEvents({ session })
+
+  const {
+    planData,
+    planLoading,
+    planError,
+  } = usePlanData({ session })
+
+  // Local state
   const [planDayOffset, setPlanDayOffset] = useState(0)
+  const [showBiowetterModal, setShowBiowetterModal] = useState(false)
 
   return (
   <>
@@ -606,7 +641,7 @@ const DashboardHome = memo(function DashboardHome({
       {/* 5. Biowetter */}
       <div
         className={`${theme.panel} rounded-2xl p-5 border ${theme.border} ${theme.cardShadow} cursor-pointer hover:border-[#4C8BF5] transition-colors overflow-hidden`}
-        onClick={openBiowetterModal}
+        onClick={() => setShowBiowetterModal(true)}
       >
         <div className="flex items-center justify-between mb-4">
           <h3 className={`text-lg font-medium ${theme.text}`}>Biowetter</h3>
@@ -815,6 +850,30 @@ const DashboardHome = memo(function DashboardHome({
         )}
       </div>
     </div>
+
+    {/* Modals - jetzt intern verwaltet */}
+    <Suspense fallback={null}>
+      <WeatherModal
+        theme={theme}
+        Icons={Icons}
+        weatherModalOpen={weatherModalOpen}
+        closeWeatherModal={closeWeatherModal}
+        weatherInput={weatherInput}
+        setWeatherInput={setWeatherInput}
+        setWeatherLocation={setWeatherLocation}
+      />
+
+      <BiowetterModal
+        theme={theme}
+        Icons={Icons}
+        showBiowetterModal={showBiowetterModal}
+        setShowBiowetterModal={setShowBiowetterModal}
+        getBiowetterForecasts={getBiowetterForecasts}
+        biowetterAiLoading={biowetterAiLoading}
+        biowetterAiRecommendation={biowetterAiRecommendation}
+        biowetterLastUpdate={biowetterLastUpdate}
+      />
+    </Suspense>
   </>
   )
 })

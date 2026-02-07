@@ -37,7 +37,7 @@ export function StaffProvider({ children }) {
     setShowExited,
     setStaffViewMode,
     isExited,
-    toggleTrackingEnabled,
+
   } = useStaffHook({ session, pharmacies })
 
   // Daten laden wenn Session vorhanden
@@ -76,7 +76,7 @@ export function StaffProvider({ children }) {
     setShowExited,
     setStaffViewMode,
     isExited,
-    toggleTrackingEnabled,
+
   }), [
     staff,
     filteredStaff,
@@ -105,7 +105,7 @@ export function StaffProvider({ children }) {
     setShowExited,
     setStaffViewMode,
     isExited,
-    toggleTrackingEnabled,
+
   ])
 
   return (

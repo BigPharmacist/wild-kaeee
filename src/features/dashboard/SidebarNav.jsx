@@ -1,40 +1,67 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { Plus, FolderPlus } from '@phosphor-icons/react'
+import { useTheme, useAuth, useStaff, useNavigation } from '../../context'
+import { useUnreadCounts } from '../../context/UnreadCountsContext'
+import { useSecondaryNav } from '../../context/SecondaryNavContext'
+import { Icons, UnreadBadge } from '../../shared/ui'
+import { navItems, miscNavItem, createSecondaryNavMap } from './config/navigation'
 
-const SidebarNav = function SidebarNav({
-  theme,
-  mobileNavOpen,
-  setMobileNavOpen,
-  navItems,
-  miscNavItem,
-  activeView,
-  setActiveView,
-  secondaryNavMap,
-  getActiveSecondaryId,
-  handleSecondarySelect,
-  unreadCounts,
-  Icons, // eslint-disable-line no-unused-vars -- used as Icons.X etc
-  UnreadBadge, // eslint-disable-line no-unused-vars -- used as component
-  currentStaff,
-  session,
-  handleSignOut,
-  onAddTask, // Callback to open task modal
-  onAddProject, // Callback to open project modal
-}) {
+/**
+ * SidebarNav - Self-sufficient sidebar component
+ * Pulls theme, navigation, auth, staff, unread counts from contexts
+ * Dynamic secondary nav data from SecondaryNavContext
+ */
+const SidebarNav = function SidebarNav() {
+  const { theme } = useTheme()
+  const { session, handleSignOut } = useAuth()
+  const { currentStaff, staff } = useStaff()
+  const { activeView, setActiveView, mobileNavOpen, setMobileNavOpen, getActiveSecondaryId, handleSecondarySelect: navHandleSecondarySelect, chatTab } = useNavigation()
+  const { unreadCounts } = useUnreadCounts()
+  const { dynamicNavData, secondarySelectOverride, sidebarCallbacks } = useSecondaryNav()
+
+  const navigate = useNavigate()
+  const { onAddTask, onAddProject } = sidebarCallbacks
+  const handleSecondarySelectFn = secondarySelectOverride || navHandleSecondarySelect
+
+  // Routes for migrated features (Phase 3)
+  const migratedRoutes = {
+    dashboard: '/',
+    tasks: '/tasks',
+    calendar: '/calendar',
+    chat: '/chat/group',
+    plan: '/plan',
+    scan: '/scan',
+    botendienst: '/botendienst',
+    dokumente: '/dokumente',
+    rechnungen: '/rechnungen',
+    archiv: '/archiv',
+    apo: '/apo',
+    post: '/post',
+    misc: '/misc',
+    settings: '/settings',
+  }
+
+  const secondaryNavMap = useMemo(() => createSecondaryNavMap({
+    projects: dynamicNavData.projects,
+    staff,
+    session,
+    archivDocumentTypes: dynamicNavData.archivDocumentTypes,
+    archivSavedViews: dynamicNavData.archivSavedViews,
+    currentStaff,
+  }), [currentStaff?.is_admin, staff, session?.user?.id, dynamicNavData.archivDocumentTypes, dynamicNavData.archivSavedViews, dynamicNavData.projects])
+
   const [showLogoutMenu, setShowLogoutMenu] = useState(false)
-  const [mobileSecondaryView, setMobileSecondaryView] = useState(null) // null = primär, sonst ID des Hauptpunkts
+  const [mobileSecondaryView, setMobileSecondaryView] = useState(null)
   const logoutMenuRef = useRef(null)
 
-  // Reset secondary panel when mobile nav closes
   useEffect(() => {
     if (!mobileNavOpen) {
-      // Kleine Verzögerung damit die Animation smooth bleibt
       const timer = setTimeout(() => setMobileSecondaryView(null), 300)
       return () => clearTimeout(timer)
     }
   }, [mobileNavOpen])
 
-  // Schließe Menü bei Klick außerhalb
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (logoutMenuRef.current && !logoutMenuRef.current.contains(event.target)) {
@@ -49,6 +76,16 @@ const SidebarNav = function SidebarNav({
 
   const handlePrimaryActivate = (id) => {
     setActiveView(id)
+    if (id === 'chat') {
+      // Chat tab-dependent navigation
+      if (chatTab && chatTab !== 'group') {
+        navigate({ to: `/chat/dm/${chatTab}` })
+      } else {
+        navigate({ to: '/chat/group' })
+      }
+    } else if (migratedRoutes[id]) {
+      navigate({ to: migratedRoutes[id] })
+    }
   }
 
   return (
@@ -68,7 +105,6 @@ const SidebarNav = function SidebarNav({
         lg:hidden overflow-hidden
       `}
     >
-      {/* Zwei-Panel Container */}
       <div
         className="h-full flex transition-transform duration-300 ease-out"
         style={{
@@ -97,7 +133,7 @@ const SidebarNav = function SidebarNav({
             <nav className="p-2 space-y-0.5">
               {navItems.map((item) => {
                 const totalApoUnread = item.id === 'apo' ? unreadCounts.amk + unreadCounts.recall + unreadCounts.lav + (unreadCounts.rhb || 0) : 0
-                const totalPostUnread = item.id === 'post' ? (unreadCounts.fax || 0) + (unreadCounts.email || 0) : 0
+                const totalPostUnread = item.id === 'post' ? (unreadCounts.fax || 0) + (unreadCounts.email || 0) + (unreadCounts.gesund || 0) : 0
                 const totalChatUnread = item.id === 'chat' && unreadCounts.chat
                   ? Object.values(unreadCounts.chat).reduce((sum, n) => sum + n, 0)
                   : 0
@@ -114,11 +150,9 @@ const SidebarNav = function SidebarNav({
                     }`}
                     onClick={() => {
                       if (hasSecondary) {
-                        // Hat Unterpunkte -> Sekundärpanel öffnen
                         handlePrimaryActivate(item.id)
                         setMobileSecondaryView(item.id)
                       } else {
-                        // Keine Unterpunkte -> direkt auswählen und schließen
                         handlePrimaryActivate(item.id)
                         setMobileNavOpen(false)
                       }
@@ -281,7 +315,7 @@ const SidebarNav = function SidebarNav({
                 const badgeCount = mobileSecondaryView === 'apo'
                   ? unreadCounts[subItem.id] || 0
                   : mobileSecondaryView === 'post'
-                    ? (subItem.id === 'fax' ? unreadCounts.fax : subItem.id === 'email' ? unreadCounts.email : 0) || 0
+                    ? (subItem.id === 'fax' ? unreadCounts.fax : subItem.id === 'email' ? unreadCounts.email : subItem.id === 'gesund' ? unreadCounts.gesund : 0) || 0
                     : mobileSecondaryView === 'chat' && unreadCounts.chat
                       ? (subItem.id === 'group' ? unreadCounts.chat.group : unreadCounts.chat[subItem.id]) || 0
                       : 0
@@ -296,7 +330,7 @@ const SidebarNav = function SidebarNav({
                         : 'text-[#E5E7EB] hover:bg-[#1E293B]/50 hover:text-white'
                     }`}
                     onClick={() => {
-                      handleSecondarySelect(subItem.id)
+                      handleSecondarySelectFn(subItem.id)
                       setMobileNavOpen(false)
                     }}
                   >
@@ -322,7 +356,7 @@ const SidebarNav = function SidebarNav({
         <nav className="py-3 space-y-1 flex flex-col items-center flex-1 pl-1">
           {navItems.map((item) => {
             const totalApoUnread = item.id === 'apo' ? unreadCounts.amk + unreadCounts.recall + unreadCounts.lav + (unreadCounts.rhb || 0) : 0
-            const totalPostUnread = item.id === 'post' ? (unreadCounts.fax || 0) + (unreadCounts.email || 0) : 0
+            const totalPostUnread = item.id === 'post' ? (unreadCounts.fax || 0) + (unreadCounts.email || 0) + (unreadCounts.gesund || 0) : 0
             const totalChatUnread = item.id === 'chat' && unreadCounts.chat
               ? Object.values(unreadCounts.chat).reduce((sum, n) => sum + n, 0)
               : 0
@@ -390,7 +424,6 @@ const SidebarNav = function SidebarNav({
               )}
             </button>
 
-            {/* Dropdown-Menü */}
             {showLogoutMenu && (
               <div className="absolute left-full ml-2 bottom-0 w-56 rounded-lg bg-white border border-[#E5E7EB] shadow-lg py-1 z-50">
                 <div className="px-4 py-3 border-b border-[#E5E7EB]">
@@ -464,7 +497,6 @@ const SidebarNav = function SidebarNav({
         </div>
         <nav className="p-2 overflow-y-auto space-y-1">
           {(secondaryNavMap[activeView] || []).map((item) => {
-            // Divider als visueller Trenner
             if (item.id === 'divider') {
               return (
                 <div key="divider" className="border-t border-[#5E647A] my-2" />
@@ -475,7 +507,7 @@ const SidebarNav = function SidebarNav({
             const badgeCount = activeView === 'apo'
               ? unreadCounts[item.id] || 0
               : activeView === 'post'
-                ? (item.id === 'fax' ? unreadCounts.fax : item.id === 'email' ? unreadCounts.email : 0) || 0
+                ? (item.id === 'fax' ? unreadCounts.fax : item.id === 'email' ? unreadCounts.email : item.id === 'gesund' ? unreadCounts.gesund : 0) || 0
                 : activeView === 'chat' && unreadCounts.chat
                   ? (item.id === 'group' ? unreadCounts.chat.group : unreadCounts.chat[item.id]) || 0
                   : 0
@@ -490,7 +522,7 @@ const SidebarNav = function SidebarNav({
                 }`}
                 title={item.label}
                 onClick={() => {
-                  handleSecondarySelect(item.id)
+                  handleSecondarySelectFn(item.id)
                 }}
               >
                 {item.color && (

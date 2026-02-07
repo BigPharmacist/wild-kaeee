@@ -24,6 +24,55 @@ const sanitizeEmailHtml = (html) => {
   }
 }
 
+export const resolveCidImages = async (email, jmapClient) => {
+  const htmlPartId = email.htmlBody?.[0]?.partId
+  if (!htmlPartId) return email
+
+  const html = email.bodyValues?.[htmlPartId]?.value
+  if (!html || !html.includes('cid:')) return email
+
+  // CID-Parts aus bodyStructure und attachments sammeln
+  const cidParts = []
+  const walkStructure = (part) => {
+    if (part.cid) cidParts.push(part)
+    if (part.subParts) part.subParts.forEach(walkStructure)
+  }
+  if (email.bodyStructure) walkStructure(email.bodyStructure)
+  if (email.attachments) {
+    for (const att of email.attachments) {
+      if (att.cid && !cidParts.find(p => p.cid === att.cid)) {
+        cidParts.push(att)
+      }
+    }
+  }
+
+  // Nur tatsächlich referenzierte CIDs auflösen
+  const referenced = cidParts.filter(p => html.includes(`cid:${p.cid}`))
+  if (referenced.length === 0) return email
+
+  const resolved = await Promise.all(
+    referenced.map(async (part) => {
+      const objectUrl = await jmapClient.fetchBlobAsObjectUrl(part.blobId, part.type)
+      return { cid: part.cid, objectUrl }
+    })
+  )
+
+  let newHtml = html
+  for (const { cid, objectUrl } of resolved) {
+    if (objectUrl) {
+      newHtml = newHtml.replaceAll(`cid:${cid}`, objectUrl)
+    }
+  }
+
+  return {
+    ...email,
+    bodyValues: {
+      ...email.bodyValues,
+      [htmlPartId]: { ...email.bodyValues[htmlPartId], value: newHtml }
+    }
+  }
+}
+
 export const getEmailBodyHtml = (email) => {
   if (!email) return ''
 

@@ -1,28 +1,24 @@
 import { createRoute } from '@tanstack/react-router'
 import { lazy, Suspense, useEffect } from 'react'
 import { LoadingSpinner } from '../../shared/ui'
-import { useNavigation } from '../../context'
 import { Route as rootRoute } from './__root'
+import { useNavigation } from '../../context'
 
-const ChatPage = lazy(() => import('../../features/chat/ChatPage'))
+const ArchivPage = lazy(() => import('../../features/archiv/ArchivPage'))
 
 export const Route = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/chat/group',
-  component: ChatGroupRoute,
+  path: '/archiv',
+  component: ArchivRoute,
 })
 
-function ChatGroupRoute() {
-  const { setActiveView, setChatTab } = useNavigation()
-
-  useEffect(() => {
-    setActiveView('chat')
-    setChatTab('group')
-  }, [setActiveView, setChatTab])
+function ArchivRoute() {
+  const { setActiveView } = useNavigation()
+  useEffect(() => { setActiveView('archiv') }, [setActiveView])
 
   return (
     <Suspense fallback={<div className="flex items-center justify-center h-full"><LoadingSpinner /></div>}>
-      <ChatPage directChatUserId={null} />
+      <ArchivPage />
     </Suspense>
   )
 }

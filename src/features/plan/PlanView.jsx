@@ -1,14 +1,26 @@
-const PlanView = ({
-  theme,
-  planData,
-  planLoading,
-  planError,
-  fetchPlanData,
-  setPlanData,
-  setPlanError,
-  selectedPlanDate,
-  setSelectedPlanDate,
-}) => (
+import { useState } from 'react'
+import { useTheme, useAuth } from '../../context'
+import usePlanData from '../dashboard/usePlanData'
+
+const PlanView = () => {
+  const { theme } = useTheme()
+  const { session } = useAuth()
+
+  const {
+    planData,
+    planLoading,
+    planError,
+    setPlanData,
+    setPlanError,
+    fetchPlanData,
+  } = usePlanData({ session })
+
+  const [selectedPlanDate, setSelectedPlanDate] = useState(() => {
+    const today = new Date()
+    return today.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  })
+
+  return (
   <>
     <div className="flex items-center justify-between mb-6">
       <h2 className="text-2xl lg:text-3xl font-semibold tracking-tight">Plan</h2>
@@ -315,6 +327,7 @@ const PlanView = ({
       </div>
     )}
   </>
-)
+  )
+}
 
 export default PlanView

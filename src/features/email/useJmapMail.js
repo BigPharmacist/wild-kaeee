@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { jmap } from '../../lib/jmap'
+import { resolveCidImages } from './emailUtils'
 
 export default function useJmapMail({ account }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -53,7 +54,8 @@ export default function useJmapMail({ account }) {
   const loadEmailDetail = useCallback(async (emailId) => {
     setEmailDetailLoading(true)
     try {
-      const detail = await jmap.getEmail(emailId)
+      let detail = await jmap.getEmail(emailId)
+      detail = await resolveCidImages(detail, jmap)
       setEmailDetail(detail)
 
       if (!detail.keywords?.['$seen']) {

@@ -132,7 +132,7 @@ const SplitFlapChar = ({ targetChar, delay = 0 }) => {
   )
 }
 
-const SplitFlapDisplay = ({ messages = [], charCount = 20, interval = 30000, urgentFaxe = [], faxCount = 0 }) => {
+const SplitFlapDisplay = ({ messages = [], charCount = 20, interval = 30000, urgentFaxe = [], faxCount = 0, gesundCount = 0 }) => {
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0)
   const [displayText, setDisplayText] = useState('')
 
@@ -163,11 +163,17 @@ const SplitFlapDisplay = ({ messages = [], charCount = 20, interval = 30000, urg
     ? [`${faxCount} FAX IM EINGANG`]
     : []
 
-  // Priorität: Urgent Fax > Fax-Count > übergebene Messages > Standard
+  // Gesund.de Nachricht
+  const gesundMessages = gesundCount > 0
+    ? [gesundCount === 1 ? 'NEUE BESTELLUNG GESUND.DE' : `${gesundCount} NEUE BESTELLUNGEN`]
+    : []
+
+  // Priorität: Urgent Fax > Fax-Count + Gesund > übergebene Messages > Standard
+  const notificationMessages = [...faxCountMessages, ...gesundMessages]
   const activeMessages = faxMessages.length > 0
     ? faxMessages
-    : faxCountMessages.length > 0
-      ? [...faxCountMessages, ...defaultMessages]
+    : notificationMessages.length > 0
+      ? [...notificationMessages, ...defaultMessages]
       : messages.length > 0
         ? messages
         : defaultMessages

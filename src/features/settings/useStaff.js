@@ -38,7 +38,7 @@ export function useStaff({ session, pharmacies }) {
     setStaffLoading(true)
     const { data, error } = await supabase
       .from('staff')
-      .select('id, first_name, last_name, street, postal_code, city, mobile, email, role, pharmacy_id, auth_user_id, is_admin, avatar_url, employed_since, exit_date, tracking_enabled, created_at')
+      .select('id, first_name, last_name, street, postal_code, city, mobile, email, role, pharmacy_id, auth_user_id, is_admin, avatar_url, employed_since, exit_date, created_at')
       .order('last_name', { ascending: true })
 
     if (error) {
@@ -263,26 +263,6 @@ export function useStaff({ session, pharmacies }) {
       .map((member) => [member.auth_user_id, member])
   )
 
-  // Tracking aktivieren/deaktivieren
-  const toggleTrackingEnabled = async (staffId, enabled) => {
-    const { error } = await supabase
-      .from('staff')
-      .update({ tracking_enabled: enabled })
-      .eq('id', staffId)
-
-    if (error) {
-      setStaffMessage(error.message)
-      return
-    }
-
-    // Lokalen State aktualisieren
-    setStaff((prev) =>
-      prev.map((member) =>
-        member.id === staffId ? { ...member, tracking_enabled: enabled } : member
-      )
-    )
-  }
-
   return {
     // State
     staff,
@@ -313,6 +293,5 @@ export function useStaff({ session, pharmacies }) {
     setShowExited,
     setStaffViewMode,
     isExited,
-    toggleTrackingEnabled,
   }
 }

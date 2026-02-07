@@ -1,28 +1,24 @@
 import { createRoute } from '@tanstack/react-router'
 import { lazy, Suspense, useEffect } from 'react'
 import { LoadingSpinner } from '../../shared/ui'
-import { useNavigation } from '../../context'
 import { Route as rootRoute } from './__root'
+import { useNavigation } from '../../context'
 
-const ChatPage = lazy(() => import('../../features/chat/ChatPage'))
+const ScanPage = lazy(() => import('../../features/scan/ScanPage'))
 
 export const Route = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/chat/group',
-  component: ChatGroupRoute,
+  path: '/scan',
+  component: ScanRoute,
 })
 
-function ChatGroupRoute() {
-  const { setActiveView, setChatTab } = useNavigation()
-
-  useEffect(() => {
-    setActiveView('chat')
-    setChatTab('group')
-  }, [setActiveView, setChatTab])
+function ScanRoute() {
+  const { setActiveView } = useNavigation()
+  useEffect(() => { setActiveView('scan') }, [setActiveView])
 
   return (
     <Suspense fallback={<div className="flex items-center justify-center h-full"><LoadingSpinner /></div>}>
-      <ChatPage directChatUserId={null} />
+      <ScanPage />
     </Suspense>
   )
 }

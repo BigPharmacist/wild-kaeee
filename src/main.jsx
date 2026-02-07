@@ -5,7 +5,7 @@ import { RouterProvider } from '@tanstack/react-router'
 import './index.css'
 import { queryClient } from './lib/queryClient'
 import { router } from './app/router'
-import { NavigationProvider, AuthProvider, PharmacyProvider, StaffProvider, ThemeProvider, ContactsProvider, EmailProvider, PhotosProvider, ChatProvider } from './context'
+import { NavigationProvider, AuthProvider, PharmacyProvider, StaffProvider, ThemeProvider, ContactsProvider, EmailProvider, PhotosProvider, ChatProvider, UnreadCountsProvider, SecondaryNavProvider, HeaderActionsProvider } from './context'
 import { ErrorBoundary, ConnectionStatus } from './shared/ui'
 
 createRoot(document.getElementById('root')).render(
@@ -21,8 +21,14 @@ createRoot(document.getElementById('root')).render(
                     <PhotosProvider>
                       <NavigationProvider>
                         <ChatProvider>
-                          <RouterProvider router={router} />
-                          <ConnectionStatus />
+                          <UnreadCountsProvider>
+                            <SecondaryNavProvider>
+                              <HeaderActionsProvider>
+                                <RouterProvider router={router} />
+                                <ConnectionStatus />
+                              </HeaderActionsProvider>
+                            </SecondaryNavProvider>
+                          </UnreadCountsProvider>
                         </ChatProvider>
                       </NavigationProvider>
                     </PhotosProvider>

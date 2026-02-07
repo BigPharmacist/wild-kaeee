@@ -41,8 +41,8 @@ const MonthGrid = ({
   calendarEvents,
   showWeekends,
   theme,
-  canWriteCurrentCalendar,
   openEventModal,
+  onDayClick,
   getEventColor,
   monthRef,
   isCurrentMonth,
@@ -76,12 +76,12 @@ const MonthGrid = ({
           {week.filter((day) => showWeekends || !day.isWeekend).map((day) => (
             <div
               key={day.dateStr}
-              onClick={() => canWriteCurrentCalendar() && openEventModal(null, day.date)}
+              onClick={() => onDayClick(day)}
               className={`
                 min-h-24 p-1 rounded-lg border transition-colors
                 ${day.isCurrentMonth ? theme.panel : `${theme.panel} opacity-40`}
                 ${day.isToday ? 'border-[#1E293B] border-2 bg-[#334155] ring-4 ring-[#1E293B]/30 shadow-lg shadow-[#1E293B]/25' : theme.border}
-                ${canWriteCurrentCalendar ? 'cursor-pointer ' + (day.isToday ? 'hover:bg-[#475569]' : theme.bgHover) : ''}
+                cursor-pointer ${day.isToday ? 'hover:bg-[#475569]' : theme.bgHover}
               `}
             >
               <div
@@ -153,6 +153,9 @@ const CalendarView = memo(function CalendarView({
 }) {
   const today = new Date()
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+
+  // DayPopup state for month view
+  const [selectedDay, setSelectedDay] = useState(null)
 
   // For infinite scroll: offset range from current month
   const [monthRange, setMonthRange] = useState({ start: -2, end: 3 })
@@ -439,8 +442,8 @@ const CalendarView = memo(function CalendarView({
                   calendarEvents={calendarEvents}
                   showWeekends={showWeekends}
                   theme={theme}
-                  canWriteCurrentCalendar={canWriteCurrentCalendar}
                   openEventModal={openEventModal}
+                  onDayClick={setSelectedDay}
                   getEventColor={getEventColor}
                   monthRef={offset === 0 ? currentMonthRef : null}
                   isCurrentMonth={offset === 0}
@@ -599,6 +602,90 @@ const CalendarView = memo(function CalendarView({
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
           </svg>
         </button>
+      )}
+
+      {/* DayPopup for month view */}
+      {selectedDay && (
+        <div
+          className={`fixed inset-0 z-50 flex items-center justify-center ${theme.overlay}`}
+          onClick={() => setSelectedDay(null)}
+        >
+          <div
+            className={`${theme.panel} rounded-2xl border ${theme.border} ${theme.cardShadow} w-full max-w-md mx-4 max-h-[80vh] flex flex-col`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className={`flex items-center justify-between p-4 border-b ${theme.border}`}>
+              <h3 className={`text-lg font-semibold ${theme.text}`}>
+                {selectedDay.date.toLocaleDateString('de-DE', {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                })}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setSelectedDay(null)}
+                className={`p-1 rounded-lg ${theme.bgHover} ${theme.textMuted}`}
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Event list */}
+            <div className="flex-1 overflow-auto p-4 space-y-2">
+              {selectedDay.events.length === 0 ? (
+                <p className={`text-sm ${theme.textMuted} text-center py-4`}>Keine Termine an diesem Tag.</p>
+              ) : (
+                selectedDay.events.map((event) => (
+                  <div
+                    key={event.id}
+                    onClick={() => {
+                      openEventModal(event)
+                      setSelectedDay(null)
+                    }}
+                    className={`flex items-start gap-3 p-3 rounded-xl border ${theme.border} cursor-pointer ${theme.bgHover}`}
+                  >
+                    <div
+                      className="w-1 h-10 rounded-full shrink-0 mt-0.5"
+                      style={{ backgroundColor: getEventColor(event) }}
+                    />
+                    <div className="min-w-0">
+                      <p className={`font-medium text-sm ${theme.text} truncate`}>{event.title}</p>
+                      <p className={`text-xs ${theme.textMuted}`}>
+                        {event.all_day
+                          ? 'Ganztägig'
+                          : `${new Date(event.start_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} – ${new Date(event.end_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`}
+                      </p>
+                      {event.location && (
+                        <p className={`text-xs ${theme.textMuted} truncate`}>{event.location}</p>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Footer */}
+            {canWriteCurrentCalendar() && (
+              <div className={`p-4 border-t ${theme.border}`}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    openEventModal(null, selectedDay.date)
+                    setSelectedDay(null)
+                  }}
+                  className={`w-full py-2.5 rounded-xl text-sm font-medium ${theme.accent} text-white`}
+                >
+                  + Neuer Termin
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </>
   )

@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { useTheme, useStaff, useAuth } from '../../context'
+import { useState, useEffect, useCallback, lazy } from 'react'
+import { useTheme, useStaff, useAuth, useSecondaryNav, useNavigation } from '../../context'
 import { useTasksQuery } from './api/useTasksQuery'
 import { useQuickCreateTask } from './api/useCreateTask'
 import { useUpdateTask, useCompleteTask, useUncompleteTask, useUpdateTaskOrder, calculateSortOrder } from './api/useUpdateTask'
@@ -9,6 +9,8 @@ import { useTaskForm } from './hooks/useTaskForm'
 import TasksView from './TasksView'
 import TaskFormModal from './TaskFormModal'
 import TaskCompleteModal from './TaskCompleteModal'
+
+const ProjectFormModal = lazy(() => import('../projects/ProjectFormModal'))
 
 // Projekte-Hook (wird später auch auf TanStack Query migriert)
 import useProjects from '../projects/useProjects'
@@ -70,7 +72,47 @@ export default function TasksPage({ initialFilters = {} }) {
   const [completingTask, setCompletingTask] = useState(null)
 
   // Projects (noch alte Hook-Implementierung)
-  const { projects, openProjectModal } = useProjects({ session, currentStaff })
+  const {
+    projects,
+    editingProject,
+    projectForm,
+    projectSaving,
+    projectSaveError,
+    openProjectModal,
+    closeProjectModal,
+    handleProjectInput,
+    saveProject,
+  } = useProjects({ session, currentStaff })
+
+  // Sidebar wiring
+  const { setDynamicNavData, setSidebarCallbacks, setSecondarySelectOverride } = useSecondaryNav()
+  const { handleSecondarySelect } = useNavigation()
+
+  useEffect(() => {
+    setDynamicNavData({ projects })
+  }, [projects, setDynamicNavData])
+
+  useEffect(() => {
+    setSidebarCallbacks({ onAddTask: openTaskModal, onAddProject: openProjectModal })
+    return () => setSidebarCallbacks({ onAddTask: null, onAddProject: null })
+  }, [openTaskModal, openProjectModal, setSidebarCallbacks])
+
+  const handleSecondarySelectWithFilter = useCallback((itemId) => {
+    if (itemId === 'divider') return
+    handleSecondarySelect(itemId)
+
+    if (itemId === 'all') {
+      setFilterProjectId(null)
+    } else if (itemId.startsWith('project-')) {
+      const projectId = itemId.replace('project-', '')
+      setFilterProjectId(projectId)
+    }
+  }, [handleSecondarySelect, setFilterProjectId])
+
+  useEffect(() => {
+    setSecondarySelectOverride(() => handleSecondarySelectWithFilter)
+    return () => setSecondarySelectOverride(null)
+  }, [handleSecondarySelectWithFilter, setSecondarySelectOverride])
 
   // Apply initial filters from URL
   useEffect(() => {
@@ -187,6 +229,7 @@ export default function TasksPage({ initialFilters = {} }) {
 
   return (
     <>
+      <div className="max-w-5xl">
       <TasksView
         theme={theme}
         tasksLoading={tasksLoading || createLoading}
@@ -219,6 +262,7 @@ export default function TasksPage({ initialFilters = {} }) {
         updateTaskOrder={updateTaskOrder}
         calculateSortOrder={calculateSortOrder}
       />
+      </div>
 
       {/* Task Form Modal */}
       {editingTask && (
@@ -248,6 +292,17 @@ export default function TasksPage({ initialFilters = {} }) {
           cancelTaskComplete={cancelTaskComplete}
         />
       )}
+
+      {/* Project Form Modal */}
+      <ProjectFormModal
+        editingProject={editingProject}
+        projectForm={projectForm}
+        projectSaving={projectSaving}
+        projectSaveError={projectSaveError}
+        handleProjectInput={handleProjectInput}
+        saveProject={saveProject}
+        closeProjectModal={closeProjectModal}
+      />
     </>
   )
 }

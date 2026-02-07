@@ -58,12 +58,6 @@ const SettingsView = ({
   fetchContacts,
   openContactModal,
   openContactDetail,
-  toggleTrackingEnabled,
-  CourierMap: _CourierMap, // eslint-disable-line no-unused-vars
-  courierLocations,
-  locationsLoading,
-  fetchCourierLocations,
-  CourierTable,
   // News Props
   allNews,
   fetchAllNews,
@@ -532,101 +526,6 @@ const SettingsView = ({
           onAddContact={() => openContactModal()}
           onOpenContactDetail={openContactDetail}
         />
-      )}
-
-      {settingsTab === 'tracking' && (
-        <div className={`${theme.panel} rounded-2xl p-5 border ${theme.border} ${theme.cardShadow}`}>
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <h3 className="text-base font-semibold">Standort-Tracking</h3>
-              <p className={`text-xs ${theme.textMuted}`}>Aktiviere Tracking für einzelne Mitarbeiter (z.B. Boten).</p>
-            </div>
-          </div>
-
-          {staffLoading && (
-            <p className={theme.textMuted}>Lade Daten...</p>
-          )}
-
-          {!staffLoading && staff.length === 0 && (
-            <p className={theme.textMuted}>Keine Mitarbeiter vorhanden.</p>
-          )}
-
-          {!staffLoading && staff.length > 0 && (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className={`border-b ${theme.border}`}>
-                    <th className={`text-left py-2 px-3 font-medium ${theme.textMuted}`}></th>
-                    <th className={`text-left py-2 px-3 font-medium ${theme.textMuted}`}>Name</th>
-                    <th className={`text-left py-2 px-3 font-medium ${theme.textMuted}`}>Beruf</th>
-                    <th className={`text-left py-2 px-3 font-medium ${theme.textMuted}`}>Apotheke</th>
-                    <th className={`text-center py-2 px-3 font-medium ${theme.textMuted}`}>Tracking</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {staff.filter((member) => !isExited(member)).map((member) => (
-                    <tr
-                      key={member.id}
-                      className={`border-b ${theme.border}`}
-                    >
-                      <td className="py-2 px-3">
-                        {member.avatar_url ? (
-                          <img
-                            src={member.avatar_url}
-                            alt=""
-                            className={`h-8 w-8 rounded-full object-cover border ${theme.border}`}
-                          />
-                        ) : (
-                          <div className={`h-8 w-8 rounded-full border ${theme.border} flex items-center justify-center text-[10px] ${theme.textMuted}`}>
-                            {(member.first_name?.[0] || '') + (member.last_name?.[0] || '')}
-                          </div>
-                        )}
-                      </td>
-                      <td className="py-2 px-3 font-medium">
-                        {member.first_name} {member.last_name}
-                      </td>
-                      <td className={`py-2 px-3 ${theme.textMuted}`}>{member.role || '-'}</td>
-                      <td className={`py-2 px-3 ${theme.textMuted}`}>{pharmacyLookup[member.pharmacy_id] || '-'}</td>
-                      <td className="py-2 px-3 text-center">
-                        <input
-                          type="checkbox"
-                          checked={member.tracking_enabled || false}
-                          onChange={() => toggleTrackingEnabled(member.id, !member.tracking_enabled)}
-                          className="w-4 h-4 rounded accent-[#4C8BF5] cursor-pointer"
-                          title={member.tracking_enabled ? 'Tracking deaktivieren' : 'Tracking aktivieren'}
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Karte vorerst deaktiviert wegen Netzwerkproblemen mit Leaflet
-      {settingsTab === 'tracking' && CourierMap && (
-        <div className="mt-4">
-          <CourierMap
-            theme={theme}
-            courierLocations={courierLocations}
-            locationsLoading={locationsLoading}
-            onRefresh={fetchCourierLocations}
-          />
-        </div>
-      )}
-      */}
-
-      {settingsTab === 'tracking' && CourierTable && (
-        <div className="mt-4">
-          <CourierTable
-            theme={theme}
-            courierLocations={courierLocations}
-            locationsLoading={locationsLoading}
-            onRefresh={fetchCourierLocations}
-          />
-        </div>
       )}
 
       {settingsTab === 'ai-chat' && (

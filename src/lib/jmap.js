@@ -526,6 +526,25 @@ class JMAPClient {
   }
 
   /**
+   * Blob als Object-URL laden (für inline CID-Bilder)
+   */
+  async fetchBlobAsObjectUrl(blobId, type) {
+    const url = this.getAttachmentUrl(blobId, 'inline', type || 'image/png')
+    if (!url || !this.credentials) return null
+
+    try {
+      const response = await fetch(url, {
+        headers: { 'Authorization': `Basic ${this.credentials}` }
+      })
+      if (!response.ok) return null
+      const blob = await response.blob()
+      return URL.createObjectURL(blob)
+    } catch {
+      return null
+    }
+  }
+
+  /**
    * Session zurücksetzen (Logout)
    */
   logout() {

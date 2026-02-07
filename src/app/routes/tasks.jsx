@@ -1,6 +1,7 @@
 import { createRoute } from '@tanstack/react-router'
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { LoadingSpinner } from '../../shared/ui'
+import { useNavigation } from '../../context'
 import { Route as rootRoute } from './__root'
 
 const TasksPage = lazy(() => import('../../features/tasks/TasksPage'))
@@ -20,6 +21,11 @@ export const Route = createRoute({
 
 function TasksRoute() {
   const { project, priority, assignee, due, completed } = Route.useSearch()
+  const { setActiveView } = useNavigation()
+
+  useEffect(() => {
+    setActiveView('tasks')
+  }, [setActiveView])
 
   return (
     <Suspense fallback={<div className="flex items-center justify-center h-full"><LoadingSpinner /></div>}>
