@@ -360,7 +360,7 @@ const SidebarNav = function SidebarNav() {
 
     <aside data-sidebar="primary" className={`hidden lg:flex flex-shrink-0 ${theme.sidebarBg} w-14 min-w-[3.5rem] max-w-[3.5rem] overflow-visible h-full relative z-[45] pointer-events-auto`}>
       <div className="h-full flex flex-col">
-        <nav className="py-2 space-y-0 flex flex-col items-center flex-1 pl-1">
+        <nav className="py-2 space-y-6 flex flex-col items-center flex-1 pl-1">
           {navItems.map((item) => {
             const totalApoUnread = item.id === 'pharma' ? unreadCounts.amk + unreadCounts.recall + unreadCounts.lav + (unreadCounts.rhb || 0) : 0
             const totalPostUnread = item.id === 'post' ? (unreadCounts.fax || 0) + (unreadCounts.email || 0) + (unreadCounts.gesund || 0) : 0
