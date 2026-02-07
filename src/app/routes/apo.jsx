@@ -14,7 +14,7 @@ export const Route = createRoute({
 
 function ApoRoute() {
   const { setActiveView } = useNavigation()
-  useEffect(() => { setActiveView('apo') }, [setActiveView])
+  useEffect(() => { setActiveView('pharma') }, [setActiveView])
 
   return (
     <Suspense fallback={<div className="flex items-center justify-center h-full"><LoadingSpinner /></div>}>

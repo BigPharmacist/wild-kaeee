@@ -16,7 +16,7 @@ const SidebarNav = function SidebarNav() {
   const { theme } = useTheme()
   const { session, handleSignOut } = useAuth()
   const { currentStaff, staff } = useStaff()
-  const { activeView, setActiveView, mobileNavOpen, setMobileNavOpen, getActiveSecondaryId, handleSecondarySelect: navHandleSecondarySelect, chatTab } = useNavigation()
+  const { activeView, setActiveView, mobileNavOpen, setMobileNavOpen, getActiveSecondaryId, handleSecondarySelect: navHandleSecondarySelect, chatTab, planungTab, dokumenteTab } = useNavigation()
   const { unreadCounts } = useUnreadCounts()
   const { dynamicNavData, secondarySelectOverride, sidebarCallbacks } = useSecondaryNav()
 
@@ -24,19 +24,15 @@ const SidebarNav = function SidebarNav() {
   const { onAddTask, onAddProject } = sidebarCallbacks
   const handleSecondarySelectFn = secondarySelectOverride || navHandleSecondarySelect
 
-  // Routes for migrated features (Phase 3)
+  // Routes for migrated features
   const migratedRoutes = {
     dashboard: '/',
     tasks: '/tasks',
-    calendar: '/calendar',
     chat: '/chat/group',
-    plan: '/plan',
-    scan: '/scan',
     botendienst: '/botendienst',
     dokumente: '/dokumente',
-    rechnungen: '/rechnungen',
-    archiv: '/archiv',
-    apo: '/apo',
+    pharma: '/apo',
+    planung: '/calendar',
     post: '/post',
     misc: '/misc',
     settings: '/settings',
@@ -46,10 +42,8 @@ const SidebarNav = function SidebarNav() {
     projects: dynamicNavData.projects,
     staff,
     session,
-    archivDocumentTypes: dynamicNavData.archivDocumentTypes,
-    archivSavedViews: dynamicNavData.archivSavedViews,
     currentStaff,
-  }), [currentStaff?.is_admin, staff, session?.user?.id, dynamicNavData.archivDocumentTypes, dynamicNavData.archivSavedViews, dynamicNavData.projects])
+  }), [currentStaff?.is_admin, staff, session?.user?.id, dynamicNavData.projects])
 
   const [showLogoutMenu, setShowLogoutMenu] = useState(false)
   const [mobileSecondaryView, setMobileSecondaryView] = useState(null)
@@ -75,6 +69,18 @@ const SidebarNav = function SidebarNav() {
   }, [showLogoutMenu])
 
   const handlePrimaryActivate = (id) => {
+    if (id === 'planung') {
+      setActiveView('planung')
+      const routes = { calendar: '/calendar', notdienstplanung: '/calendar/notdienst', timeline: '/plan' }
+      navigate({ to: routes[planungTab] || '/calendar' })
+      return
+    }
+    if (id === 'dokumente') {
+      setActiveView('dokumente')
+      const routes = { rechnungen: '/rechnungen', archiv: '/archiv' }
+      navigate({ to: routes[dokumenteTab] || '/dokumente' })
+      return
+    }
     setActiveView(id)
     if (id === 'chat') {
       // Chat tab-dependent navigation
@@ -132,7 +138,7 @@ const SidebarNav = function SidebarNav() {
           <div className="flex-1 overflow-y-auto">
             <nav className="p-2 space-y-0.5">
               {navItems.map((item) => {
-                const totalApoUnread = item.id === 'apo' ? unreadCounts.amk + unreadCounts.recall + unreadCounts.lav + (unreadCounts.rhb || 0) : 0
+                const totalApoUnread = item.id === 'pharma' ? unreadCounts.amk + unreadCounts.recall + unreadCounts.lav + (unreadCounts.rhb || 0) : 0
                 const totalPostUnread = item.id === 'post' ? (unreadCounts.fax || 0) + (unreadCounts.email || 0) + (unreadCounts.gesund || 0) : 0
                 const totalChatUnread = item.id === 'chat' && unreadCounts.chat
                   ? Object.values(unreadCounts.chat).reduce((sum, n) => sum + n, 0)
@@ -312,7 +318,7 @@ const SidebarNav = function SidebarNav() {
                 }
 
                 const isSubActive = getActiveSecondaryId() === subItem.id
-                const badgeCount = mobileSecondaryView === 'apo'
+                const badgeCount = mobileSecondaryView === 'pharma'
                   ? unreadCounts[subItem.id] || 0
                   : mobileSecondaryView === 'post'
                     ? (subItem.id === 'fax' ? unreadCounts.fax : subItem.id === 'email' ? unreadCounts.email : subItem.id === 'gesund' ? unreadCounts.gesund : 0) || 0
@@ -331,6 +337,7 @@ const SidebarNav = function SidebarNav() {
                     }`}
                     onClick={() => {
                       handleSecondarySelectFn(subItem.id)
+                      if (subItem.route) navigate({ to: subItem.route })
                       setMobileNavOpen(false)
                     }}
                   >
@@ -355,7 +362,7 @@ const SidebarNav = function SidebarNav() {
       <div className="h-full flex flex-col">
         <nav className="py-3 space-y-1 flex flex-col items-center flex-1 pl-1">
           {navItems.map((item) => {
-            const totalApoUnread = item.id === 'apo' ? unreadCounts.amk + unreadCounts.recall + unreadCounts.lav + (unreadCounts.rhb || 0) : 0
+            const totalApoUnread = item.id === 'pharma' ? unreadCounts.amk + unreadCounts.recall + unreadCounts.lav + (unreadCounts.rhb || 0) : 0
             const totalPostUnread = item.id === 'post' ? (unreadCounts.fax || 0) + (unreadCounts.email || 0) + (unreadCounts.gesund || 0) : 0
             const totalChatUnread = item.id === 'chat' && unreadCounts.chat
               ? Object.values(unreadCounts.chat).reduce((sum, n) => sum + n, 0)
@@ -496,15 +503,15 @@ const SidebarNav = function SidebarNav() {
           </div>
         </div>
         <nav className="p-2 overflow-y-auto space-y-1">
-          {(secondaryNavMap[activeView] || []).map((item) => {
+          {(secondaryNavMap[activeView] || []).map((item, idx) => {
             if (item.id === 'divider') {
               return (
-                <div key="divider" className="border-t border-[#5E647A] my-2" />
+                <div key={`divider-${idx}`} className="border-t border-[#5E647A] my-2" />
               )
             }
 
             const isActive = getActiveSecondaryId() === item.id
-            const badgeCount = activeView === 'apo'
+            const badgeCount = activeView === 'pharma'
               ? unreadCounts[item.id] || 0
               : activeView === 'post'
                 ? (item.id === 'fax' ? unreadCounts.fax : item.id === 'email' ? unreadCounts.email : item.id === 'gesund' ? unreadCounts.gesund : 0) || 0
@@ -523,6 +530,7 @@ const SidebarNav = function SidebarNav() {
                 title={item.label}
                 onClick={() => {
                   handleSecondarySelectFn(item.id)
+                  if (item.route) navigate({ to: item.route })
                 }}
               >
                 {item.color && (

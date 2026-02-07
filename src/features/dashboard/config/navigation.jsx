@@ -1,22 +1,18 @@
-import { House, Pill, CalendarDots, CalendarBlank, ChatCircle, GearSix, Files, Archive, CheckSquare, Moped, Barcode, DotsThree } from '@phosphor-icons/react'
+import { House, Pill, CalendarDots, ChatCircle, GearSix, Files, CheckSquare, Moped, DotsThree } from '@phosphor-icons/react'
 import { Icons } from '../../../shared/ui'
 
 /**
  * Navigation items configuration
- * Extracted from App.jsx
  */
 export const navItems = [
   { id: 'dashboard', icon: () => <House size={20} weight="regular" />, label: 'Dashboard' },
-  { id: 'scan', icon: () => <Barcode size={20} weight="regular" />, label: 'Scannen' },
-  { id: 'apo', icon: () => <Pill size={20} weight="regular" />, label: 'Apo' },
-  { id: 'tasks', icon: () => <CheckSquare size={20} weight="regular" />, label: 'Tasks' },
-  { id: 'plan', icon: () => <CalendarDots size={20} weight="regular" />, label: 'Team' },
-  { id: 'calendar', icon: () => <CalendarBlank size={20} weight="regular" />, label: 'Kalender' },
+  { id: 'post', icon: () => <Icons.PostHorn />, label: 'Post' },
+  { id: 'planung', icon: () => <CalendarDots size={20} weight="regular" />, label: 'Planung' },
+  { id: 'tasks', icon: () => <CheckSquare size={20} weight="regular" />, label: 'Aufgaben' },
   { id: 'chat', icon: () => <ChatCircle size={20} weight="regular" />, label: 'Chat' },
   { id: 'botendienst', icon: () => <Moped size={20} weight="regular" />, label: 'Botendienst' },
-  { id: 'post', icon: () => <Icons.PostHorn />, label: 'Post' },
+  { id: 'pharma', icon: () => <Pill size={20} weight="regular" />, label: 'Pharma-Info' },
   { id: 'dokumente', icon: () => <Files size={20} weight="regular" />, label: 'Dokumente' },
-  { id: 'archiv', icon: () => <Archive size={20} weight="regular" />, label: 'Archiv' },
   { id: 'settings', icon: () => <GearSix size={20} weight="regular" />, label: 'Einstellungen' },
 ]
 
@@ -32,8 +28,6 @@ export function createSecondaryNavMap({
   projects = [],
   staff = [],
   session,
-  archivDocumentTypes = [],
-  archivSavedViews = [],
   currentStaff,
 }) {
   return {
@@ -46,18 +40,16 @@ export function createSecondaryNavMap({
         color: p.color,
       })),
     ],
-    apo: [
+    pharma: [
       { id: 'amk', label: 'AMK' },
       { id: 'recall', label: 'Rückrufe' },
       { id: 'rhb', label: 'Rote Hand' },
       { id: 'lav', label: 'LAV' },
     ],
-    plan: [
-      { id: 'timeline', label: 'Zeitplan' },
-    ],
-    calendar: [
-      { id: 'calendars', label: 'Kalender' },
-      { id: 'notdienstplanung', label: 'Notdienstplanung' },
+    planung: [
+      { id: 'calendar', label: 'Kalender', route: '/calendar' },
+      { id: 'notdienstplanung', label: 'Notdienstplanung', route: '/calendar/notdienst' },
+      { id: 'timeline', label: 'Dienstplan', route: '/plan' },
     ],
     chat: [
       { id: 'group', label: 'Gruppenchat' },
@@ -79,37 +71,21 @@ export function createSecondaryNavMap({
       { id: 'gesund', label: 'Gesund.de' },
     ],
     dokumente: [
-      { id: 'briefe', label: 'Briefe' },
-      { id: 'word', label: 'Word' },
-      { id: 'alle', label: 'Alle Dokumente' },
-      { id: 'rechnungen', label: 'Rechnungen' },
-      { id: 'vertraege', label: 'Verträge' },
-      { id: 'sonstiges', label: 'Sonstiges' },
-    ],
-    archiv: [
-      { id: 'alle', label: 'Alle Dokumente' },
-      // Dokumenttypen dynamisch hinzufügen
-      ...archivDocumentTypes.map(dt => ({
-        id: `type-${dt.id}`,
-        label: dt.name,
-      })),
-      // Saved Views als Trenner und Liste
-      ...(archivSavedViews.length > 0 ? [
-        { id: 'divider', label: '─────────', disabled: true },
-        ...archivSavedViews.map(sv => ({
-          id: `view-${sv.id}`,
-          label: `⭐ ${sv.name}`,
-        })),
-      ] : []),
-    ],
-    rechnungen: [
-      { id: 'alt', label: 'Alt' },
-      { id: 'neu', label: 'Neu' },
+      { id: 'briefe', label: 'Briefe', route: '/dokumente' },
+      { id: 'word', label: 'Word', route: '/dokumente' },
+      { id: 'alle', label: 'Alle Dokumente', route: '/dokumente' },
+      { id: 'vertraege', label: 'Verträge', route: '/dokumente' },
+      { id: 'sonstiges', label: 'Sonstiges', route: '/dokumente' },
+      { id: 'divider' },
+      { id: 'rechnungen', label: 'Rechnungen', route: '/rechnungen' },
+      { id: 'divider' },
+      { id: 'archiv', label: 'Archiv', route: '/archiv' },
     ],
     misc: [
       { id: 'ocr', label: 'OCR' },
       { id: 'visitenkarten', label: 'Visitenkarten' },
       { id: 'colors', label: 'Farben' },
+      { id: 'scan', label: 'Scannen', route: '/scan' },
     ],
     settings: [
       { id: 'pharmacies', label: 'Apotheken' },

@@ -473,8 +473,8 @@ export default function useCalendar({ session, activeView }) {
 
   // useEffect: Kalender laden
   useEffect(() => {
-    if (session && activeView === 'calendar') {
-       
+    if (session && activeView === 'planung') {
+
       fetchCalendars()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -482,7 +482,7 @@ export default function useCalendar({ session, activeView }) {
 
   // useEffect: Events laden bei Kalender/Datum-Wechsel
   useEffect(() => {
-    if (session && activeView === 'calendar' && selectedCalendarId) {
+    if (session && activeView === 'planung' && selectedCalendarId) {
        
       fetchCalendarEvents(selectedCalendarId)
     }
@@ -491,7 +491,7 @@ export default function useCalendar({ session, activeView }) {
 
   // useEffect: Realtime-Subscription für Events
   useEffect(() => {
-    if (!session || activeView !== 'calendar' || !selectedCalendarId) return
+    if (!session || activeView !== 'planung' || !selectedCalendarId) return
 
     const subscriptionConfig = selectedCalendarId === 'all'
       ? { event: '*', schema: 'public', table: 'calendar_events' }

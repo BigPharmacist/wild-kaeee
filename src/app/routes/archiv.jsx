@@ -13,8 +13,11 @@ export const Route = createRoute({
 })
 
 function ArchivRoute() {
-  const { setActiveView } = useNavigation()
-  useEffect(() => { setActiveView('archiv') }, [setActiveView])
+  const { setActiveView, setDokumenteTab } = useNavigation()
+  useEffect(() => {
+    setActiveView('dokumente')
+    setDokumenteTab('archiv')
+  }, [setActiveView, setDokumenteTab])
 
   return (
     <Suspense fallback={<div className="flex items-center justify-center h-full"><LoadingSpinner /></div>}>

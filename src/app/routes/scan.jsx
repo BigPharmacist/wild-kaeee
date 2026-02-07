@@ -13,8 +13,11 @@ export const Route = createRoute({
 })
 
 function ScanRoute() {
-  const { setActiveView } = useNavigation()
-  useEffect(() => { setActiveView('scan') }, [setActiveView])
+  const { setActiveView, setSecondaryTab } = useNavigation()
+  useEffect(() => {
+    setActiveView('misc')
+    setSecondaryTab('scan')
+  }, [setActiveView, setSecondaryTab])
 
   return (
     <Suspense fallback={<div className="flex items-center justify-center h-full"><LoadingSpinner /></div>}>

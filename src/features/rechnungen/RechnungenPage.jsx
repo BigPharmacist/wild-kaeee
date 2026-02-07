@@ -1,5 +1,5 @@
-import { useEffect, lazy } from 'react'
-import { useTheme, useNavigation } from '../../context'
+import { useEffect, useState, lazy } from 'react'
+import { useTheme } from '../../context'
 import { useRechnungen } from './useRechnungen'
 import { Icons, LoadingSpinner } from '../../shared/ui'
 
@@ -8,7 +8,7 @@ const PaperlessPdfModal = lazy(() => import('./modals/PaperlessPdfModal'))
 
 export default function RechnungenPage() {
   const { theme } = useTheme()
-  const { rechnungenTab } = useNavigation()
+  const [rechnungenTab, setRechnungenTab] = useState('alt')
 
   const {
     rechnungen,
@@ -36,7 +36,25 @@ export default function RechnungenPage() {
 
   return (
     <>
-      <h2 className="text-2xl lg:text-3xl font-semibold mb-6 tracking-tight">Großhandelsrechnungen</h2>
+      <div className="flex items-center gap-4 mb-6">
+        <h2 className="text-2xl lg:text-3xl font-semibold tracking-tight">Großhandelsrechnungen</h2>
+        <div className="flex gap-1">
+          <button
+            type="button"
+            onClick={() => setRechnungenTab('alt')}
+            className={`px-3 py-1.5 text-sm rounded-[6px] font-medium transition-colors ${rechnungenTab === 'alt' ? 'bg-[#FEF3C7] text-[#1E293B]' : `${theme.textSecondary} hover:bg-[#FEF3C7]/50`}`}
+          >
+            Alt
+          </button>
+          <button
+            type="button"
+            onClick={() => setRechnungenTab('neu')}
+            className={`px-3 py-1.5 text-sm rounded-[6px] font-medium transition-colors ${rechnungenTab === 'neu' ? 'bg-[#FEF3C7] text-[#1E293B]' : `${theme.textSecondary} hover:bg-[#FEF3C7]/50`}`}
+          >
+            Neu
+          </button>
+        </div>
+      </div>
       {rechnungenTab === 'neu' ? (
         paperlessLoading ? (
           <div className="flex items-center justify-center py-12">

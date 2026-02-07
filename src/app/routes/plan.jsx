@@ -13,8 +13,11 @@ export const Route = createRoute({
 })
 
 function PlanRoute() {
-  const { setActiveView } = useNavigation()
-  useEffect(() => { setActiveView('plan') }, [setActiveView])
+  const { setActiveView, setPlanungTab } = useNavigation()
+  useEffect(() => {
+    setActiveView('planung')
+    setPlanungTab('timeline')
+  }, [setActiveView, setPlanungTab])
 
   return (
     <Suspense fallback={<div className="flex items-center justify-center h-full"><LoadingSpinner /></div>}>

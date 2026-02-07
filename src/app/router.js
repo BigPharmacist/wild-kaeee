@@ -20,13 +20,11 @@ import { Route as postRoute } from './routes/post'
 import { Route as miscRoute } from './routes/misc'
 import { Route as settingsRoute } from './routes/settings'
 
-// Build route tree: calendar has notdienst as child
-const calendarRouteWithChildren = calendarRoute.addChildren([calendarNotdienstRoute])
-
 const routeTree = rootRoute.addChildren([
   indexRoute,
   tasksRoute,
-  calendarRouteWithChildren,
+  calendarRoute,
+  calendarNotdienstRoute,
   contactsRoute,
   chatGroupRoute,
   chatDmRoute,

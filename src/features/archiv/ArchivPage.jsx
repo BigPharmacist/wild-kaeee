@@ -1,13 +1,10 @@
-import { useEffect, useCallback } from 'react'
-import { useTheme, useNavigation } from '../../context'
-import { useSecondaryNav } from '../../context/SecondaryNavContext'
+import { useEffect } from 'react'
+import { useTheme } from '../../context'
 import { useArchiv } from './useArchiv'
 import ArchivView from './ArchivView'
 
 export default function ArchivPage() {
   const { theme } = useTheme()
-  const { archivTab, handleSecondarySelect } = useNavigation()
-  const { setDynamicNavData, setSecondarySelectOverride } = useSecondaryNav()
 
   const {
     documents,
@@ -54,29 +51,6 @@ export default function ArchivPage() {
     })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Populate SecondaryNavContext with archiv-specific data
-  useEffect(() => {
-    setDynamicNavData({ archivDocumentTypes: documentTypes, archivSavedViews: savedViews })
-  }, [documentTypes, savedViews, setDynamicNavData])
-
-  // Handle archiv-specific secondary nav selection (type/view filtering)
-  const handleArchivSecondarySelect = useCallback((itemId) => {
-    if (itemId === 'divider') return
-    handleSecondarySelect(itemId)
-    if (itemId === 'alle') {
-      clearFilters()
-    } else if (itemId.startsWith('type-')) {
-      filterByType(itemId.replace('type-', ''))
-    } else if (itemId.startsWith('view-')) {
-      filterBySavedView(itemId.replace('view-', ''))
-    }
-  }, [handleSecondarySelect, clearFilters, filterByType, filterBySavedView])
-
-  useEffect(() => {
-    setSecondarySelectOverride(() => handleArchivSecondarySelect)
-    return () => setSecondarySelectOverride(null)
-  }, [handleArchivSecondarySelect, setSecondarySelectOverride])
-
   return (
     <ArchivView
       theme={theme}
@@ -113,7 +87,7 @@ export default function ArchivPage() {
       getTypeForDocument={getTypeForDocument}
       savedViews={savedViews}
       activeSavedView={activeSavedView}
-      activeTab={archivTab}
+      activeTab="alle"
       createSavedView={createSavedView}
       deleteSavedView={deleteSavedView}
     />

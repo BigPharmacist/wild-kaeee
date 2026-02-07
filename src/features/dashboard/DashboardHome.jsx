@@ -1,4 +1,5 @@
 import { memo, useState, lazy, Suspense } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { Sparkle, CheckCircle, Warning, Clock, CaretLeft, CaretRight } from '@phosphor-icons/react'
 import { useTheme, useAuth, usePharmacy, useStaff, useEmail, useNavigation } from '../../context'
 import { Icons } from '../../shared/ui'
@@ -18,7 +19,8 @@ const DashboardHome = memo(function DashboardHome() {
   const { pharmacies } = usePharmacy()
   const { currentStaff } = useStaff()
   const { aiSettings } = useEmail()
-  const { setActiveView } = useNavigation()
+  const { setActiveView, setPlanungTab } = useNavigation()
+  const navigate = useNavigate()
 
   // Dashboard-eigene Hooks
   const {
@@ -175,7 +177,7 @@ const DashboardHome = memo(function DashboardHome() {
           <h3 className={`text-lg font-medium ${theme.text}`}>Team</h3>
           <button
             type="button"
-            onClick={() => setActiveView('plan')}
+            onClick={() => { setActiveView('planung'); setPlanungTab('timeline'); navigate({ to: '/plan' }) }}
             className={`text-xs ${theme.accentText} hover:underline`}
           >
             Vollständiger Plan
@@ -383,7 +385,7 @@ const DashboardHome = memo(function DashboardHome() {
           <h3 className={`text-lg font-medium ${theme.text}`}>Termine</h3>
           <button
             type="button"
-            onClick={() => setActiveView('calendar')}
+            onClick={() => { setActiveView('planung'); setPlanungTab('calendar'); navigate({ to: '/calendar' }) }}
             className={`text-xs ${theme.accentText} hover:underline`}
           >
             Kalender öffnen

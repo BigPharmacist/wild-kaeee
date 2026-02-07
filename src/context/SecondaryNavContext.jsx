@@ -4,14 +4,12 @@ const SecondaryNavContext = createContext(null)
 
 /**
  * Stellt dynamische Daten für die sekundäre Navigation bereit
- * Wird von DashboardLayout befüllt (projects, archivDocumentTypes etc.)
+ * Wird von Feature-Pages befüllt (projects etc.)
  * Wird von SidebarNav gelesen
  */
 export function SecondaryNavProvider({ children }) {
   const [dynamicNavData, setDynamicNavDataRaw] = useState({
     projects: [],
-    archivDocumentTypes: [],
-    archivSavedViews: [],
   })
 
   // Merge-Setter: each feature page can update only its own portion

@@ -434,7 +434,7 @@ export function useApoState({ session, activeView, apoTab, staffByAuthId, pharma
 
   // Effects
   useEffect(() => {
-    if (session && activeView === 'apo') {
+    if (session && activeView === 'pharma') {
       if (apoTab === 'amk') {
         fetchAmkMessages(apoYear)
       } else if (apoTab === 'recall') {

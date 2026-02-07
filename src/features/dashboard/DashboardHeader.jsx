@@ -1,3 +1,4 @@
+import { useNavigate } from '@tanstack/react-router'
 import { useTheme, useNavigation, useUnreadCounts } from '../../context'
 import { useHeaderActions } from '../../context/HeaderActionsContext'
 import { Icons } from '../../shared/ui'
@@ -11,7 +12,8 @@ import SplitFlapDisplay from './SplitFlapDisplay'
  */
 const DashboardHeader = () => {
   const { theme } = useTheme()
-  const { activeView, settingsTab, mobileNavOpen, setMobileNavOpen, setActiveView } = useNavigation()
+  const { activeView, settingsTab, dokumenteTab, mobileNavOpen, setMobileNavOpen, setActiveView, setDokumenteTab } = useNavigation()
+  const navigate = useNavigate()
   const { count: faxCount } = useFaxCounts()
   const { urgentFaxe } = useUrgentFax()
   const { gesundCount } = useUnreadCounts()
@@ -104,8 +106,8 @@ const DashboardHeader = () => {
         )}
 
         <button
-          onClick={() => setActiveView('rechnungen')}
-          className={`p-2 rounded-[6px] hover:bg-[#FEF3C7] ${activeView === 'rechnungen' ? theme.accentText : theme.textSecondary} transition-colors`}
+          onClick={() => { setActiveView('dokumente'); setDokumenteTab('rechnungen'); navigate({ to: '/rechnungen' }) }}
+          className={`p-2 rounded-[6px] hover:bg-[#FEF3C7] ${activeView === 'dokumente' && dokumenteTab === 'rechnungen' ? theme.accentText : theme.textSecondary} transition-colors`}
           title="GH-Rechnungen"
         >
           <Icons.FileText />

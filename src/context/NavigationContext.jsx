@@ -6,16 +6,19 @@ export function NavigationProvider({ children }) {
   const isInitialMount = useRef(true)
   const mobileNavTimerRef = useRef(null)
 
-  // Navigation State
-  const [activeView, setActiveView] = useState(() => localStorage.getItem('nav_activeView') || 'dashboard')
+  // Navigation State (with migration for old view names)
+  const [activeView, setActiveView] = useState(() => {
+    const stored = localStorage.getItem('nav_activeView') || 'dashboard'
+    const migrations = { apo: 'pharma', calendar: 'planung', plan: 'planung', archiv: 'dokumente', rechnungen: 'dokumente', scan: 'misc' }
+    return migrations[stored] || stored
+  })
   const [secondaryTab, setSecondaryTab] = useState(() => localStorage.getItem('nav_secondaryTab') || 'overview')
   const [settingsTab, setSettingsTab] = useState(() => localStorage.getItem('nav_settingsTab') || 'pharmacies')
   const [chatTab, setChatTab] = useState(() => localStorage.getItem('nav_chatTab') || 'group')
   const [dokumenteTab, setDokumenteTab] = useState(() => localStorage.getItem('nav_dokumenteTab') || 'briefe')
-  const [archivTab, setArchivTab] = useState(() => localStorage.getItem('nav_archivTab') || 'alle')
-  const [rechnungenTab, setRechnungenTab] = useState(() => localStorage.getItem('nav_rechnungenTab') || 'alt')
   const [apoTab, setApoTab] = useState(() => localStorage.getItem('nav_apoTab') || 'amk')
   const [botendienstTab, setBotendienstTab] = useState(() => localStorage.getItem('nav_botendienstTab') || 'overview')
+  const [planungTab, setPlanungTab] = useState(() => localStorage.getItem('nav_planungTab') || 'calendar')
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
   // Persist to localStorage
@@ -48,12 +51,8 @@ export function NavigationProvider({ children }) {
   }, [dokumenteTab])
 
   useEffect(() => {
-    localStorage.setItem('nav_archivTab', archivTab)
-  }, [archivTab])
-
-  useEffect(() => {
-    localStorage.setItem('nav_rechnungenTab', rechnungenTab)
-  }, [rechnungenTab])
+    localStorage.setItem('nav_planungTab', planungTab)
+  }, [planungTab])
 
   // Mobile Nav auto-close timer
   useEffect(() => {
@@ -84,31 +83,28 @@ export function NavigationProvider({ children }) {
   // Helper to get active secondary ID based on current view
   const getActiveSecondaryId = useCallback(() => {
     if (activeView === 'settings') return settingsTab
-    if (activeView === 'apo') return apoTab
+    if (activeView === 'pharma') return apoTab
     if (activeView === 'chat') return chatTab
     if (activeView === 'dokumente') return dokumenteTab
-    if (activeView === 'archiv') return archivTab
-    if (activeView === 'rechnungen') return rechnungenTab
     if (activeView === 'botendienst') return botendienstTab
+    if (activeView === 'planung') return planungTab
     return secondaryTab
-  }, [activeView, settingsTab, apoTab, chatTab, dokumenteTab, archivTab, rechnungenTab, botendienstTab, secondaryTab])
+  }, [activeView, settingsTab, apoTab, chatTab, dokumenteTab, botendienstTab, planungTab, secondaryTab])
 
   // Handle secondary navigation selection
   const handleSecondarySelect = useCallback((id) => {
     if (activeView === 'settings') {
       setSettingsTab(id)
-    } else if (activeView === 'apo') {
+    } else if (activeView === 'pharma') {
       setApoTab(id)
     } else if (activeView === 'chat') {
       setChatTab(id)
     } else if (activeView === 'dokumente') {
       setDokumenteTab(id)
-    } else if (activeView === 'archiv') {
-      setArchivTab(id)
-    } else if (activeView === 'rechnungen') {
-      setRechnungenTab(id)
     } else if (activeView === 'botendienst') {
       setBotendienstTab(id)
+    } else if (activeView === 'planung') {
+      setPlanungTab(id)
     } else {
       setSecondaryTab(id)
     }
@@ -120,7 +116,7 @@ export function NavigationProvider({ children }) {
       isInitialMount.current = false
       return
     }
-    if (activeView === 'settings' || activeView === 'apo' || activeView === 'chat' || activeView === 'dokumente' || activeView === 'botendienst') return
+    if (activeView === 'settings' || activeView === 'pharma' || activeView === 'chat' || activeView === 'dokumente' || activeView === 'botendienst' || activeView === 'planung') return
     const nextItems = secondaryNavMap[activeView] || []
     if (nextItems.length) {
       setSecondaryTab(nextItems[0].id)
@@ -134,10 +130,9 @@ export function NavigationProvider({ children }) {
     settingsTab,
     chatTab,
     dokumenteTab,
-    archivTab,
-    rechnungenTab,
     apoTab,
     botendienstTab,
+    planungTab,
     mobileNavOpen,
 
     // Setters
@@ -146,10 +141,9 @@ export function NavigationProvider({ children }) {
     setSettingsTab,
     setChatTab,
     setDokumenteTab,
-    setArchivTab,
-    setRechnungenTab,
     setApoTab,
     setBotendienstTab,
+    setPlanungTab,
     setMobileNavOpen,
 
     // Helpers
@@ -162,10 +156,9 @@ export function NavigationProvider({ children }) {
     settingsTab,
     chatTab,
     dokumenteTab,
-    archivTab,
-    rechnungenTab,
     apoTab,
     botendienstTab,
+    planungTab,
     mobileNavOpen,
     getActiveSecondaryId,
     handleSecondarySelect,

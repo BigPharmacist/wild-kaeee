@@ -13,8 +13,12 @@ export const Route = createRoute({
 })
 
 function MiscRoute() {
-  const { setActiveView } = useNavigation()
-  useEffect(() => { setActiveView('misc') }, [setActiveView])
+  const { setActiveView, secondaryTab, setSecondaryTab } = useNavigation()
+  useEffect(() => {
+    setActiveView('misc')
+    // If navigating to /misc with scan tab selected, reset to ocr (scan has its own route)
+    if (secondaryTab === 'scan') setSecondaryTab('ocr')
+  }, [setActiveView]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <Suspense fallback={<div className="flex items-center justify-center h-full"><LoadingSpinner /></div>}>
