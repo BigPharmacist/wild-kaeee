@@ -19,7 +19,7 @@ const showChatNotification = (message, senderName, chatType, chatId) => {
     const title = chatType === 'group' ? 'Neue Gruppenchat-Nachricht' : `Nachricht von ${senderName}`
     const body = message.file_url
       ? `${senderName}: 📎 ${message.file_name || 'Datei'}`
-      : `${senderName}: ${message.message?.substring(0, 100) || ''}`
+      : `${senderName}: Neue Nachricht`
 
     const notification = new Notification(title, {
       body,

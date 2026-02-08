@@ -10,6 +10,7 @@ const ChatView = ({
   session,
   chatEndRef,
   chatError,
+  isSendError,
   sendChatMessage,
   chatInput,
   setChatInput,
@@ -420,11 +421,11 @@ const ChatView = ({
           <p className="text-rose-400 text-sm">{chatError}</p>
           <button
             type="button"
-            onClick={fetchChatMessages}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 rounded-lg transition-colors"
+            onClick={isSendError ? sendChatMessage : fetchChatMessages}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 rounded-lg transition-colors whitespace-nowrap"
           >
             <ArrowClockwise size={16} />
-            Erneut versuchen
+            {isSendError ? 'Nochmal senden' : 'Erneut versuchen'}
           </button>
         </div>
       )}

@@ -75,13 +75,12 @@ async function uploadChatAttachment(file, userId, directChatUserId) {
  * Send a chat message
  */
 async function sendMessage({ userId, message, directChatUserId, file }) {
-  const messageData = {
-    user_id: userId,
-    message: message?.trim() || '',
+  const rpcParams = {
+    p_message: message?.trim() || '',
   }
 
   if (directChatUserId) {
-    messageData.recipient_id = directChatUserId
+    rpcParams.p_recipient_id = directChatUserId
   }
 
   // Upload file if present
@@ -97,19 +96,22 @@ async function sendMessage({ userId, message, directChatUserId, file }) {
 
     const fileData = await uploadChatAttachment(file, userId, directChatUserId)
     if (fileData) {
-      messageData.file_url = fileData.file_url
-      messageData.file_name = fileData.file_name
-      messageData.file_type = fileData.file_type
+      rpcParams.p_file_url = fileData.file_url
+      rpcParams.p_file_name = fileData.file_name
+      rpcParams.p_file_type = fileData.file_type
     }
   }
 
-  const { data, error } = await supabase
-    .from('chat_messages')
-    .insert(messageData)
-    .select()
-    .single()
+  const { data, error } = await supabase.rpc('send_encrypted_message', rpcParams)
 
-  if (error) throw error
+  if (error) {
+    // AbortError means the request was interrupted - the message may have been sent.
+    // The realtime subscription or next refetch will pick it up.
+    if (error.message?.includes('AbortError')) {
+      throw new Error('Verbindung unterbrochen. Die Nachricht wurde möglicherweise gesendet.')
+    }
+    throw error
+  }
   return data
 }
 
@@ -117,19 +119,16 @@ async function sendMessage({ userId, message, directChatUserId, file }) {
  * Edit a chat message
  */
 async function editMessage({ messageId, userId, newText, createdAt }) {
-  // Time check: max 5 minutes after creation
+  // Client-side time check as UX guard (server enforces it too)
   const createdTime = new Date(createdAt).getTime()
   if (Date.now() - createdTime > EDIT_TIME_LIMIT_MS) {
     throw new Error('Nachrichten können nur innerhalb von 5 Minuten bearbeitet werden.')
   }
 
-  const { data, error } = await supabase
-    .from('chat_messages')
-    .update({ message: newText.trim(), edited_at: new Date().toISOString() })
-    .eq('id', messageId)
-    .eq('user_id', userId)
-    .select()
-    .single()
+  const { data, error } = await supabase.rpc('edit_encrypted_message', {
+    p_message_id: messageId,
+    p_new_text: newText.trim(),
+  })
 
   if (error) throw error
   return data
@@ -292,8 +291,9 @@ export function useMarkAsRead() {
   return useMutation({
     mutationFn: markAsRead,
     onSuccess: () => {
-      // Invalidate unread counts
+      // Invalidate unread counts and reads cache so the mark-as-read effect doesn't re-trigger
       queryClient.invalidateQueries({ queryKey: chatKeys.unreadCounts() })
+      queryClient.invalidateQueries({ queryKey: chatKeys.reads() })
     },
   })
 }

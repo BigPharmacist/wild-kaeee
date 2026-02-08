@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useTheme, useAuth, useStaff, useNavigation } from '../../context'
 import {
   useChatMessagesQuery,
@@ -97,8 +97,15 @@ export default function ChatPage({ directChatUserId: propDirectChatUserId }) {
     resetInput,
   } = useChatInput()
 
-  // Combined error message
-  const chatError = queryError?.message || fileError || sendMutation.error?.message || ''
+  // Combined error message (filter out transient AbortError from background refetches)
+  const isAbortError = (msg) => msg && msg.includes('AbortError')
+  const sendError = sendMutation.error?.message && !isAbortError(sendMutation.error.message)
+    ? sendMutation.error.message : ''
+  const chatError = (queryError?.message && !isAbortError(queryError.message) ? queryError.message : '')
+    || fileError
+    || sendError
+    || ''
+  const isSendError = !!sendError && chatError === sendError
 
   // Send message handler
   const sendChatMessage = useCallback(async (event) => {
@@ -106,6 +113,9 @@ export default function ChatPage({ directChatUserId: propDirectChatUserId }) {
 
     if (!chatInput.trim() && !pendingFile) return
     if (!session?.user?.id) return
+
+    // Reset previous send error before retrying
+    sendMutation.reset()
 
     try {
       await sendMutation.mutateAsync({
@@ -116,7 +126,7 @@ export default function ChatPage({ directChatUserId: propDirectChatUserId }) {
       })
       resetInput()
     } catch {
-      // Error is handled by mutation
+      // Error is handled by mutation state, input preserved for retry
     }
   }, [chatInput, pendingFile, session?.user?.id, directChatUserId, sendMutation, resetInput])
 
@@ -191,23 +201,35 @@ export default function ChatPage({ directChatUserId: propDirectChatUserId }) {
     }
   }, [hasMoreMessages, chatLoadingMore, fetchNextPage])
 
+  // Track which messages were already marked as read this session (prevents upsert loop)
+  const markedAsReadRef = useRef(new Set())
+
+  // Reset tracked reads when switching chats
+  useEffect(() => {
+    markedAsReadRef.current = new Set()
+  }, [directChatUserId])
+
   // Mark messages as read when chat is opened
   useEffect(() => {
     if (activeView !== 'chat' || chatLoading || chatMessages.length === 0) return
     if (!session?.user?.id) return
 
-    // Filter unread messages from others
+    // Filter unread messages from others (skip already-marked ones)
     const unreadFromOthers = chatMessages.filter(
-      (m) => m.user_id !== session.user.id && !messageReads[m.id]?.includes(session.user.id)
+      (m) => m.user_id !== session.user.id
+        && !markedAsReadRef.current.has(m.id)
+        && !messageReads[m.id]?.includes(session.user.id)
     )
 
     if (unreadFromOthers.length > 0) {
+      const ids = unreadFromOthers.map((m) => m.id)
+      ids.forEach((id) => markedAsReadRef.current.add(id))
       markAsReadMutation.mutate({
-        messageIds: unreadFromOthers.map((m) => m.id),
+        messageIds: ids,
         userId: session.user.id,
       })
     }
-  }, [activeView, chatLoading, chatMessages, session?.user?.id, messageReads, markAsReadMutation])
+  }, [activeView, chatLoading, chatMessages, session?.user?.id, messageReads, directChatUserId, markAsReadMutation])
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -226,6 +248,7 @@ export default function ChatPage({ directChatUserId: propDirectChatUserId }) {
       session={session}
       chatEndRef={chatEndRef}
       chatError={chatError}
+      isSendError={isSendError}
       sendChatMessage={sendChatMessage}
       chatInput={chatInput}
       setChatInput={setChatInput}

@@ -14,7 +14,7 @@ const PAGE_SIZE = 50
  */
 async function fetchChatMessages({ userId, directChatUserId, cursor = null }) {
   let query = supabase
-    .from('chat_messages')
+    .from('chat_messages_decrypted')
     .select('id, user_id, recipient_id, message, created_at, deleted_at, edited_at, file_url, file_name, file_type')
     .order('created_at', { ascending: false })
     .limit(PAGE_SIZE + 1)
@@ -36,7 +36,14 @@ async function fetchChatMessages({ userId, directChatUserId, cursor = null }) {
 
   const { data, error } = await query
 
-  if (error) throw error
+  // Ignore transient AbortErrors (browser background tab throttling, network blips)
+  // The next refetch will get the data successfully
+  if (error) {
+    if (error.message?.includes('AbortError')) {
+      return { messages: [], hasMore: false, nextCursor: null }
+    }
+    throw error
+  }
 
   // Check if there are more messages
   const hasMore = data && data.length > PAGE_SIZE
@@ -128,7 +135,7 @@ export function useChatMessagesQuery({ userId, directChatUserId = null, enabled 
 
     const channel = supabase
       .channel(`chat_messages_${chatId}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, (payload) => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, async (payload) => {
         const newMsg = payload.new
 
         // Check if message belongs to this chat
@@ -140,37 +147,67 @@ export function useChatMessagesQuery({ userId, directChatUserId = null, enabled 
         )
 
         if ((isGroupChat && isForGroupChat) || isForThisDirectChat) {
-          // Optimistically add new message to cache
+          // Fetch decrypted message via RPC (realtime payload contains ciphertext)
+          const { data: decryptedMsg } = await supabase.rpc('get_decrypted_message', {
+            p_message_id: newMsg.id,
+          })
+
+          if (!decryptedMsg) return
+
+          // Add decrypted message to cache
           queryClient.setQueryData(chatKeys.messageList(chatType, chatId), (old) => {
             if (!old) return old
 
             // Check if message already exists
             const allMessages = old.pages.flatMap((p) => p.messages)
-            if (allMessages.some((m) => m.id === newMsg.id)) return old
+            if (allMessages.some((m) => m.id === decryptedMsg.id)) return old
 
             // Add to last page
             const newPages = [...old.pages]
             const lastPageIndex = newPages.length - 1
             newPages[lastPageIndex] = {
               ...newPages[lastPageIndex],
-              messages: [...newPages[lastPageIndex].messages, newMsg],
+              messages: [...newPages[lastPageIndex].messages, decryptedMsg],
             }
 
             return { ...old, pages: newPages }
           })
         }
       })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'chat_messages' }, (payload) => {
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'chat_messages' }, async (payload) => {
         const updatedMsg = payload.new
 
-        // Update message in cache
+        // For soft deletes, we can use the payload directly (no text needed)
+        if (updatedMsg.deleted_at) {
+          queryClient.setQueryData(chatKeys.messageList(chatType, chatId), (old) => {
+            if (!old) return old
+
+            const newPages = old.pages.map((page) => ({
+              ...page,
+              messages: page.messages.map((m) =>
+                m.id === updatedMsg.id ? { ...m, deleted_at: updatedMsg.deleted_at } : m
+              ),
+            }))
+
+            return { ...old, pages: newPages }
+          })
+          return
+        }
+
+        // For edits, fetch decrypted message via RPC
+        const { data: decryptedMsg } = await supabase.rpc('get_decrypted_message', {
+          p_message_id: updatedMsg.id,
+        })
+
+        if (!decryptedMsg) return
+
         queryClient.setQueryData(chatKeys.messageList(chatType, chatId), (old) => {
           if (!old) return old
 
           const newPages = old.pages.map((page) => ({
             ...page,
             messages: page.messages.map((m) =>
-              m.id === updatedMsg.id ? { ...m, ...updatedMsg } : m
+              m.id === decryptedMsg.id ? decryptedMsg : m
             ),
           }))
 
