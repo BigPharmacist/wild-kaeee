@@ -487,8 +487,8 @@ const DashboardHome = memo(function DashboardHome() {
         })()}
       </div>
 
-      {/* 4. Aufgaben */}
-      <div className={`${theme.panel} rounded-2xl p-4 border ${theme.border} ${theme.cardShadow} flex flex-col gap-3`}>
+      {/* 4. Aufgaben (nur für Admins) */}
+      {currentStaff?.is_admin && <div className={`${theme.panel} rounded-2xl p-4 border ${theme.border} ${theme.cardShadow} flex flex-col gap-3`}>
         <div className="flex items-center justify-between">
           <h3 className={`text-lg font-medium ${theme.text}`}>Aufgaben</h3>
           <button
@@ -638,7 +638,7 @@ const DashboardHome = memo(function DashboardHome() {
             <p className={theme.textMuted}>Keine offenen Aufgaben!</p>
           </div>
         )}
-      </div>
+      </div>}
 
       {/* 5. Biowetter */}
       <div

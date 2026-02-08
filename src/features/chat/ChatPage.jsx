@@ -27,7 +27,9 @@ export default function ChatPage({ directChatUserId: propDirectChatUserId }) {
   const { activeView, chatTab } = useNavigation()
 
   // Determine direct chat user ID from props or navigation context
-  const directChatUserId = propDirectChatUserId ?? (chatTab === 'group' ? null : chatTab)
+  // Verhindere Chat mit sich selbst (kann durch stale localStorage passieren)
+  const rawDirectChatUserId = propDirectChatUserId ?? (chatTab === 'group' ? null : chatTab)
+  const directChatUserId = rawDirectChatUserId === session?.user?.id ? null : rawDirectChatUserId
 
   // Staff lookup by auth_user_id
   const staffByAuthId = useMemo(() => {

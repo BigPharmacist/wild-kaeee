@@ -110,9 +110,11 @@ export function useChatMessagesQuery({ userId, directChatUserId = null, enabled 
       directChatUserId,
       cursor: pageParam,
     }),
+    initialPageParam: null,
     getNextPageParam: (lastPage) => lastPage.hasMore ? lastPage.nextCursor : undefined,
     enabled: enabled && !!userId,
     staleTime: 30_000, // 30 seconds
+    refetchInterval: enabled ? 5000 : false, // Fallback polling if realtime fails (e.g., mobile/websocket issues)
     select: (data) => ({
       // Flatten all pages into a single array, maintaining chronological order
       messages: data.pages.flatMap((page) => page.messages),

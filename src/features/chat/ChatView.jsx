@@ -171,29 +171,25 @@ const ChatView = ({
               }
             }
 
-            const Avatar = () => (
-              sender.avatar_url ? (
-                <img
-                  src={sender.avatar_url}
-                  alt={senderName}
-                  className={`h-9 w-9 rounded-full object-cover border ${theme.border} flex-shrink-0`}
-                />
-              ) : (
-                <div className={`h-9 w-9 rounded-full border ${theme.border} flex items-center justify-center text-xs ${theme.textMuted} flex-shrink-0 bg-white`}>
-                  {senderName?.[0]?.toUpperCase() || '?'}
-                </div>
-              )
+            const avatar = sender.avatar_url ? (
+              <img
+                src={sender.avatar_url}
+                alt={senderName}
+                className={`h-9 w-9 rounded-full object-cover border ${theme.border} flex-shrink-0`}
+              />
+            ) : (
+              <div className={`h-9 w-9 rounded-full border ${theme.border} flex items-center justify-center text-xs ${theme.textMuted} flex-shrink-0 bg-white`}>
+                {senderName?.[0]?.toUpperCase() || '?'}
+              </div>
             )
 
-            // Häkchen-Komponente für eigene Nachrichten
-            const ReadStatus = () => {
-              if (!isOwn) return null
-              return wasRead ? (
+            const readStatus = isOwn ? (
+              wasRead ? (
                 <Checks size={14} weight="bold" className="text-[#0D9488]" title="Gelesen" />
               ) : (
                 <Check size={14} weight="bold" className="text-[#64748B]" title="Gesendet" />
               )
-            }
+            ) : null
 
             return (
               <div
@@ -202,7 +198,7 @@ const ChatView = ({
               >
                 {/* Avatar zentriert auf der Mittellinie */}
                 <div className={`absolute left-1/2 top-0 -translate-x-1/2 ${isOwn ? '-ml-[22px]' : 'ml-[22px]'}`}>
-                  <Avatar />
+                  {avatar}
                 </div>
 
                 {isOwn ? (
@@ -266,7 +262,7 @@ const ChatView = ({
                           <span>{senderName}</span>
                           {timeLabel && <span>{timeLabel}</span>}
                           {entry.edited_at && <span className="italic">(bearbeitet)</span>}
-                          <ReadStatus />
+                          {readStatus}
                         </div>
                         <div className={`inline-block rounded-2xl px-4 py-2 border ${entry.deleted_at ? `${theme.panel} ${theme.border}` : 'bg-[#F59E0B]/15 border-[#F59E0B]/30 text-[#1E293B]'}`}>
                           {entry.deleted_at ? (

@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useMemo } from 'react'
 import { useEmail } from './EmailContext'
-import { useChatContext } from './ChatContext'
+import { useAuth } from './AuthContext'
+import { useStaff } from './StaffContext'
+import { useUnreadCountsQuery } from '../features/chat/api'
 import { useFaxCounts } from '../features/fax'
 import { useGesundUnreadCount } from '../features/gesund-bestellungen'
 
@@ -8,11 +10,27 @@ const UnreadCountsContext = createContext(null)
 
 /**
  * Aggregiert alle Unread-Badge-Zahlen für SidebarNav
- * Quellen: Fax (via useFaxCounts), Email, Chat, Apo (AMK/Recall/LAV/RHB)
+ * Quellen: Fax (via useFaxCounts), Email, Chat (TanStack Query), Apo (AMK/Recall/LAV/RHB)
  */
 export function UnreadCountsProvider({ children }) {
+  const { session } = useAuth()
+  const { staff } = useStaff()
   const { emailUnreadCount } = useEmail()
-  const { chatUnreadCounts } = useChatContext()
+
+  // Staff lookup für Chat-Notifications
+  const staffByAuthId = useMemo(() => {
+    return staff?.reduce((acc, s) => {
+      if (s.auth_user_id) acc[s.auth_user_id] = s
+      return acc
+    }, {}) || {}
+  }, [staff])
+
+  // Chat unread counts via TanStack Query (ersetzt Legacy ChatProvider)
+  const { unreadCounts: chatUnreadCounts } = useUnreadCountsQuery({
+    userId: session?.user?.id,
+    staffByAuthId,
+    enabled: !!session?.user?.id,
+  })
 
   // Fax count (via existierendem useFaxCounts Hook)
   const { count: faxCount } = useFaxCounts()

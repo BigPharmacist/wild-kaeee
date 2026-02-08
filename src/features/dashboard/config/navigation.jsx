@@ -29,17 +29,20 @@ export function createSecondaryNavMap({
   staff = [],
   session,
   currentStaff,
+  chatLastMessages = {},
 }) {
   return {
-    tasks: [
-      { id: 'all', label: 'Alle Aufgaben' },
-      ...(projects.length > 0 ? [{ id: 'divider' }] : []),
-      ...projects.map(p => ({
-        id: `project-${p.id}`,
-        label: p.name,
-        color: p.color,
-      })),
-    ],
+    ...(currentStaff?.is_admin ? {
+      tasks: [
+        { id: 'all', label: 'Alle Aufgaben' },
+        ...(projects.length > 0 ? [{ id: 'divider' }] : []),
+        ...projects.map(p => ({
+          id: `project-${p.id}`,
+          label: p.name,
+          color: p.color,
+        })),
+      ],
+    } : {}),
     pharma: [
       { id: 'amk', label: 'AMK' },
       { id: 'recall', label: 'Rückrufe' },
@@ -52,10 +55,19 @@ export function createSecondaryNavMap({
       { id: 'timeline', label: 'Dienstplan', route: '/plan' },
     ],
     chat: [
-      { id: 'group', label: 'Gruppenchat' },
       ...staff
         .filter((s) => s.auth_user_id && s.auth_user_id !== session?.user?.id)
-        .map((s) => ({ id: s.auth_user_id, label: s.first_name || 'Unbekannt' })),
+        .map((s) => ({ id: s.auth_user_id, label: s.first_name || 'Unbekannt', avatar: s.avatar_url }))
+        .sort((a, b) => {
+          const tA = chatLastMessages[a.id] || ''
+          const tB = chatLastMessages[b.id] || ''
+          if (tA && tB) return tB.localeCompare(tA)
+          if (tA) return -1
+          if (tB) return 1
+          return a.label.localeCompare(b.label)
+        }),
+      { id: 'divider' },
+      { id: 'group', label: 'Alle (Gruppe)' },
     ],
     botendienst: [
       { id: 'overview', label: 'Übersicht' },
@@ -88,11 +100,11 @@ export function createSecondaryNavMap({
       { id: 'scan', label: 'Scannen', route: '/scan' },
     ],
     settings: [
-      { id: 'pharmacies', label: 'Apotheken' },
-      { id: 'staff', label: 'Kollegium' },
+      ...(currentStaff?.is_admin ? [{ id: 'pharmacies', label: 'Apotheken' }] : []),
+      ...(currentStaff?.is_admin ? [{ id: 'staff', label: 'Kollegium' }] : []),
       { id: 'contacts', label: 'Kontakte' },
-      { id: 'email', label: 'E-Mail' },
-      { id: 'ai-chat', label: 'KI-Chat' },
+      ...(currentStaff?.is_admin ? [{ id: 'email', label: 'E-Mail' }] : []),
+      ...(currentStaff?.is_admin ? [{ id: 'ai-chat', label: 'KI-Chat' }] : []),
       ...(currentStaff?.is_admin ? [{ id: 'news', label: 'News' }] : []),
       ...(currentStaff?.is_admin ? [{ id: 'admin', label: 'Admin' }] : []),
     ],

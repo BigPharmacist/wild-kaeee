@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useNavigate } from '@tanstack/react-router'
+import { useQuery } from '@tanstack/react-query'
 import { Plus, FolderPlus } from '@phosphor-icons/react'
 import { useTheme, useAuth, useStaff, useNavigation } from '../../context'
 import { useUnreadCounts } from '../../context/UnreadCountsContext'
 import { useSecondaryNav } from '../../context/SecondaryNavContext'
 import { Icons, UnreadBadge } from '../../shared/ui'
+import { supabase } from '../../lib/supabase'
 import { navItems, miscNavItem, createSecondaryNavMap } from './config/navigation'
 
 /**
@@ -24,6 +26,12 @@ const SidebarNav = function SidebarNav() {
   const { onAddTask, onAddProject } = sidebarCallbacks
   const handleSecondarySelectFn = secondarySelectOverride || navHandleSecondarySelect
 
+  // Tasks nur für Admins sichtbar
+  const filteredNavItems = useMemo(() =>
+    navItems.filter(item => item.id !== 'tasks' || currentStaff?.is_admin),
+    [currentStaff?.is_admin]
+  )
+
   // Routes for migrated features
   const migratedRoutes = {
     dashboard: '/',
@@ -38,12 +46,26 @@ const SidebarNav = function SidebarNav() {
     settings: '/settings',
   }
 
+  // Letzte Nachricht pro Direktchat für Sortierung
+  const { data: chatLastMessages = {} } = useQuery({
+    queryKey: ['chat', 'lastMessages', session?.user?.id],
+    queryFn: async () => {
+      const { data } = await supabase.rpc('get_chat_last_messages', { p_user_id: session.user.id })
+      const map = {}
+      data?.forEach((row) => { map[row.chat_id] = row.last_message_at })
+      return map
+    },
+    enabled: !!session?.user?.id,
+    staleTime: 30_000,
+  })
+
   const secondaryNavMap = useMemo(() => createSecondaryNavMap({
     projects: dynamicNavData.projects,
     staff,
     session,
     currentStaff,
-  }), [currentStaff?.is_admin, staff, session?.user?.id, dynamicNavData.projects])
+    chatLastMessages,
+  }), [currentStaff?.is_admin, staff, session?.user?.id, dynamicNavData.projects, chatLastMessages])
 
   const [showLogoutMenu, setShowLogoutMenu] = useState(false)
   const [mobileSecondaryView, setMobileSecondaryView] = useState(null)
@@ -83,12 +105,8 @@ const SidebarNav = function SidebarNav() {
     }
     setActiveView(id)
     if (id === 'chat') {
-      // Chat tab-dependent navigation
-      if (chatTab && chatTab !== 'group') {
-        navigate({ to: `/chat/dm/${chatTab}` })
-      } else {
-        navigate({ to: '/chat/group' })
-      }
+      // Immer zum Gruppenchat navigieren beim Primary-Klick
+      navigate({ to: '/chat/group' })
     } else if (migratedRoutes[id]) {
       navigate({ to: migratedRoutes[id] })
     }
@@ -137,7 +155,7 @@ const SidebarNav = function SidebarNav() {
 
           <div className="flex-1 overflow-y-auto">
             <nav className="p-2 space-y-0.5">
-              {navItems.map((item) => {
+              {filteredNavItems.map((item) => {
                 const totalApoUnread = item.id === 'pharma' ? unreadCounts.amk + unreadCounts.recall + unreadCounts.lav + (unreadCounts.rhb || 0) : 0
                 const totalPostUnread = item.id === 'post' ? (unreadCounts.fax || 0) + (unreadCounts.email || 0) + (unreadCounts.gesund || 0) : 0
                 const totalChatUnread = item.id === 'chat' && unreadCounts.chat
@@ -263,7 +281,7 @@ const SidebarNav = function SidebarNav() {
             </button>
             <div className="flex-1">
               <p className="text-xs uppercase tracking-[0.08em] text-[#64748B]">
-                {navItems.find((item) => item.id === mobileSecondaryView)?.label ||
+                {filteredNavItems.find((item) => item.id === mobileSecondaryView)?.label ||
                   (mobileSecondaryView === miscNavItem.id ? miscNavItem.label : '')}
               </p>
               <h2 className="text-sm font-semibold text-[#E5E7EB] mt-0.5">Auswählen</h2>
@@ -337,16 +355,27 @@ const SidebarNav = function SidebarNav() {
                     }`}
                     onClick={() => {
                       handleSecondarySelectFn(subItem.id)
-                      if (subItem.route) navigate({ to: subItem.route })
+                      if (subItem.route) {
+                        navigate({ to: subItem.route })
+                      } else if (mobileSecondaryView === 'chat') {
+                        // Chat: Route-Navigation statt nur State-Update
+                        navigate({ to: subItem.id === 'group' ? '/chat/group' : `/chat/dm/${subItem.id}` })
+                      }
                       setMobileNavOpen(false)
                     }}
                   >
-                    {subItem.color && (
+                    {subItem.avatar ? (
+                      <img src={subItem.avatar} alt="" className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
+                    ) : subItem.avatar === null ? (
+                      <span className="w-6 h-6 rounded-full bg-[#475569] flex items-center justify-center text-[10px] text-white flex-shrink-0">
+                        {subItem.label?.[0]?.toUpperCase()}
+                      </span>
+                    ) : subItem.color ? (
                       <span
                         className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                         style={{ backgroundColor: subItem.color }}
                       />
-                    )}
+                    ) : null}
                     <span className="flex-1 min-w-0 truncate">{subItem.label}</span>
                     <UnreadBadge count={badgeCount} />
                   </button>
@@ -361,7 +390,7 @@ const SidebarNav = function SidebarNav() {
     <aside data-sidebar="primary" className={`hidden lg:flex flex-shrink-0 ${theme.sidebarBg} w-14 min-w-[3.5rem] max-w-[3.5rem] overflow-visible h-full relative z-[45] pointer-events-auto`}>
       <div className="h-full flex flex-col">
         <nav className="py-2 space-y-6 flex flex-col items-center flex-1 pl-1">
-          {navItems.map((item) => {
+          {filteredNavItems.map((item) => {
             const totalApoUnread = item.id === 'pharma' ? unreadCounts.amk + unreadCounts.recall + unreadCounts.lav + (unreadCounts.rhb || 0) : 0
             const totalPostUnread = item.id === 'post' ? (unreadCounts.fax || 0) + (unreadCounts.email || 0) + (unreadCounts.gesund || 0) : 0
             const totalChatUnread = item.id === 'chat' && unreadCounts.chat
@@ -478,7 +507,7 @@ const SidebarNav = function SidebarNav() {
           </p>
           <div className="flex items-center justify-between mt-1">
             <h2 className="text-sm font-semibold text-[#E5E7EB]">
-              {navItems.find((item) => item.id === activeView)?.label || 'Kontext'}
+              {filteredNavItems.find((item) => item.id === activeView)?.label || 'Kontext'}
             </h2>
             {activeView === 'tasks' && (
               <div className="flex items-center gap-1">
@@ -534,15 +563,26 @@ const SidebarNav = function SidebarNav() {
                 title={item.label}
                 onClick={() => {
                   handleSecondarySelectFn(item.id)
-                  if (item.route) navigate({ to: item.route })
+                  if (item.route) {
+                    navigate({ to: item.route })
+                  } else if (activeView === 'chat') {
+                    // Chat: Route-Navigation statt nur State-Update
+                    navigate({ to: item.id === 'group' ? '/chat/group' : `/chat/dm/${item.id}` })
+                  }
                 }}
               >
-                {item.color && (
+                {item.avatar ? (
+                  <img src={item.avatar} alt="" className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
+                ) : item.avatar === null ? (
+                  <span className="w-6 h-6 rounded-full bg-[#475569] flex items-center justify-center text-[10px] text-white flex-shrink-0">
+                    {item.label?.[0]?.toUpperCase()}
+                  </span>
+                ) : item.color ? (
                   <span
                     className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                     style={{ backgroundColor: item.color }}
                   />
-                )}
+                ) : null}
                 <span className="flex-1 min-w-0 truncate">{item.label}</span>
                 <UnreadBadge count={badgeCount} />
               </button>

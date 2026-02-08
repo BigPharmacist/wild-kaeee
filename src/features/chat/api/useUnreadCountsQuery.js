@@ -106,8 +106,9 @@ export function useUnreadCountsQuery({ userId, staffByAuthId = {}, enabled = tru
           playChatNotificationSound()
         }
 
-        // Refetch unread counts
+        // Refetch unread counts + chat order
         refetch()
+        queryClient.invalidateQueries({ queryKey: ['chat', 'lastMessages'] })
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_message_reads' }, () => {
         refetch()
