@@ -207,7 +207,7 @@ export default function FaxDetailPane({
               <button
                 type="button"
                 onClick={onBack}
-                className={`lg:hidden p-1.5 rounded-lg ${theme.bgHover}`}
+                className={`lg:hidden p-1.5 rounded-lg ${theme.textSecondary} ${theme.bgHover}`}
               >
                 <CaretLeft size={20} />
               </button>
@@ -223,52 +223,51 @@ export default function FaxDetailPane({
                     {selectedFax.absender || 'Unbekannter Absender'}
                   </h3>
                 </div>
-                {selectedFax.fax_nummer && (
-                  <div className={`text-sm ${theme.textSecondary}`}>
-                    Faxnummer: {selectedFax.fax_nummer}
+                <div className="flex items-center gap-3 mt-1">
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={handleDownload}
+                      className={`p-1.5 rounded-lg ${theme.textSecondary} ${theme.bgHover}`}
+                      title="PDF herunterladen"
+                    >
+                      <DownloadSimple size={18} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handlePrint}
+                      className={`p-1.5 rounded-lg ${theme.textSecondary} ${theme.bgHover}`}
+                      title="Drucken"
+                    >
+                      <Printer size={18} />
+                    </button>
+                    {selectedFolder === 'eingang' ? (
+                      <button
+                        type="button"
+                        onClick={() => onDelete(selectedFax.id)}
+                        className={`p-1.5 rounded-lg ${theme.danger}`}
+                        title="In Papierkorb verschieben"
+                      >
+                        <Trash size={18} />
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => onRestore(selectedFax.id)}
+                        className={`p-1.5 rounded-lg ${theme.textSecondary} ${theme.bgHover}`}
+                        title="Wiederherstellen"
+                      >
+                        <ArrowCounterClockwise size={18} />
+                      </button>
+                    )}
                   </div>
-                )}
-                <div className={`text-xs ${theme.textMuted} mt-0.5`}>
-                  Empfangen: {formatDateTime(selectedFax.fax_received_at)}
+                  <div className={`text-xs ${theme.textMuted}`}>
+                    {selectedFax.fax_nummer && (
+                      <span>Faxnummer: {selectedFax.fax_nummer} · </span>
+                    )}
+                    <span>Empfangen: {formatDateTime(selectedFax.fax_received_at)}</span>
+                  </div>
                 </div>
-              </div>
-
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={handleDownload}
-                  className={`p-2 rounded-lg ${theme.bgHover}`}
-                  title="PDF herunterladen"
-                >
-                  <DownloadSimple size={20} />
-                </button>
-                <button
-                  type="button"
-                  onClick={handlePrint}
-                  className={`p-2 rounded-lg ${theme.bgHover}`}
-                  title="Drucken"
-                >
-                  <Printer size={20} />
-                </button>
-                {selectedFolder === 'eingang' ? (
-                  <button
-                    type="button"
-                    onClick={() => onDelete(selectedFax.id)}
-                    className={`p-2 rounded-lg ${theme.danger}`}
-                    title="In Papierkorb verschieben"
-                  >
-                    <Trash size={20} />
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => onRestore(selectedFax.id)}
-                    className={`p-2 rounded-lg ${theme.bgHover}`}
-                    title="Wiederherstellen"
-                  >
-                    <ArrowCounterClockwise size={20} />
-                  </button>
-                )}
               </div>
             </div>
           </div>
@@ -359,7 +358,7 @@ export default function FaxDetailPane({
               <button
                 type="button"
                 onClick={handleZoomOut}
-                className={`p-1.5 rounded-lg ${theme.bgHover}`}
+                className={`p-1.5 rounded-lg ${theme.textSecondary} ${theme.bgHover}`}
                 title="Verkleinern"
               >
                 <MagnifyingGlassMinus size={18} />
@@ -370,7 +369,7 @@ export default function FaxDetailPane({
               <button
                 type="button"
                 onClick={handleZoomIn}
-                className={`p-1.5 rounded-lg ${theme.bgHover}`}
+                className={`p-1.5 rounded-lg ${theme.textSecondary} ${theme.bgHover}`}
                 title="Vergrößern"
               >
                 <MagnifyingGlassPlus size={18} />
@@ -381,7 +380,7 @@ export default function FaxDetailPane({
               <button
                 type="button"
                 onClick={handleRotateLeft}
-                className={`p-1.5 rounded-lg ${theme.bgHover}`}
+                className={`p-1.5 rounded-lg ${theme.textSecondary} ${theme.bgHover}`}
                 title="90° nach links drehen"
               >
                 <ArrowUUpLeft size={18} />
@@ -389,7 +388,7 @@ export default function FaxDetailPane({
               <button
                 type="button"
                 onClick={handleRotateRight}
-                className={`p-1.5 rounded-lg ${theme.bgHover}`}
+                className={`p-1.5 rounded-lg ${theme.textSecondary} ${theme.bgHover}`}
                 title="90° nach rechts drehen"
               >
                 <ArrowUUpRight size={18} />
@@ -400,7 +399,7 @@ export default function FaxDetailPane({
               <button
                 type="button"
                 onClick={handleReset}
-                className={`p-1.5 rounded-lg ${theme.bgHover}`}
+                className={`p-1.5 rounded-lg ${theme.textSecondary} ${theme.bgHover}`}
                 title="Zurücksetzen"
               >
                 <ArrowsOutSimple size={18} />

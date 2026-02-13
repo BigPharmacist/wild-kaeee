@@ -57,7 +57,7 @@ export function CashCollectionModal({
               Betrag kassieren
             </h2>
           </div>
-          <button onClick={onClose} className={`p-2 rounded-lg ${theme.bgHover}`}>
+          <button onClick={onClose} className={`p-2 rounded-lg ${theme.textSecondary} ${theme.bgHover}`}>
             <X size={20} className={theme.textMuted} />
           </button>
         </div>

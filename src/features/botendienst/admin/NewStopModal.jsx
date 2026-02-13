@@ -115,7 +115,7 @@ export function NewStopModal({
           <h2 className={`text-lg font-semibold ${theme.textPrimary}`}>
             Neuen Stop hinzufügen
           </h2>
-          <button onClick={onClose} className={`p-2 rounded-lg ${theme.bgHover}`}>
+          <button onClick={onClose} className={`p-2 rounded-lg ${theme.textSecondary} ${theme.bgHover}`}>
             <X size={20} className={theme.textMuted} />
           </button>
         </div>

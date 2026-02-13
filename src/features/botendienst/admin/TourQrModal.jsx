@@ -129,7 +129,7 @@ export function TourQrModal({ theme, isOpen, onClose, tour, baseUrl }) {
           </h2>
           <button
             onClick={onClose}
-            className={`p-2 rounded-lg ${theme.bgHover}`}
+            className={`p-2 rounded-lg ${theme.textSecondary} ${theme.bgHover}`}
           >
             <X size={20} className={theme.textMuted} />
           </button>

@@ -128,7 +128,7 @@ export function TourDetail({
       <div className="flex items-start gap-4">
         <button
           onClick={onBack}
-          className={`p-2 rounded-lg ${theme.bgHover}`}
+          className={`p-2 rounded-lg ${theme.textSecondary} ${theme.bgHover}`}
           title="Zurück"
         >
           <ArrowLeft size={20} className={theme.textPrimary} />
@@ -598,7 +598,7 @@ export function TourDetail({
                 </div>
                 <button
                   onClick={() => setSelectedStopDetail(null)}
-                  className={`p-2 rounded-lg ${theme.bgHover}`}
+                  className={`p-2 rounded-lg ${theme.textSecondary} ${theme.bgHover}`}
                 >
                   <X size={20} className={theme.textMuted} />
                 </button>
