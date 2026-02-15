@@ -16,9 +16,9 @@ export function ShiftEditModal({ theme, isOpen, staffId, date, existingSchedules
     weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric'
   })
 
-  // Shifts not yet assigned
+  // Shifts not yet assigned (only active shifts)
   const assignedShiftIds = existingSchedules.map(s => s.shift_id)
-  const availableShifts = shifts.filter(s => !assignedShiftIds.includes(s.id))
+  const availableShifts = shifts.filter(s => s.active !== false && !assignedShiftIds.includes(s.id))
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">

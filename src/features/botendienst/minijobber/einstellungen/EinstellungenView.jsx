@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
-import { FloppyDisk, Check } from '@phosphor-icons/react'
+import { useState, useEffect, useCallback } from 'react'
+import { FloppyDisk, Check, Eye, EyeSlash } from '@phosphor-icons/react'
+import { supabase } from '../../../../lib/supabase'
 import { useMjSettings } from '../hooks/useMjSettings'
 import { HolidayManager } from './HolidayManager'
 
@@ -7,10 +8,37 @@ export function EinstellungenView({ theme, pharmacyId, profiles }) {
   const { settings, loading, fetchSettings, updateSettings } = useMjSettings({ pharmacyId })
   const [form, setForm] = useState({ default_hourly_rate: '', monthly_limit: '' })
   const [saved, setSaved] = useState(false)
+  const [shifts, setShifts] = useState([])
+  const [shiftsLoading, setShiftsLoading] = useState(false)
+
+  const fetchShifts = useCallback(async () => {
+    if (!pharmacyId) return
+    setShiftsLoading(true)
+    const { data } = await supabase
+      .from('mj_shifts')
+      .select('*')
+      .eq('pharmacy_id', pharmacyId)
+      .order('start_time')
+    setShifts(data || [])
+    setShiftsLoading(false)
+  }, [pharmacyId])
+
+  const toggleShiftActive = async (shiftId, active) => {
+    const { error } = await supabase
+      .from('mj_shifts')
+      .update({ active })
+      .eq('id', shiftId)
+    if (!error) {
+      setShifts(prev => prev.map(s => s.id === shiftId ? { ...s, active } : s))
+    }
+  }
 
   useEffect(() => {
-    if (pharmacyId) fetchSettings()
-  }, [pharmacyId, fetchSettings])
+    if (pharmacyId) {
+      fetchSettings()
+      fetchShifts()
+    }
+  }, [pharmacyId, fetchSettings, fetchShifts])
 
   useEffect(() => {
     if (settings) {
@@ -86,6 +114,53 @@ export function EinstellungenView({ theme, pharmacyId, profiles }) {
                 {saved ? 'Gespeichert' : 'Speichern'}
               </button>
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* Schichten verwalten */}
+      <div className={`${theme.surface} border ${theme.border} rounded-xl p-4 ${theme.cardShadow}`}>
+        <h3 className={`text-sm font-semibold ${theme.textPrimary} mb-4`}>Schichten verwalten</h3>
+        <p className={`text-xs ${theme.textMuted} mb-3`}>
+          Deaktivierte Schichten werden im Dienstplan ausgeblendet, bestehende Einträge bleiben erhalten.
+        </p>
+        {shiftsLoading ? (
+          <div className="flex justify-center py-4">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#F59E0B]" />
+          </div>
+        ) : shifts.length === 0 ? (
+          <p className={`text-sm ${theme.textMuted}`}>Keine Schichten vorhanden</p>
+        ) : (
+          <div className="space-y-2">
+            {shifts.map(shift => (
+              <div
+                key={shift.id}
+                className={`flex items-center justify-between px-3 py-2.5 rounded-lg border ${
+                  shift.active ? theme.border : 'border-gray-200 bg-gray-50'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <span className={`text-sm font-medium ${shift.active ? theme.textPrimary : theme.textMuted + ' line-through'}`}>
+                    {shift.name}
+                  </span>
+                  <span className={`text-xs ${theme.textMuted}`}>
+                    {shift.start_time?.slice(0, 5)} – {shift.end_time?.slice(0, 5)} ({shift.hours}h)
+                  </span>
+                </div>
+                <button
+                  onClick={() => toggleShiftActive(shift.id, !shift.active)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    shift.active
+                      ? 'text-green-700 bg-green-50 hover:bg-green-100'
+                      : 'text-gray-500 bg-gray-100 hover:bg-gray-200'
+                  }`}
+                  title={shift.active ? 'Schicht ausblenden' : 'Schicht einblenden'}
+                >
+                  {shift.active ? <Eye size={14} /> : <EyeSlash size={14} />}
+                  {shift.active ? 'Sichtbar' : 'Ausgeblendet'}
+                </button>
+              </div>
+            ))}
           </div>
         )}
       </div>

@@ -46,6 +46,7 @@ export default function MinijobberView({ theme, session, currentStaff, pharmacie
             theme={theme}
             pharmacyId={pharmacyId}
             profiles={profilesHook.profiles}
+            pharmacyName={pharmacies?.find(p => p.id === pharmacyId)?.name}
           />
         )
       case 'zeiterfassung':

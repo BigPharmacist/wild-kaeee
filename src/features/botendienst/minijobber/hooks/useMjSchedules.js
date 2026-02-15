@@ -305,6 +305,21 @@ export function useMjSchedules({ pharmacyId }) {
     return await bulkInsertSchedules(entries)
   }, [standardWeeks, bulkInsertSchedules])
 
+  const toggleShiftActive = useCallback(async (shiftId, active) => {
+    const { error } = await supabase
+      .from('mj_shifts')
+      .update({ active })
+      .eq('id', shiftId)
+
+    if (error) {
+      console.error('Fehler beim Umschalten der Schicht:', error)
+      return false
+    }
+
+    setShifts(prev => prev.map(s => s.id === shiftId ? { ...s, active } : s))
+    return true
+  }, [])
+
   return {
     schedules,
     shifts,
@@ -323,6 +338,7 @@ export function useMjSchedules({ pharmacyId }) {
     fetchStandardWeeks,
     saveStandardWeek,
     applyStandardWeek,
+    toggleShiftActive,
   }
 }
 

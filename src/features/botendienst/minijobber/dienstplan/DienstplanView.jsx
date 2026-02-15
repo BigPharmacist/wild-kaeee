@@ -1,9 +1,11 @@
-import { useState, useEffect, useCallback } from 'react'
-import { CaretLeft, CaretRight, Copy, Rows, GridFour } from '@phosphor-icons/react'
+import { useState, useEffect, useMemo } from 'react'
+import { CaretLeft, CaretRight, Copy, GridFour, CalendarBlank, ListBullets, FilePdf } from '@phosphor-icons/react'
 import { useMjSchedules } from '../hooks/useMjSchedules'
 import { WeekGrid } from './WeekGrid'
+import { MonthTable } from './MonthTable'
 import { ShiftEditModal } from './ShiftEditModal'
 import { StandardWeekManager } from './StandardWeekManager'
+import { generateDienstplanPdf } from './DienstplanPdf'
 
 const dayNames = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
 const dayNamesFull = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag']
@@ -17,7 +19,10 @@ function getMonday(d) {
 }
 
 function formatDate(d) {
-  return d.toISOString().split('T')[0]
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 }
 
 function addDays(d, days) {
@@ -26,9 +31,10 @@ function addDays(d, days) {
   return result
 }
 
-export function DienstplanView({ theme, pharmacyId, profiles }) {
+export function DienstplanView({ theme, pharmacyId, profiles, pharmacyName }) {
   const [viewMode, setViewMode] = useState('week') // 'week' or 'month'
   const [currentWeekStart, setCurrentWeekStart] = useState(() => getMonday(new Date()))
+  const [currentMonth, setCurrentMonth] = useState(() => ({ year: new Date().getFullYear(), month: new Date().getMonth() }))
   const [editModal, setEditModal] = useState(null)
   const [showStandardWeeks, setShowStandardWeeks] = useState(false)
 
@@ -41,40 +47,45 @@ export function DienstplanView({ theme, pharmacyId, profiles }) {
   const weekDates = Array.from({ length: 6 }, (_, i) => addDays(currentWeekStart, i))
   const weekEnd = weekDates[weekDates.length - 1]
 
+  // Month date range
+  const monthFirstDay = useMemo(() => new Date(currentMonth.year, currentMonth.month, 1), [currentMonth])
+  const monthLastDay = useMemo(() => new Date(currentMonth.year, currentMonth.month + 1, 0), [currentMonth])
+  const monthLabel = monthFirstDay.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })
+
   // Load shifts + schedules
   useEffect(() => {
     if (pharmacyId) {
       fetchShifts()
-      fetchHolidays(currentWeekStart.getFullYear())
+      const year = viewMode === 'month' ? currentMonth.year : currentWeekStart.getFullYear()
+      fetchHolidays(year)
     }
-  }, [pharmacyId, fetchShifts, fetchHolidays, currentWeekStart])
+  }, [pharmacyId, fetchShifts, fetchHolidays, currentWeekStart, currentMonth, viewMode])
 
   useEffect(() => {
     if (pharmacyId && shifts.length > 0) {
       if (viewMode === 'week') {
         fetchSchedules(formatDate(currentWeekStart), formatDate(weekEnd))
       } else {
-        // Month view: load full month
-        const year = currentWeekStart.getFullYear()
-        const month = currentWeekStart.getMonth()
-        const firstDay = new Date(year, month, 1)
-        const lastDay = new Date(year, month + 1, 0)
-        fetchSchedules(formatDate(firstDay), formatDate(lastDay))
+        fetchSchedules(formatDate(monthFirstDay), formatDate(monthLastDay))
       }
     }
-  }, [pharmacyId, shifts, viewMode, currentWeekStart, fetchSchedules]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pharmacyId, shifts, viewMode, currentWeekStart, monthFirstDay, monthLastDay, fetchSchedules]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const goToPreviousWeek = () => {
-    setCurrentWeekStart(prev => addDays(prev, -7))
-  }
+  // Week navigation
+  const goToPreviousWeek = () => setCurrentWeekStart(prev => addDays(prev, -7))
+  const goToNextWeek = () => setCurrentWeekStart(prev => addDays(prev, 7))
+  const goToThisWeek = () => setCurrentWeekStart(getMonday(new Date()))
 
-  const goToNextWeek = () => {
-    setCurrentWeekStart(prev => addDays(prev, 7))
-  }
-
-  const goToThisWeek = () => {
-    setCurrentWeekStart(getMonday(new Date()))
-  }
+  // Month navigation
+  const goToPreviousMonth = () => setCurrentMonth(prev => {
+    const m = prev.month - 1
+    return m < 0 ? { year: prev.year - 1, month: 11 } : { year: prev.year, month: m }
+  })
+  const goToNextMonth = () => setCurrentMonth(prev => {
+    const m = prev.month + 1
+    return m > 11 ? { year: prev.year + 1, month: 0 } : { year: prev.year, month: m }
+  })
+  const goToThisMonth = () => setCurrentMonth({ year: new Date().getFullYear(), month: new Date().getMonth() })
 
   const handleCellClick = (staffId, date) => {
     setEditModal({ staffId, date, existingSchedules: schedules.filter(s => s.staff_id === staffId && s.date === date) })
@@ -121,57 +132,112 @@ export function DienstplanView({ theme, pharmacyId, profiles }) {
       <div className={`${theme.surface} border ${theme.border} rounded-xl p-4`}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <button onClick={goToPreviousWeek} className={`p-1.5 rounded-lg ${theme.textSecondary} hover:bg-gray-100`}>
+            {/* View Mode Toggle */}
+            <div className={`flex rounded-lg border ${theme.border} overflow-hidden mr-2`}>
+              <button
+                onClick={() => setViewMode('week')}
+                className={`inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium transition-colors ${
+                  viewMode === 'week' ? 'bg-[#FEF3C7] text-[#1E293B]' : `${theme.textSecondary} hover:bg-gray-50`
+                }`}
+              >
+                <CalendarBlank size={14} />
+                Woche
+              </button>
+              <button
+                onClick={() => setViewMode('month')}
+                className={`inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium transition-colors border-l ${theme.border} ${
+                  viewMode === 'month' ? 'bg-[#FEF3C7] text-[#1E293B]' : `${theme.textSecondary} hover:bg-gray-50`
+                }`}
+              >
+                <ListBullets size={14} />
+                Monat
+              </button>
+            </div>
+
+            {/* Navigation */}
+            <button
+              onClick={viewMode === 'week' ? goToPreviousWeek : goToPreviousMonth}
+              className={`p-1.5 rounded-lg ${theme.textSecondary} hover:bg-gray-100`}
+            >
               <CaretLeft size={18} weight="bold" />
             </button>
             <span className={`text-sm font-semibold ${theme.textPrimary} min-w-[200px] text-center`}>
-              {currentWeekStart.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}
-              {' – '}
-              {weekEnd.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+              {viewMode === 'week' ? (
+                <>
+                  {currentWeekStart.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}
+                  {' – '}
+                  {weekEnd.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                </>
+              ) : (
+                monthLabel
+              )}
             </span>
-            <button onClick={goToNextWeek} className={`p-1.5 rounded-lg ${theme.textSecondary} hover:bg-gray-100`}>
+            <button
+              onClick={viewMode === 'week' ? goToNextWeek : goToNextMonth}
+              className={`p-1.5 rounded-lg ${theme.textSecondary} hover:bg-gray-100`}
+            >
               <CaretRight size={18} weight="bold" />
             </button>
             <button
-              onClick={goToThisWeek}
+              onClick={viewMode === 'week' ? goToThisWeek : goToThisMonth}
               className={`ml-2 px-3 py-1.5 rounded-lg text-xs font-medium ${theme.textSecondary} hover:bg-gray-100 border ${theme.border}`}
             >
               Heute
             </button>
           </div>
 
-          <div className="flex items-center gap-2">
+          {viewMode === 'month' && (
             <button
-              onClick={handleCopyFromTwoWeeksAgo}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium ${theme.textSecondary} hover:bg-gray-100 border ${theme.border}`}
-              title="Schichtplan von vor 2 Wochen kopieren"
+              onClick={() => generateDienstplanPdf({
+                year: currentMonth.year,
+                month: currentMonth.month,
+                schedules,
+                shifts,
+                profiles,
+                holidays,
+                pharmacyName,
+              })}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 border border-red-200`}
             >
-              <Copy size={14} />
-              Vor 2 Wo. kopieren
+              <FilePdf size={14} weight="bold" />
+              PDF
             </button>
-            <button
-              onClick={() => setShowStandardWeeks(true)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium ${theme.textSecondary} hover:bg-gray-100 border ${theme.border}`}
-            >
-              <GridFour size={14} />
-              Standard-Woche
-            </button>
-            <button
-              onClick={handleDeleteWeek}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-red-600 hover:bg-red-50 border border-red-200"
-            >
-              Woche löschen
-            </button>
-          </div>
+          )}
+
+          {viewMode === 'week' && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleCopyFromTwoWeeksAgo}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium ${theme.textSecondary} hover:bg-gray-100 border ${theme.border}`}
+                title="Schichtplan von vor 2 Wochen kopieren"
+              >
+                <Copy size={14} />
+                Vor 2 Wo. kopieren
+              </button>
+              <button
+                onClick={() => setShowStandardWeeks(true)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium ${theme.textSecondary} hover:bg-gray-100 border ${theme.border}`}
+              >
+                <GridFour size={14} />
+                Standard-Woche
+              </button>
+              <button
+                onClick={handleDeleteWeek}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-red-600 hover:bg-red-50 border border-red-200"
+              >
+                Woche löschen
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Week Grid */}
+      {/* Grid / Table */}
       {loading && schedules.length === 0 ? (
         <div className={`${theme.surface} border ${theme.border} rounded-xl p-12 flex items-center justify-center`}>
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#F59E0B]" />
         </div>
-      ) : (
+      ) : viewMode === 'week' ? (
         <WeekGrid
           theme={theme}
           profiles={profiles}
@@ -180,6 +246,17 @@ export function DienstplanView({ theme, pharmacyId, profiles }) {
           shifts={shifts}
           holidayMap={holidayMap}
           dayNames={dayNames}
+          onCellClick={handleCellClick}
+        />
+      ) : (
+        <MonthTable
+          theme={theme}
+          profiles={profiles}
+          schedules={schedules}
+          shifts={shifts}
+          holidayMap={holidayMap}
+          year={currentMonth.year}
+          month={currentMonth.month}
           onCellClick={handleCellClick}
         />
       )}
