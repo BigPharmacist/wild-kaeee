@@ -182,7 +182,7 @@ export function ZeiterfassungView({ theme, pharmacyId, profiles }) {
       {/* Recorded Tab */}
       {!loading && activeTab === 'erfasst' && (
         <div className="space-y-2">
-          {profiles.filter(p => p.active).map(profile => {
+          {profiles.map(profile => {
             const staffId = profile.staff_id
             const records = recordsByStaff[staffId] || []
             const manuals = manualByStaff[staffId] || []

@@ -6,22 +6,16 @@ export function useMjProfiles({ pharmacyId }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
-  const fetchProfiles = useCallback(async (includeInactive = false) => {
+  const fetchProfiles = useCallback(async () => {
     if (!pharmacyId) return
     setLoading(true)
     setError(null)
 
-    let query = supabase
+    const { data, error: err } = await supabase
       .from('mj_profiles')
       .select('*, staff:staff!mj_profiles_staff_id_fkey(id, first_name, last_name, email, mobile, street, postal_code, city, employed_since, exit_date)')
       .eq('pharmacy_id', pharmacyId)
       .order('created_at', { ascending: true })
-
-    if (!includeInactive) {
-      query = query.eq('active', true)
-    }
-
-    const { data, error: err } = await query
 
     if (err) {
       console.error('Fehler beim Laden der Minijobber:', err)

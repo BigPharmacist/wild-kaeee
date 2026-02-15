@@ -40,7 +40,7 @@ export function generateDienstplanPdf({ year, month, schedules, shifts, profiles
 
   // Profile-Map
   const profileMap = {}
-  profiles.filter(p => p.active).forEach(p => {
+  profiles.forEach(p => {
     profileMap[p.staff_id] = p.staff?.first_name || '?'
   })
 

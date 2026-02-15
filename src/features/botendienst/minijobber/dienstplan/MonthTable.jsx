@@ -26,10 +26,8 @@ function getShiftLabelColor(shiftName) {
 }
 
 export function MonthTable({ theme, profiles, schedules, shifts, holidayMap, year, month, onCellClick }) {
-  const activeProfiles = profiles.filter(p => p.active)
-
   const profileMap = {}
-  activeProfiles.forEach(p => {
+  profiles.forEach(p => {
     const firstName = p.staff?.first_name || '?'
     profileMap[p.staff_id] = { ...p, firstName }
   })

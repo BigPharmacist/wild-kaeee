@@ -34,7 +34,7 @@ export function MonatsberichteView({ theme, pharmacyId, pharmacies, profiles, cu
     setCalculating(true)
     const results = {}
 
-    for (const profile of profiles.filter(p => p.active)) {
+    for (const profile of profiles) {
       const reportData = await calculateReport(profile.staff_id, profile, year, month)
       if (reportData) {
         results[profile.staff_id] = reportData
@@ -79,7 +79,10 @@ export function MonatsberichteView({ theme, pharmacyId, pharmacies, profiles, cu
     })
   }
 
-  const activeProfiles = profiles.filter(p => p.active)
+  // Zeige alle Profile die aktiv sind ODER Berichte/Daten im gewählten Monat haben
+  const activeProfiles = profiles.filter(p =>
+    p.active || reports.some(r => r.staff_id === p.staff_id) || calculatedReports[p.staff_id]
+  )
 
   return (
     <div className="space-y-4">

@@ -33,10 +33,8 @@ function getShiftLabelColors(shiftName) {
 }
 
 export function WeekGrid({ theme, profiles, weekDates, schedules, shifts, holidayMap, dayNames, onCellClick }) {
-  const activeProfiles = profiles.filter(p => p.active)
-
   const profileMap = {}
-  activeProfiles.forEach(p => {
+  profiles.forEach(p => {
     const firstName = p.staff?.first_name || 'Unbekannt'
     const fullName = p.staff ? `${p.staff.first_name} ${p.staff.last_name}` : 'Unbekannt'
     profileMap[p.staff_id] = { ...p, firstName, fullName }
