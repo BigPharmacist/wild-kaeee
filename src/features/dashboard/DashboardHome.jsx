@@ -1,4 +1,4 @@
-import { memo, useState, lazy, Suspense } from 'react'
+import { memo, useState, useEffect, useRef, lazy, Suspense } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { Sparkle, CheckCircle, Warning, Clock, CaretLeft, CaretRight } from '@phosphor-icons/react'
 import { useTheme, useAuth, usePharmacy, useStaff, useEmail, useNavigation } from '../../context'
@@ -7,6 +7,7 @@ import { useWeather, usePollen, useBiowetter, useDashboardTasks, useNews } from 
 import useDashboardEvents from './useDashboardEvents'
 import usePlanData from './usePlanData'
 import NewsWidget from './NewsWidget'
+import { BotenWidgetContent } from './BotenWidget'
 
 const WeatherModal = lazy(() => import('./modals/WeatherModal'))
 const BiowetterModal = lazy(() => import('./modals/BiowetterModal'))
@@ -85,6 +86,25 @@ const DashboardHome = memo(function DashboardHome() {
   // Local state
   const [planDayOffset, setPlanDayOffset] = useState(0)
   const [showBiowetterModal, setShowBiowetterModal] = useState(false)
+  const [teamBotenView, setTeamBotenView] = useState('team') // 'team' | 'boten'
+
+  // Auto-Rotation: alle 60 Sekunden wechseln
+  const teamBotenTimerRef = useRef(null)
+  useEffect(() => {
+    teamBotenTimerRef.current = setInterval(() => {
+      setTeamBotenView(prev => prev === 'team' ? 'boten' : 'team')
+    }, 60000)
+    return () => clearInterval(teamBotenTimerRef.current)
+  }, [])
+
+  // Bei manuellem Klick Timer zurücksetzen
+  const switchTeamBoten = (view) => {
+    setTeamBotenView(view)
+    clearInterval(teamBotenTimerRef.current)
+    teamBotenTimerRef.current = setInterval(() => {
+      setTeamBotenView(prev => prev === 'team' ? 'boten' : 'team')
+    }, 60000)
+  }
 
   return (
   <>
@@ -171,19 +191,41 @@ const DashboardHome = memo(function DashboardHome() {
         )}
       </div>
 
-      {/* 2. Team Widget - Dienstplan */}
+      {/* 2. Team / Boten Widget - Dienstplan */}
       <div className={`${theme.panel} rounded-2xl p-4 border ${theme.border} ${theme.cardShadow} flex flex-col gap-3`}>
         <div className="flex items-center justify-between">
-          <h3 className={`text-lg font-medium ${theme.text}`}>Team</h3>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => switchTeamBoten('team')}
+              className={`text-lg font-medium transition-colors ${teamBotenView === 'team' ? theme.text : theme.textMuted + ' hover:' + theme.text}`}
+            >
+              Team
+            </button>
+            <span className={`text-lg ${theme.textMuted}`}>·</span>
+            <button
+              type="button"
+              onClick={() => switchTeamBoten('boten')}
+              className={`text-lg font-medium transition-colors ${teamBotenView === 'boten' ? theme.text : theme.textMuted + ' hover:' + theme.text}`}
+            >
+              Boten
+            </button>
+          </div>
           <button
             type="button"
-            onClick={() => { setActiveView('planung'); setPlanungTab('timeline'); navigate({ to: '/plan' }) }}
+            onClick={() => teamBotenView === 'team'
+              ? (setActiveView('planung'), setPlanungTab('timeline'), navigate({ to: '/plan' }))
+              : (setActiveView('botendienst'), navigate({ to: '/botendienst' }))
+            }
             className={`text-xs ${theme.accentText} hover:underline`}
           >
-            Vollständiger Plan
+            {teamBotenView === 'team' ? 'Vollständiger Plan' : 'Dienstplan'}
           </button>
         </div>
 
+        {teamBotenView === 'boten' ? (
+          <BotenWidgetContent theme={theme} pharmacyId={currentStaff?.pharmacy_id} />
+        ) : (<>
         {planLoading && (
           <p className={`text-xs ${theme.textMuted}`}>Dienstplan wird geladen...</p>
         )}
@@ -367,6 +409,7 @@ const DashboardHome = memo(function DashboardHome() {
         {!planLoading && !planError && !planData && (
           <p className={theme.textMuted}>Keine Dienstplandaten verfügbar.</p>
         )}
+        </>)}
       </div>
 
       {/* 3. News */}
