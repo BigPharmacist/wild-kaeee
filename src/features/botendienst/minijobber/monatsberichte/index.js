@@ -1,0 +1,1 @@
+export { MonatsberichteView } from './MonatsberichteView'
