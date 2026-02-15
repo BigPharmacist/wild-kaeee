@@ -113,37 +113,49 @@ export function ZeiterfassungView({ theme, pharmacyId, profiles }) {
       {!loading && activeTab === 'offen' && (
         <div className={`${theme.surface} border ${theme.border} rounded-xl overflow-hidden ${theme.cardShadow}`}>
           {openSchedules.length === 0 ? (
-            <div className={`p-8 text-center ${theme.textMuted}`}>
-              <Check size={32} className="mx-auto mb-2" />
-              <p>Alle Schichten für diesen Monat sind erfasst</p>
+            <div className={`p-6 text-center ${theme.textMuted}`}>
+              <Check size={24} className="mx-auto mb-1" />
+              <p className="text-sm">Alle Schichten für diesen Monat sind erfasst</p>
             </div>
           ) : (
-            <table className="w-full text-sm">
+            <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-gray-100">
-                  <th className={`px-4 py-3 text-left ${theme.textSecondary} font-medium`}>Datum</th>
-                  <th className={`px-4 py-3 text-left ${theme.textSecondary} font-medium`}>Mitarbeiter</th>
-                  <th className={`px-4 py-3 text-left ${theme.textSecondary} font-medium`}>Schicht</th>
-                  <th className={`px-4 py-3 text-left ${theme.textSecondary} font-medium`}>Soll</th>
-                  <th className={`px-4 py-3 text-center ${theme.textSecondary} font-medium`}>Aktion</th>
+                  <th className={`px-3 py-1.5 text-left ${theme.textSecondary} font-medium`}>Datum</th>
+                  <th className={`px-3 py-1.5 text-left ${theme.textSecondary} font-medium`}>Mitarbeiter</th>
+                  <th className={`px-3 py-1.5 text-left ${theme.textSecondary} font-medium`}>Schicht</th>
+                  <th className={`px-3 py-1.5 text-left ${theme.textSecondary} font-medium`}>Soll</th>
+                  <th className={`px-3 py-1.5 text-center ${theme.textSecondary} font-medium`}>Aktion</th>
                 </tr>
               </thead>
               <tbody>
-                {openSchedules.map(sched => (
-                  <tr key={sched.id} className="border-b border-gray-50 hover:bg-gray-50/50">
-                    <td className={`px-4 py-2.5 ${theme.textPrimary}`}>
+                {openSchedules.map((sched, idx, arr) => {
+                  const date = sched.date
+                  // Count unique dates up to this index to determine color
+                  let dateIdx = 0
+                  let prevDate = null
+                  for (let i = 0; i <= idx; i++) {
+                    if (arr[i].date !== prevDate) {
+                      if (prevDate !== null) dateIdx++
+                      prevDate = arr[i].date
+                    }
+                  }
+                  const rowBg = dateIdx % 2 === 1 ? 'bg-gray-100' : ''
+                  return (
+                  <tr key={sched.id} className={`border-b border-gray-50 ${rowBg}`}>
+                    <td className={`px-3 py-1 ${theme.textPrimary}`}>
                       {new Date(sched.date).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' })}
                     </td>
-                    <td className={`px-4 py-2.5 ${theme.textPrimary}`}>
+                    <td className={`px-3 py-1 ${theme.textPrimary}`}>
                       {sched.staff?.first_name} {sched.staff?.last_name}
                     </td>
-                    <td className="px-4 py-2.5">
-                      <MjShiftBadge shiftName={sched.shift?.name} />
+                    <td className="px-3 py-1">
+                      <MjShiftBadge shiftName={sched.shift?.name} compact />
                     </td>
-                    <td className={`px-4 py-2.5 ${theme.textSecondary}`}>
+                    <td className={`px-3 py-1 ${theme.textSecondary}`}>
                       {sched.shift?.start_time?.substring(0, 5)} – {sched.shift?.end_time?.substring(0, 5)}
                     </td>
-                    <td className="px-4 py-2.5 text-center">
+                    <td className="px-3 py-1 text-center">
                       <button
                         onClick={() => setEditModal({
                           mode: 'create',
@@ -152,14 +164,15 @@ export function ZeiterfassungView({ theme, pharmacyId, profiles }) {
                           defaultEnd: sched.shift?.end_time?.substring(0, 5) || '',
                           label: `${sched.staff?.first_name} – ${sched.shift?.name} – ${new Date(sched.date).toLocaleDateString('de-DE')}`,
                         })}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm ${theme.accent} text-white`}
+                        className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs ${theme.accent} text-white`}
                       >
-                        <Clock size={14} />
+                        <Clock size={13} />
                         Erfassen
                       </button>
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           )}
@@ -168,7 +181,7 @@ export function ZeiterfassungView({ theme, pharmacyId, profiles }) {
 
       {/* Recorded Tab */}
       {!loading && activeTab === 'erfasst' && (
-        <div className="space-y-4">
+        <div className="space-y-2">
           {profiles.filter(p => p.active).map(profile => {
             const staffId = profile.staff_id
             const records = recordsByStaff[staffId] || []
@@ -183,74 +196,101 @@ export function ZeiterfassungView({ theme, pharmacyId, profiles }) {
             const totalManual = manuals.reduce((sum, mh) => sum + (parseFloat(mh.hours) || 0), 0)
             const total = totalActual + totalManual
 
+            // Build combined list sorted by date, then assign alternating color per date
+            const allEntries = [
+              ...records.map(wr => ({ type: 'record', date: wr.schedule?.date || '', data: wr })),
+              ...manuals.map(mh => ({ type: 'manual', date: mh.date, data: mh })),
+            ].sort((a, b) => a.date.localeCompare(b.date))
+
+            const dateColorMap = {}
+            let colorIdx = 0
+            let lastDate = null
+            allEntries.forEach(e => {
+              if (e.date !== lastDate) {
+                if (lastDate !== null) colorIdx++
+                lastDate = e.date
+              }
+              dateColorMap[e.type + '-' + e.data.id] = colorIdx % 2 === 1
+            })
+
             return (
               <div key={staffId} className={`${theme.surface} border ${theme.border} rounded-xl ${theme.cardShadow}`}>
-                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-                  <span className={`font-semibold ${theme.textPrimary}`}>{name}</span>
-                  <MjHoursDisplay hours={total} className="font-semibold" />
+                <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-100">
+                  <span className={`font-semibold text-sm ${theme.textPrimary}`}>{name}</span>
+                  <MjHoursDisplay hours={total} className="font-semibold text-sm" />
                 </div>
-                <table className="w-full text-sm">
+                <table className="w-full text-xs">
                   <tbody>
-                    {records.sort((a, b) => (a.schedule?.date || '').localeCompare(b.schedule?.date || '')).map(wr => (
-                      <tr key={wr.id} className="border-b border-gray-50 hover:bg-gray-50/50">
-                        <td className={`px-4 py-2 ${theme.textPrimary} w-[120px]`}>
-                          {wr.schedule?.date ? new Date(wr.schedule.date).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' }) : '–'}
-                        </td>
-                        <td className="px-4 py-2 w-[100px]">
-                          <MjShiftBadge shiftName={wr.schedule?.shift?.name} compact />
-                        </td>
-                        <td className={`px-4 py-2 ${theme.textSecondary}`}>
-                          {wr.actual_start_time?.substring(0, 5)} – {wr.actual_end_time?.substring(0, 5)}
-                        </td>
-                        <td className={`px-4 py-2 ${theme.textPrimary} font-medium w-[80px]`}>
-                          {parseFloat(wr.actual_hours || 0).toFixed(2).replace('.', ',')} h
-                        </td>
-                        <td className="px-4 py-2 w-[80px] text-right">
-                          <button
-                            onClick={() => setEditModal({
-                              mode: 'edit',
-                              recordId: wr.id,
-                              defaultStart: wr.actual_start_time?.substring(0, 5) || '',
-                              defaultEnd: wr.actual_end_time?.substring(0, 5) || '',
-                              label: `${name} – ${wr.schedule?.shift?.name} – ${wr.schedule?.date ? new Date(wr.schedule.date).toLocaleDateString('de-DE') : ''}`,
-                            })}
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-                          >
-                            <PencilSimple size={14} />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteRecord(wr.id)}
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50"
-                          >
-                            <Trash size={14} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                    {manuals.map(mh => (
-                      <tr key={`manual-${mh.id}`} className="border-b border-gray-50 bg-blue-50/30">
-                        <td className={`px-4 py-2 ${theme.textPrimary}`}>
-                          {new Date(mh.date).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' })}
-                        </td>
-                        <td className="px-4 py-2">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">Manuell</span>
-                        </td>
-                        <td className={`px-4 py-2 ${theme.textSecondary}`}>
-                          {mh.description || '–'}
-                        </td>
-                        <td className={`px-4 py-2 ${theme.textPrimary} font-medium`}>
-                          {parseFloat(mh.hours).toFixed(2).replace('.', ',')} h
-                        </td>
-                        <td className="px-4 py-2 text-right">
-                          <button
-                            onClick={() => deleteManualHours(mh.id)}
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50"
-                          >
-                            <Trash size={14} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {allEntries.map(entry => {
+                      const isShaded = dateColorMap[entry.type + '-' + entry.data.id]
+                      const rowBg = isShaded ? 'bg-gray-100' : ''
+
+                      if (entry.type === 'record') {
+                        const wr = entry.data
+                        return (
+                          <tr key={wr.id} className={`border-b border-gray-50 ${rowBg}`}>
+                            <td className={`px-3 py-1 ${theme.textPrimary} w-[110px]`}>
+                              {wr.schedule?.date ? new Date(wr.schedule.date).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' }) : '–'}
+                            </td>
+                            <td className="px-3 py-1 w-[90px]">
+                              <MjShiftBadge shiftName={wr.schedule?.shift?.name} compact />
+                            </td>
+                            <td className={`px-3 py-1 ${theme.textSecondary}`}>
+                              {wr.actual_start_time?.substring(0, 5)} – {wr.actual_end_time?.substring(0, 5)}
+                            </td>
+                            <td className={`px-3 py-1 ${theme.textPrimary} font-medium w-[70px]`}>
+                              {parseFloat(wr.actual_hours || 0).toFixed(2).replace('.', ',')} h
+                            </td>
+                            <td className="px-2 py-1 w-[60px] text-right">
+                              <button
+                                onClick={() => setEditModal({
+                                  mode: 'edit',
+                                  recordId: wr.id,
+                                  defaultStart: wr.actual_start_time?.substring(0, 5) || '',
+                                  defaultEnd: wr.actual_end_time?.substring(0, 5) || '',
+                                  label: `${name} – ${wr.schedule?.shift?.name} – ${wr.schedule?.date ? new Date(wr.schedule.date).toLocaleDateString('de-DE') : ''}`,
+                                })}
+                                className="p-1 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                              >
+                                <PencilSimple size={13} />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteRecord(wr.id)}
+                                className="p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50"
+                              >
+                                <Trash size={13} />
+                              </button>
+                            </td>
+                          </tr>
+                        )
+                      }
+
+                      const mh = entry.data
+                      return (
+                        <tr key={`manual-${mh.id}`} className={`border-b border-gray-50 ${isShaded ? 'bg-blue-100/60' : 'bg-blue-50/30'}`}>
+                          <td className={`px-3 py-1 ${theme.textPrimary}`}>
+                            {new Date(mh.date).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' })}
+                          </td>
+                          <td className="px-3 py-1">
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-100 text-blue-700">Manuell</span>
+                          </td>
+                          <td className={`px-3 py-1 ${theme.textSecondary}`}>
+                            {mh.description || '–'}
+                          </td>
+                          <td className={`px-3 py-1 ${theme.textPrimary} font-medium`}>
+                            {parseFloat(mh.hours).toFixed(2).replace('.', ',')} h
+                          </td>
+                          <td className="px-2 py-1 text-right">
+                            <button
+                              onClick={() => deleteManualHours(mh.id)}
+                              className="p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50"
+                            >
+                              <Trash size={13} />
+                            </button>
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>

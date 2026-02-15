@@ -40,6 +40,7 @@ export default function SettingsPage() {
   const {
     staff,
     filteredStaff,
+    exitedStaff,
     staffLoading,
     staffMessage,
     editingStaff,
@@ -150,6 +151,7 @@ export default function SettingsPage() {
         openEditModal={openEditModal}
         staff={staff}
         filteredStaff={filteredStaff}
+        exitedStaff={exitedStaff}
         staffMessage={staffMessage}
         staffLoading={staffLoading}
         fetchStaff={fetchStaff}

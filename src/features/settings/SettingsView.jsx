@@ -1,6 +1,16 @@
 import ChatSettingsSection from './ChatSettingsSection'
 import NewsSettingsSection from './NewsSettingsSection'
 
+function getRoleBg(role) {
+  switch (role) {
+    case 'ApothekerIn': return 'bg-blue-50/60'
+    case 'PTA': return 'bg-emerald-50/60'
+    case 'PKA': return 'bg-amber-50/60'
+    case 'FahrerIn': return 'bg-purple-50/60'
+    default: return 'bg-gray-50/40'
+  }
+}
+
 const SettingsView = ({
   theme,
   settingsTab,
@@ -12,6 +22,7 @@ const SettingsView = ({
   openEditModal,
   staff,
   filteredStaff,
+  exitedStaff,
   staffMessage,
   staffLoading,
   fetchStaff,
@@ -248,20 +259,18 @@ const SettingsView = ({
 
           {!staffLoading && pharmacies.length > 0 && filteredStaff.length === 0 && (
             <p className={theme.textMuted}>
-              {showExited ? 'Noch keine Personen erfasst. Nutze das + oben rechts.' : 'Keine aktiven Personen. Aktiviere "Ausgeschiedene" um alle zu sehen.'}
+              Noch keine Personen erfasst. Nutze das + oben rechts.
             </p>
           )}
 
           {/* Kartenansicht */}
           {staffViewMode === 'cards' && (
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {filteredStaff.map((member) => {
-                const memberExited = isExited(member)
-                return (
+              {filteredStaff.map((member) => (
                   <button
                     type="button"
                     key={member.id}
-                    className={`rounded-xl border ${theme.border} p-4 ${theme.bgHover} text-left ${memberExited ? 'opacity-50' : ''}`}
+                    className={`rounded-xl border ${theme.border} p-4 ${theme.bgHover} text-left ${getRoleBg(member.role)}`}
                     title="Person bearbeiten"
                     onClick={() => openStaffModal(member)}
                   >
@@ -272,7 +281,7 @@ const SettingsView = ({
                             <img
                               src={member.avatar_url}
                               alt={`${member.first_name} ${member.last_name}`}
-                              className={`h-8 w-8 rounded-full object-cover border ${theme.border} ${memberExited ? 'grayscale' : ''}`}
+                              className={`h-8 w-8 rounded-full object-cover border ${theme.border}`}
                             />
                           ) : (
                             <div className={`h-8 w-8 rounded-full border ${theme.border} flex items-center justify-center text-[10px] ${theme.textMuted}`}>
@@ -290,11 +299,6 @@ const SettingsView = ({
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-1">
-                        {memberExited && (
-                          <span className="text-[10px] uppercase tracking-wide px-2 py-1 rounded-full bg-rose-500/10 text-rose-500 border border-rose-500/20">
-                            Ausgeschieden
-                          </span>
-                        )}
                         {member.is_admin && (
                           <span className={`text-[10px] uppercase tracking-wide px-2 py-1 rounded-full border ${theme.border} ${theme.textMuted}`}>
                             Admin
@@ -317,11 +321,6 @@ const SettingsView = ({
                       <p className={theme.textMuted}>
                         E-Mail: <span className={theme.text}>{member.email || '-'}</span>
                       </p>
-                      {currentStaff?.is_admin && member.exit_date && (
-                        <p className={theme.textMuted}>
-                          {memberExited ? 'Ausgeschieden am:' : 'Ausscheiden am:'} <span className={memberExited ? 'text-rose-500' : theme.text}>{new Date(member.exit_date).toLocaleDateString('de-DE')}</span>
-                        </p>
-                      )}
                       {member.auth_user_id && (
                         <p className={theme.textMuted}>
                           Login verknüpft
@@ -329,8 +328,7 @@ const SettingsView = ({
                       )}
                     </div>
                   </button>
-                )
-              })}
+              ))}
             </div>
           )}
 
@@ -350,20 +348,18 @@ const SettingsView = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredStaff.map((member) => {
-                    const memberExited = isExited(member)
-                    return (
+                  {filteredStaff.map((member) => (
                       <tr
                         key={member.id}
                         onClick={() => openStaffModal(member)}
-                        className={`border-b ${theme.border} ${theme.bgHover} cursor-pointer ${memberExited ? 'opacity-50' : ''}`}
+                        className={`border-b ${theme.border} ${theme.bgHover} cursor-pointer ${getRoleBg(member.role)}`}
                       >
                         <td className="py-2 px-3">
                           {member.avatar_url ? (
                             <img
                               src={member.avatar_url}
                               alt=""
-                              className={`h-8 w-8 rounded-full object-cover border ${theme.border} ${memberExited ? 'grayscale' : ''}`}
+                              className={`h-8 w-8 rounded-full object-cover border ${theme.border}`}
                             />
                           ) : (
                             <div className={`h-8 w-8 rounded-full border ${theme.border} flex items-center justify-center text-[10px] ${theme.textMuted}`}>
@@ -380,11 +376,6 @@ const SettingsView = ({
                         <td className={`py-2 px-3 ${theme.textMuted}`}>{member.mobile || '-'}</td>
                         <td className="py-2 px-3">
                           <div className="flex flex-wrap gap-1">
-                            {memberExited && (
-                              <span className="text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-500 border border-rose-500/20">
-                                Ausgeschieden
-                              </span>
-                            )}
                             {member.is_admin && (
                               <span className={`text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full border ${theme.border} ${theme.textMuted}`}>
                                 Admin
@@ -398,11 +389,108 @@ const SettingsView = ({
                           </div>
                         </td>
                       </tr>
-                    )
-                  })}
+                  ))}
                 </tbody>
               </table>
             </div>
+          )}
+
+          {/* Ausgeschiedene Sektion */}
+          {showExited && exitedStaff.length > 0 && (
+            <>
+              <div className={`flex items-center gap-3 mt-6 mb-3`}>
+                <div className={`h-px flex-1 ${theme.border} border-t`} />
+                <span className={`text-xs font-semibold uppercase tracking-wider text-rose-400`}>
+                  Ausgeschieden ({exitedStaff.length})
+                </span>
+                <div className={`h-px flex-1 ${theme.border} border-t`} />
+              </div>
+
+              {staffViewMode === 'cards' && (
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {exitedStaff.map((member) => (
+                    <button
+                      type="button"
+                      key={member.id}
+                      className={`rounded-xl border ${theme.border} p-4 ${theme.bgHover} text-left opacity-50`}
+                      title="Person bearbeiten"
+                      onClick={() => openStaffModal(member)}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            {member.avatar_url ? (
+                              <img
+                                src={member.avatar_url}
+                                alt={`${member.first_name} ${member.last_name}`}
+                                className={`h-8 w-8 rounded-full object-cover border ${theme.border} grayscale`}
+                              />
+                            ) : (
+                              <div className={`h-8 w-8 rounded-full border ${theme.border} flex items-center justify-center text-[10px] ${theme.textMuted}`}>
+                                {(member.first_name?.[0] || '') + (member.last_name?.[0] || '')}
+                              </div>
+                            )}
+                            <div>
+                              <p className="font-medium text-sm">
+                                {member.first_name} {member.last_name}
+                              </p>
+                              <p className={`text-xs ${theme.textMuted}`}>
+                                {member.role || '-'}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        <span className="text-[10px] uppercase tracking-wide px-2 py-1 rounded-full bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                          {new Date(member.exit_date).toLocaleDateString('de-DE')}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {staffViewMode === 'table' && (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <tbody>
+                      {exitedStaff.map((member) => (
+                        <tr
+                          key={member.id}
+                          onClick={() => openStaffModal(member)}
+                          className={`border-b ${theme.border} ${theme.bgHover} cursor-pointer opacity-50`}
+                        >
+                          <td className="py-2 px-3">
+                            {member.avatar_url ? (
+                              <img
+                                src={member.avatar_url}
+                                alt=""
+                                className={`h-8 w-8 rounded-full object-cover border ${theme.border} grayscale`}
+                              />
+                            ) : (
+                              <div className={`h-8 w-8 rounded-full border ${theme.border} flex items-center justify-center text-[10px] ${theme.textMuted}`}>
+                                {(member.first_name?.[0] || '') + (member.last_name?.[0] || '')}
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-2 px-3 font-medium">
+                            {member.first_name} {member.last_name}
+                          </td>
+                          <td className={`py-2 px-3 ${theme.textMuted}`}>{member.role || '-'}</td>
+                          <td className={`py-2 px-3 ${theme.textMuted}`}>{pharmacyLookup[member.pharmacy_id] || '-'}</td>
+                          <td className={`py-2 px-3 ${theme.textMuted}`}>{member.email || '-'}</td>
+                          <td className={`py-2 px-3 ${theme.textMuted}`}>{member.mobile || '-'}</td>
+                          <td className="py-2 px-3">
+                            <span className="text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                              {new Date(member.exit_date).toLocaleDateString('de-DE')}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}

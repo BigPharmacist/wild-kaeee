@@ -163,6 +163,7 @@ function StaffModal({
                 <option value="ApothekerIn">ApothekerIn</option>
                 <option value="PTA">PTA</option>
                 <option value="PKA">PKA</option>
+                <option value="FahrerIn">FahrerIn</option>
                 <option value="Sonst.">Sonst.</option>
               </select>
             </div>

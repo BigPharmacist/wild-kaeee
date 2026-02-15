@@ -10,9 +10,9 @@ import { InfoView } from './info/InfoView'
 
 const subTabs = [
   { id: 'dienstplan', label: 'Dienstplan', icon: CalendarBlank },
-  { id: 'mitarbeiter', label: 'Mitarbeiter', icon: Users },
   { id: 'zeiterfassung', label: 'Zeiterfassung', icon: Clock },
   { id: 'berichte', label: 'Berichte', icon: FileText },
+  { id: 'mitarbeiter', label: 'Mitarbeiter', icon: Users },
   { id: 'einstellungen', label: 'Einstellungen', icon: GearSix },
   { id: 'info', label: 'Info', icon: Info },
 ]

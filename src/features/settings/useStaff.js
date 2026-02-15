@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { supabase, supabaseUrl } from '../../lib/supabase'
 
+const roleOrder = ['ApothekerIn', 'PTA', 'PKA', 'FahrerIn', 'Sonst.']
+
 const emptyForm = {
   firstName: '',
   lastName: '',
@@ -39,14 +41,21 @@ export function useStaff({ session, pharmacies }) {
     const { data, error } = await supabase
       .from('staff')
       .select('id, first_name, last_name, street, postal_code, city, mobile, email, role, pharmacy_id, auth_user_id, is_admin, avatar_url, employed_since, exit_date, created_at')
-      .order('last_name', { ascending: true })
 
     if (error) {
       setStaffMessage(error.message)
       setStaff([])
     } else {
       setStaffMessage('')
-      setStaff(data || [])
+      const sorted = (data || []).sort((a, b) => {
+        const rA = roleOrder.indexOf(a.role)
+        const rB = roleOrder.indexOf(b.role)
+        const orderA = rA === -1 ? roleOrder.length : rA
+        const orderB = rB === -1 ? roleOrder.length : rB
+        if (orderA !== orderB) return orderA - orderB
+        return (a.last_name || '').localeCompare(b.last_name || '')
+      })
+      setStaff(sorted)
       if (session?.user?.id) {
         const matched = (data || []).find((member) => member.auth_user_id === session.user.id)
         setCurrentStaff(matched || null)
@@ -284,10 +293,10 @@ export function useStaff({ session, pharmacies }) {
     return new Date(member.exit_date) < new Date()
   }
 
-  // Gefilterte Staff-Liste (ohne Ausgeschiedene, außer showExited ist true)
-  const filteredStaff = showExited
-    ? staff
-    : staff.filter((member) => !isExited(member))
+  // Aktive und ausgeschiedene Staff getrennt
+  const activeStaff = staff.filter((member) => !isExited(member))
+  const exitedStaff = staff.filter((member) => isExited(member))
+  const filteredStaff = activeStaff
 
   // Lookup-Objekt: { auth_user_id: staffMember }
   const staffByAuthId = Object.fromEntries(
@@ -300,6 +309,7 @@ export function useStaff({ session, pharmacies }) {
     // State
     staff,
     filteredStaff,
+    exitedStaff,
     staffLoading,
     staffMessage,
     editingStaff,

@@ -12,6 +12,7 @@ export function StaffProvider({ children }) {
   const {
     staff,
     filteredStaff,
+    exitedStaff,
     staffLoading,
     staffMessage,
     editingStaff,
@@ -51,6 +52,7 @@ export function StaffProvider({ children }) {
   const value = useMemo(() => ({
     staff,
     filteredStaff,
+    exitedStaff,
     staffLoading,
     staffMessage,
     editingStaff,
@@ -80,6 +82,7 @@ export function StaffProvider({ children }) {
   }), [
     staff,
     filteredStaff,
+    exitedStaff,
     staffLoading,
     staffMessage,
     editingStaff,

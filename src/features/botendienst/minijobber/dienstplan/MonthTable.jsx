@@ -7,6 +7,13 @@ function toLocalDateStr(d) {
   return `${y}-${m}-${day}`
 }
 
+function getISOWeek(d) {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()))
+  date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7))
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1))
+  return Math.ceil((((date - yearStart) / 86400000) + 1) / 7)
+}
+
 function getShiftLabelColor(shiftName) {
   const name = (shiftName || '').toLowerCase()
   if (name.includes('vormittag') || name.includes('früh') || name.includes('morgen')) {
@@ -85,8 +92,17 @@ export function MonthTable({ theme, profiles, schedules, shifts, holidayMap, yea
           </tr>
         </thead>
         <tbody>
-          {days.map(day => {
+          {(() => {
+            let lastKw = null
+            let kwColorIdx = 0
+            return days.map(day => {
             if (day.isSunday) return null
+
+            const kw = getISOWeek(day.date)
+            const isFirstOfWeek = kw !== lastKw
+            if (isFirstOfWeek && lastKw !== null) kwColorIdx++
+            lastKw = kw
+            const weekBg = kwColorIdx % 2 === 1 ? 'bg-gray-100/80' : ''
 
             const daySchedules = scheduleMap[day.dateStr] || {}
 
@@ -96,12 +112,17 @@ export function MonthTable({ theme, profiles, schedules, shifts, holidayMap, yea
                 className={`border-b last:border-b-0 ${theme.border} ${
                   day.isToday ? 'bg-[#FEF3C7]/40' :
                   day.isHoliday ? 'bg-red-50/40' :
-                  day.isWeekend ? 'bg-gray-50/50' : ''
+                  weekBg
                 } hover:bg-gray-50/80 transition-colors`}
               >
                 {/* Datum-Spalte */}
                 <td className={`px-3 py-2 whitespace-nowrap`}>
                   <div className="flex items-center gap-2">
+                    {isFirstOfWeek ? (
+                      <span className={`text-[10px] font-semibold w-7 ${theme.textMuted}`}>KW{kw}</span>
+                    ) : (
+                      <span className="w-7" />
+                    )}
                     <span className={`text-xs font-bold w-5 ${
                       day.isToday ? 'text-[#F59E0B]' : day.isHoliday ? 'text-red-500' : theme.textMuted
                     }`}>
@@ -161,7 +182,8 @@ export function MonthTable({ theme, profiles, schedules, shifts, holidayMap, yea
                 })}
               </tr>
             )
-          })}
+          })
+          })()}
         </tbody>
       </table>
     </div>
