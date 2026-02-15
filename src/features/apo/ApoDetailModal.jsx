@@ -18,7 +18,7 @@ function MarkdownContent({ children }) {
  */
 function ApoDetailModal({
   theme,
-  Icons: _Icons,
+  Icons,
   selectedApoMessage,
   setSelectedApoMessage,
   existingDokumentationen,

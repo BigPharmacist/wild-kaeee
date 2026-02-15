@@ -26,6 +26,7 @@ import {
   PhotoCapture,
   CashCollectionModal,
 } from './driver'
+import MinijobberView from './minijobber/MinijobberView'
 
 export default function BotendienstView({
   theme,
@@ -702,6 +703,19 @@ export default function BotendienstView({
           </div>
         )}
       </div>
+    )
+  }
+
+  // Minijobber View
+  if (botendienstTab === 'minijobber') {
+    return (
+      <MinijobberView
+        theme={theme}
+        session={session}
+        currentStaff={currentStaff}
+        pharmacies={pharmacies}
+        staff={staff}
+      />
     )
   }
 

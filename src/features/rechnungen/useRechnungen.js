@@ -2,18 +2,9 @@ import { useState, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
 
 export function useRechnungen() {
-  const [rechnungen, setRechnungen] = useState([])
-  const [rechnungenLoading, setRechnungenLoading] = useState(false)
-  const [collapsedDays, setCollapsedDays] = useState({})
-  const [pdfModalOpen, setPdfModalOpen] = useState(false)
-  const [selectedPdf, setSelectedPdf] = useState(null)
-
-  // Paperless States
   const [paperlessRechnungen, setPaperlessRechnungen] = useState([])
   const [paperlessLoading, setPaperlessLoading] = useState(false)
-  const [paperlessCorrespondents, setPaperlessCorrespondents] = useState([])
   const [paperlessConfig, setPaperlessConfig] = useState({ url: null, token: null })
-  const [paperlessCollapsedDays, setPaperlessCollapsedDays] = useState({})
   const [paperlessPdfModalOpen, setPaperlessPdfModalOpen] = useState(false)
   const [selectedPaperlessPdf, setSelectedPaperlessPdf] = useState(null)
 
@@ -83,7 +74,6 @@ export function useRechnungen() {
       ])
 
       const corrs = corrsData.results || []
-      setPaperlessCorrespondents(corrs)
 
       const savedView = (viewsData.results || []).find(v =>
         v.name.toLowerCase().includes('rechnungsdatum') && v.name.includes('8')
@@ -121,12 +111,9 @@ export function useRechnungen() {
       const response = await paperlessApi(filterEndpoint)
       const data = await response.json()
 
-      // Dokumente mit Korrespondent-Namen anreichern (direkt aus geladenen Daten)
+      // Dokumente mit Korrespondent-Namen anreichern
       const enrichedDocs = (data.results || []).map(doc => {
         const correspondent = corrs.find(c => c.id === doc.correspondent)
-        // Rechnungsdatum aus custom_fields extrahieren (falls vorhanden)
-        // custom_fields ist ein Array von { field: ID, value: Wert }
-        // Wir suchen nach einem Datum-Feld (value im Format YYYY-MM-DD)
         let rechnungsDatum = null
         if (doc.custom_fields && Array.isArray(doc.custom_fields)) {
           const datumField = doc.custom_fields.find(cf =>
@@ -140,6 +127,7 @@ export function useRechnungen() {
           ...doc,
           correspondentName: correspondent?.name || 'Unbekannt',
           datum: rechnungsDatum || (doc.created ? doc.created.split('T')[0] : null),
+          grosshaendler: getGrosshaendler(correspondent?.name),
         }
       })
 
@@ -150,19 +138,18 @@ export function useRechnungen() {
     } finally {
       setPaperlessLoading(false)
     }
-  }, [paperlessApi])
+  }, [paperlessApi]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Paperless PDF öffnen (lädt als Blob für Authorization)
   const openPaperlessPdfModal = useCallback(async (doc) => {
     try {
-      // PDF als Blob laden mit Authorization Header
       const response = await paperlessApi(`/documents/${doc.id}/preview/`)
       const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
 
       setSelectedPaperlessPdf({
         ...doc,
-        url: url,
+        url,
         isObjectUrl: true,
       })
       setPaperlessPdfModalOpen(true)
@@ -172,7 +159,6 @@ export function useRechnungen() {
   }, [paperlessApi])
 
   const closePaperlessPdfModal = useCallback(() => {
-    // Object URL freigeben
     if (selectedPaperlessPdf?.isObjectUrl && selectedPaperlessPdf?.url) {
       window.URL.revokeObjectURL(selectedPaperlessPdf.url)
     }
@@ -180,93 +166,21 @@ export function useRechnungen() {
     setSelectedPaperlessPdf(null)
   }, [selectedPaperlessPdf])
 
-  const togglePaperlessDayCollapsed = (dateKey) => {
-    setPaperlessCollapsedDays((prev) => ({
-      ...prev,
-      [dateKey]: !prev[dateKey]
-    }))
-  }
-
-  // Helper: Korrespondent-Name normalisieren für Großhändler-Zuordnung
-  const getGrosshaendler = useCallback((correspondentName) => {
-    const name = (correspondentName || '').toLowerCase()
-    if (name.includes('phoenix')) return 'phoenix'
-    if (name.includes('ahd')) return 'ahd'
-    if (name.includes('sanacorp')) return 'sanacorp'
-    return 'sonstige'
-  }, [])
-
-  const fetchRechnungen = async () => {
-    setRechnungenLoading(true)
-    const { data, error } = await supabase
-      .from('rechnungen')
-      .select('*')
-      .order('datum', { ascending: false })
-      .limit(100)
-
-    if (error) {
-      console.error('Fehler beim Laden der Rechnungen:', error.message)
-      setRechnungen([])
-    } else {
-      setRechnungen(data || [])
-    }
-    setRechnungenLoading(false)
-  }
-
-  const openPdfModal = async (rechnung) => {
-    const { data, error } = await supabase.storage
-      .from('rechnungen')
-      .createSignedUrl(rechnung.storage_path, 3600)
-
-    if (error) {
-      console.error('Fehler beim Erstellen der PDF-URL:', error.message)
-      return
-    }
-
-    setSelectedPdf({
-      ...rechnung,
-      url: data.signedUrl
-    })
-    setPdfModalOpen(true)
-  }
-
-  const closePdfModal = () => {
-    setPdfModalOpen(false)
-    setSelectedPdf(null)
-  }
-
-  const toggleDayCollapsed = (dateKey) => {
-    setCollapsedDays((prev) => ({
-      ...prev,
-      [dateKey]: !prev[dateKey]
-    }))
-  }
-
   return {
-    // Alt (Supabase)
-    rechnungen,
-    rechnungenLoading,
-    collapsedDays,
-    pdfModalOpen,
-    selectedPdf,
-    fetchRechnungen,
-    openPdfModal,
-    closePdfModal,
-    toggleDayCollapsed,
-    setCollapsedDays,
-
-    // Neu (Paperless)
     paperlessRechnungen,
     paperlessLoading,
-    paperlessCorrespondents,
-    paperlessCollapsedDays,
     paperlessPdfModalOpen,
     selectedPaperlessPdf,
     fetchPaperlessRechnungen,
     openPaperlessPdfModal,
     closePaperlessPdfModal,
-    togglePaperlessDayCollapsed,
-    setPaperlessCollapsedDays,
-    getGrosshaendler,
   }
+}
+
+function getGrosshaendler(correspondentName) {
+  const name = (correspondentName || '').toLowerCase()
+  if (name.includes('phoenix')) return 'phoenix'
+  if (name.includes('sanacorp')) return 'sanacorp'
+  if (name.includes('ahd')) return 'ahd'
+  return 'sonstige'
 }

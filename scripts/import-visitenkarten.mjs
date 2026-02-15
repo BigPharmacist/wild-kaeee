@@ -12,7 +12,7 @@ import { readFile, readdir } from 'fs/promises'
 import { join, basename } from 'path'
 
 // Konfiguration
-const SUPABASE_URL = 'https://mtthy.kaeee.de/supabase'
+const SUPABASE_URL = 'https://kaeee.de/supabase'
 const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaXNzIjoic3VwYWJhc2UiLCJpYXQiOjE3Njc4MDE0OTMsImV4cCI6MjA4MzE2MTQ5M30.OSW6k9WdFIoCn1mTe_ase-b3KlOiOMk4iR8h8IYpBbI'
 const VISITENKARTEN_ORDNER = '/home/matthias/Syncthing Austausch/Visitenkarten erfasst'
 

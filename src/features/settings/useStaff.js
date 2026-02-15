@@ -223,6 +223,38 @@ export function useStaff({ session, pharmacies }) {
     setStaffInviteLoading(true)
     setStaffInviteMessage('')
     try {
+      // Wenn Staff noch nicht gespeichert → zuerst speichern
+      let staffId = editingStaff?.id
+      if (!staffId) {
+        if (!staffForm.firstName.trim() || !staffForm.lastName.trim()) {
+          throw new Error('Bitte Vor- und Nachname eingeben')
+        }
+        if (!staffForm.pharmacyId) {
+          throw new Error('Bitte Apotheke zuordnen')
+        }
+        const { data: newStaff, error: saveError } = await supabase
+          .from('staff')
+          .insert({
+            first_name: staffForm.firstName.trim(),
+            last_name: staffForm.lastName.trim(),
+            street: staffForm.street.trim(),
+            postal_code: staffForm.postalCode.trim(),
+            city: staffForm.city.trim(),
+            mobile: staffForm.mobile.trim(),
+            email: staffForm.email.trim(),
+            role: staffForm.role,
+            pharmacy_id: staffForm.pharmacyId,
+            is_admin: staffForm.isAdmin,
+            employed_since: staffForm.employedSince || null,
+            exit_date: staffForm.exitDate || null,
+          })
+          .select('id')
+          .single()
+        if (saveError) throw new Error(saveError.message)
+        staffId = newStaff.id
+        setEditingStaff(prev => ({ ...prev, id: staffId }))
+      }
+
       const response = await fetch(`${supabaseUrl}/functions/v1/invite-user`, {
         method: 'POST',
         headers: {
@@ -231,7 +263,7 @@ export function useStaff({ session, pharmacies }) {
         },
         body: JSON.stringify({
           email: staffForm.email.trim(),
-          staffId: editingStaff?.id || null,
+          staffId,
         }),
       })
       const data = await response.json()
@@ -239,6 +271,7 @@ export function useStaff({ session, pharmacies }) {
         throw new Error(data.error || 'Einladung fehlgeschlagen')
       }
       setStaffInviteMessage('Einladung wurde gesendet!')
+      await fetchStaff()
     } catch (error) {
       setStaffInviteMessage(error.message)
     }

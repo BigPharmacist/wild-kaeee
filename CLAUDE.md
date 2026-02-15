@@ -104,7 +104,7 @@ Apply via template literals: `className={theme.bg}`
 #### Architektur
 
 ```
-Browser → mtthy.kaeee.de → Caddy → localhost:5173 (Vite)
+Browser → kaeee.de → Caddy → localhost:5173 (Vite)
                               ↘ /supabase/* → localhost:8000 (Kong/Supabase API)
 ```
 
@@ -139,7 +139,7 @@ docker compose logs -f
 
 In `/home/matthias/Kaeee/.env`:
 ```
-VITE_SUPABASE_URL=https://mtthy.kaeee.de/supabase
+VITE_SUPABASE_URL=https://kaeee.de/supabase
 VITE_SUPABASE_ANON_KEY=<aus /home/matthias/supabase/docker/.env>
 ```
 
@@ -378,5 +378,5 @@ input: 'bg-white border-[#E5E7EB] focus:border-[#4A90E2] focus:ring-1 focus:ring
 ## Deployment
 
 - Dev server binds to `0.0.0.0:5173`
-- Configured for domain `mtthy.kaeee.de`
+- Configured for domain `kaeee.de`
 - Caddy reverse proxy handles HTTPS and routes `/supabase/*` to local Supabase instance

@@ -7,7 +7,7 @@ import { useSignatureCanvas } from './hooks/useSignatureCanvas'
  */
 function ApoDokumentationModal({
   theme,
-  Icons: _Icons,
+  Icons,
   show,
   onClose,
   selectedApoMessage,
