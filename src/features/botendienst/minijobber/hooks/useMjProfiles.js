@@ -66,6 +66,8 @@ export function useMjProfiles({ pharmacyId }) {
         staff_id: staffId,
         hourly_rate: profileData.hourly_rate,
         monthly_payment: profileData.monthly_payment,
+        initial_balance: profileData.initial_balance || 0,
+        hours_balance: profileData.initial_balance || 0,
         job_type: profileData.job_type || 'Autobote',
         initials: profileData.initials || null,
         active: true,

@@ -153,7 +153,7 @@ export function MonatsberichtDetail({ theme, isOpen, staffId, profile, calculate
             </>
           ) : (
             <div className={`text-center py-8 ${theme.textMuted}`}>
-              Noch keine Daten vorhanden. Bitte "Alle berechnen" klicken.
+              Keine Daten für diesen Monat vorhanden.
             </div>
           )}
         </div>

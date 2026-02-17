@@ -17,6 +17,7 @@ export function MitarbeiterDetailModal({ theme, isOpen, profile, onClose, onSave
   const [profileForm, setProfileForm] = useState({
     hourly_rate: '12.41',
     monthly_payment: '538.00',
+    initial_balance: '0',
     job_type: 'Autobote',
     initials: '',
   })
@@ -37,6 +38,7 @@ export function MitarbeiterDetailModal({ theme, isOpen, profile, onClose, onSave
       setProfileForm({
         hourly_rate: String(profile.hourly_rate || '12.41'),
         monthly_payment: String(profile.monthly_payment || '538.00'),
+        initial_balance: String(profile.initial_balance || '0'),
         job_type: profile.job_type || 'Autobote',
         initials: profile.initials || '',
       })
@@ -46,7 +48,7 @@ export function MitarbeiterDetailModal({ theme, isOpen, profile, onClose, onSave
         street: '', postal_code: '', city: '', employed_since: '',
       })
       setProfileForm({
-        hourly_rate: '12.41', monthly_payment: '538.00',
+        hourly_rate: '12.41', monthly_payment: '538.00', initial_balance: '0',
         job_type: 'Autobote', initials: '',
       })
     }
@@ -60,6 +62,9 @@ export function MitarbeiterDetailModal({ theme, isOpen, profile, onClose, onSave
     const profileData = {
       hourly_rate: parseFloat(profileForm.hourly_rate),
       monthly_payment: parseFloat(profileForm.monthly_payment),
+      initial_balance: Number.isFinite(parseFloat(profileForm.initial_balance))
+        ? parseFloat(profileForm.initial_balance)
+        : 0,
       job_type: profileForm.job_type,
       initials: profileForm.initials || null,
     }
@@ -213,6 +218,18 @@ export function MitarbeiterDetailModal({ theme, isOpen, profile, onClose, onSave
                 className={`w-full px-4 py-2.5 rounded-lg border ${theme.input}`}
               />
             </div>
+          </div>
+
+          <div>
+            <label className={`block text-sm font-medium ${theme.textSecondary} mb-1.5`}>Anfangssaldo (Std.)</label>
+            <input
+              type="number"
+              step="0.01"
+              value={profileForm.initial_balance}
+              onChange={(e) => setProfileForm({ ...profileForm, initial_balance: e.target.value })}
+              className={`w-full px-4 py-2.5 rounded-lg border ${theme.input}`}
+            />
+            <p className={`text-xs ${theme.textMuted} mt-1`}>Startwert für das Stundenkonto (kann negativ sein).</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">

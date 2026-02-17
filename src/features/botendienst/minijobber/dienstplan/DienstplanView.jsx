@@ -6,6 +6,7 @@ import { MonthTable } from './MonthTable'
 import { ShiftEditModal } from './ShiftEditModal'
 import { StandardWeekManager } from './StandardWeekManager'
 import { generateDienstplanPdf } from './DienstplanPdf'
+import { MjHoursDisplay } from '../shared/MjHoursDisplay'
 
 const dayNames = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
 const dayNamesFull = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag']
@@ -126,6 +127,8 @@ export function DienstplanView({ theme, pharmacyId, profiles, pharmacyName }) {
   const holidayMap = {}
   holidays.forEach(h => { holidayMap[h.date] = h.name })
 
+  const activeProfiles = profiles.filter(p => p.active)
+
   return (
     <div className="space-y-4">
       {/* Controls */}
@@ -231,6 +234,33 @@ export function DienstplanView({ theme, pharmacyId, profiles, pharmacyName }) {
           )}
         </div>
       </div>
+
+      {/* Stundenstände */}
+      {activeProfiles.length > 0 && (
+        <div className={`${theme.surface} border ${theme.border} rounded-xl p-3`}>
+          <div className="flex items-center justify-between mb-2">
+            <span className={`text-sm font-semibold ${theme.textPrimary}`}>Stundenstände</span>
+            <span className={`text-xs ${theme.textMuted}`}>kumuliert</span>
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {activeProfiles.map(p => {
+              const name = p.staff ? `${p.staff.first_name} ${p.staff.last_name}` : 'Unbekannt'
+              const initials = p.initials || name.split(' ').map(n => n[0]).join('').toUpperCase()
+              return (
+                <div key={p.id} className={`min-w-[160px] flex items-center justify-between gap-2 px-3 py-2 rounded-lg border ${theme.border} bg-white`}>
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-full bg-[#F59E0B]/10 flex items-center justify-center text-xs font-semibold text-[#F59E0B]">
+                      {initials}
+                    </div>
+                    <span className={`text-xs ${theme.textSecondary}`}>{name}</span>
+                  </div>
+                  <MjHoursDisplay hours={p.hours_balance} showSign className="text-sm font-semibold" />
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Grid / Table */}
       {loading && schedules.length === 0 ? (

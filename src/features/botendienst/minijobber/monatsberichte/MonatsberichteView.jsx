@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react'
-import { Calculator, FilePdf, CalendarBlank } from '@phosphor-icons/react'
+import { useState, useEffect, useMemo } from 'react'
+import { FilePdf, CalendarBlank, ListBullets } from '@phosphor-icons/react'
 import { useMjMonthlyReports } from '../hooks/useMjMonthlyReports'
 import { useMjMonthlyConditions } from '../hooks/useMjMonthlyConditions'
 import { MjMonthSelector } from '../shared/MjMonthSelector'
 import { MjHoursDisplay } from '../shared/MjHoursDisplay'
 import { MonatsberichtDetail } from './MonatsberichtDetail'
+import { StundenkontoModal } from './StundenkontoModal'
 import { ZeitraumPdfDialog } from './ZeitraumPdfDialog'
 import { generateMonatsberichtPdf } from './MonatsberichtPdf'
 
@@ -17,56 +18,79 @@ export function MonatsberichteView({ theme, pharmacyId, pharmacies, profiles, cu
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
-  const [calculating, setCalculating] = useState(false)
-  const [calculatedReports, setCalculatedReports] = useState({})
+  // staffId → { allReports: [...], currentBalance: number }
+  const [staffData, setStaffData] = useState({})
   const [detailStaffId, setDetailStaffId] = useState(null)
+  const [stundenkontoStaffId, setStundenkontoStaffId] = useState(null)
   const [showZeitraumPdf, setShowZeitraumPdf] = useState(false)
 
-  const { reports, loading, fetchReports, calculateReport, calculateRangeReport, saveReport } = useMjMonthlyReports({ pharmacyId })
+  const { fetchAllReportsForStaff, calculateReport, calculateRangeReport, loading } = useMjMonthlyReports({ pharmacyId })
   const { getEffectiveConditions } = useMjMonthlyConditions({ pharmacyId })
 
   const pharmacy = pharmacies?.find(p => p.id === pharmacyId)
 
+  const activeProfiles = useMemo(
+    () => profiles.filter(p => p.active),
+    [profiles]
+  )
+
+  const activeProfileIds = useMemo(
+    () => activeProfiles.map(p => p.staff_id).sort().join(','),
+    [activeProfiles]
+  )
+
   useEffect(() => {
-    if (pharmacyId) {
-      fetchReports(year, month)
-      setCalculatedReports({})
-    }
-  }, [pharmacyId, year, month, fetchReports])
+    if (!pharmacyId || !activeProfileIds) return
+    let mounted = true
 
-  const handleCalculateAll = async () => {
-    setCalculating(true)
-    const results = {}
+    const staffIds = activeProfiles.map(p => p.staff_id)
+    fetchAllReportsForStaff(staffIds).then(rows => {
+      if (!mounted) return
 
-    for (const profile of activeProfiles) {
-      const conditions = await getEffectiveConditions(profile.staff_id, year, month)
-      if (!conditions) continue
-
-      const reportData = await calculateReport(profile.staff_id, conditions, year, month)
-      if (reportData) {
-        results[profile.staff_id] = reportData
-        await saveReport(reportData)
+      const result = {}
+      for (const profile of activeProfiles) {
+        result[profile.staff_id] = {
+          allReports: [],
+          currentBalance: parseFloat(profile.initial_balance || 0),
+        }
       }
-    }
 
-    setCalculatedReports(results)
-    await fetchReports(year, month)
-    setCalculating(false)
+      for (const r of rows) {
+        if (!result[r.staff_id]) {
+          result[r.staff_id] = { allReports: [], currentBalance: 0 }
+        }
+        result[r.staff_id].allReports.push(r)
+      }
+
+      for (const profile of activeProfiles) {
+        const data = result[profile.staff_id]
+        if (data.allReports.length > 0) {
+          data.currentBalance = parseFloat(data.allReports[data.allReports.length - 1].cumulative_balance || 0)
+        }
+      }
+
+      setStaffData(result)
+    })
+
+    return () => { mounted = false }
+  }, [pharmacyId, activeProfileIds, activeProfiles, fetchAllReportsForStaff])
+
+  // Report für den gewählten Monat pro Mitarbeiter
+  const getMonthReport = (staffId) => {
+    const data = staffData[staffId]
+    if (!data) return null
+    return data.allReports.find(r => r.year === year && r.month === month) || null
   }
 
   const handlePdf = async (profile) => {
     const staffId = profile.staff_id
-    let reportData = calculatedReports[staffId]
-
-    if (!reportData) {
-      const conditions = await getEffectiveConditions(staffId, year, month)
-      if (!conditions) {
-        alert('Keine Konditionen für diesen Monat vorhanden')
-        return
-      }
-      reportData = await calculateReport(staffId, conditions, year, month)
+    const conditions = await getEffectiveConditions(staffId, year, month)
+    if (!conditions) {
+      alert('Keine Konditionen für diesen Monat vorhanden')
+      return
     }
 
+    const reportData = await calculateReport(staffId, conditions, year, month)
     if (!reportData) {
       alert('Keine Daten für PDF vorhanden')
       return
@@ -86,8 +110,6 @@ export function MonatsberichteView({ theme, pharmacyId, pharmacies, profiles, cu
     })
   }
 
-  const activeProfiles = profiles.filter(p => p.active)
-
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -102,26 +124,15 @@ export function MonatsberichteView({ theme, pharmacyId, pharmacies, profiles, cu
               <CalendarBlank size={18} />
               Zeitraum-PDF
             </button>
-            <button
-              onClick={handleCalculateAll}
-              disabled={calculating}
-              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg ${theme.accent} text-white font-medium text-sm`}
-            >
-              {calculating ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-              ) : (
-                <Calculator size={18} weight="bold" />
-              )}
-              {calculating ? 'Berechne...' : 'Alle berechnen'}
-            </button>
           </div>
         </div>
       </div>
 
       {/* Loading */}
-      {(loading || calculating) && reports.length === 0 && (
-        <div className={`${theme.surface} border ${theme.border} rounded-xl p-12 flex items-center justify-center`}>
+      {loading && (
+        <div className={`${theme.surface} border ${theme.border} rounded-xl p-12 flex flex-col items-center justify-center gap-3`}>
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#F59E0B]" />
+          <span className={`text-sm ${theme.textMuted}`}>Stundenkonten werden geladen…</span>
         </div>
       )}
 
@@ -129,9 +140,9 @@ export function MonatsberichteView({ theme, pharmacyId, pharmacies, profiles, cu
       {!loading && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {activeProfiles.map(profile => {
-            const report = reports.find(r => r.staff_id === profile.staff_id)
-            const calculated = calculatedReports[profile.staff_id]
-            const data = report || calculated
+            const data = staffData[profile.staff_id]
+            const monthReport = getMonthReport(profile.staff_id)
+            const currentBalance = data?.currentBalance ?? null
             const name = profile.staff
               ? `${profile.staff.first_name} ${profile.staff.last_name}`
               : 'Unbekannt'
@@ -141,38 +152,33 @@ export function MonatsberichteView({ theme, pharmacyId, pharmacies, profiles, cu
                 key={profile.id}
                 className={`${theme.surface} border ${theme.border} rounded-xl ${theme.cardShadow}`}
               >
-                {/* Card Header */}
+                {/* Card Header: Name + aktueller Gesamtstand */}
                 <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
                   <span className={`font-semibold ${theme.textPrimary}`}>{name}</span>
+                  {currentBalance !== null && (
+                    <MjHoursDisplay hours={currentBalance} showSign className="font-bold text-base" />
+                  )}
                 </div>
 
-                {/* Card Body */}
-                {data ? (
+                {/* Card Body: gewählter Monat */}
+                {monthReport ? (
                   <div className="p-4 space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className={theme.textSecondary}>Geplante Stunden</span>
-                      <span className={theme.textPrimary}>{parseFloat(data.planned_hours || 0).toFixed(2).replace('.', ',')} h</span>
-                    </div>
-                    <div className="flex justify-between">
                       <span className={theme.textSecondary}>Ist-Stunden</span>
-                      <span className={`font-medium ${theme.textPrimary}`}>{parseFloat(data.actual_hours || 0).toFixed(2).replace('.', ',')} h</span>
+                      <span className={`font-medium ${theme.textPrimary}`}>{parseFloat(monthReport.actual_hours || 0).toFixed(2).replace('.', ',')} h</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className={theme.textSecondary}>Bezahlte Stunden</span>
-                      <span className={theme.textPrimary}>{parseFloat(data.paid_hours || 0).toFixed(2).replace('.', ',')} h</span>
+                      <span className={theme.textSecondary}>Soll-Stunden</span>
+                      <span className={theme.textPrimary}>{parseFloat(monthReport.paid_hours || 0).toFixed(2).replace('.', ',')} h</span>
                     </div>
                     <div className="border-t border-gray-100 pt-2 flex justify-between">
                       <span className={`font-medium ${theme.textSecondary}`}>Monatssaldo</span>
-                      <MjHoursDisplay hours={data.hours_balance} showSign className="font-semibold" />
-                    </div>
-                    <div className="flex justify-between">
-                      <span className={`font-medium ${theme.textSecondary}`}>Kumulierter Saldo</span>
-                      <MjHoursDisplay hours={data.cumulative_balance} showSign className="font-semibold" />
+                      <MjHoursDisplay hours={monthReport.hours_balance} showSign className="font-semibold" />
                     </div>
                   </div>
                 ) : (
                   <div className={`p-4 text-sm ${theme.textMuted} text-center`}>
-                    Noch nicht berechnet
+                    Keine Daten für {monthNames[month - 1]} {year}
                   </div>
                 )}
 
@@ -185,8 +191,15 @@ export function MonatsberichteView({ theme, pharmacyId, pharmacies, profiles, cu
                     Details
                   </button>
                   <button
+                    onClick={() => setStundenkontoStaffId(profile.staff_id)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm ${theme.textSecondary} hover:bg-gray-100`}
+                  >
+                    <ListBullets size={16} />
+                    Stundenkonto
+                  </button>
+                  <button
                     onClick={() => handlePdf(profile)}
-                    disabled={!data}
+                    disabled={!monthReport}
                     className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
                   >
                     <FilePdf size={16} />
@@ -205,20 +218,33 @@ export function MonatsberichteView({ theme, pharmacyId, pharmacies, profiles, cu
         </div>
       )}
 
-      {/* Detail Modal */}
+      {/* Detail Modal (Arbeitsstunden-Aufschlüsselung für gewählten Monat) */}
       {detailStaffId && (
         <MonatsberichtDetail
           theme={theme}
           isOpen={!!detailStaffId}
           staffId={detailStaffId}
           profile={profiles.find(p => p.staff_id === detailStaffId)}
-          calculatedReport={calculatedReports[detailStaffId]}
-          savedReport={reports.find(r => r.staff_id === detailStaffId)}
+          calculatedReport={null}
+          savedReport={null}
           pharmacyId={pharmacyId}
           year={year}
           month={month}
           monthName={monthNames[month - 1]}
           onClose={() => setDetailStaffId(null)}
+        />
+      )}
+
+      {/* Stundenkonto Modal (vollständige Tabelle aller Monate) */}
+      {stundenkontoStaffId && (
+        <StundenkontoModal
+          theme={theme}
+          isOpen={!!stundenkontoStaffId}
+          staffId={stundenkontoStaffId}
+          profile={profiles.find(p => p.staff_id === stundenkontoStaffId)}
+          pharmacyId={pharmacyId}
+          allReports={staffData[stundenkontoStaffId]?.allReports}
+          onClose={() => setStundenkontoStaffId(null)}
         />
       )}
 
