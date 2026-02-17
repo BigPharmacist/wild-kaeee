@@ -15,6 +15,7 @@ export function useMjProfiles({ pharmacyId }) {
       .from('mj_profiles')
       .select('*, staff:staff!mj_profiles_staff_id_fkey(id, first_name, last_name, email, mobile, street, postal_code, city, employed_since, exit_date)')
       .eq('pharmacy_id', pharmacyId)
+      .order('sort_order', { ascending: true })
       .order('created_at', { ascending: true })
 
     if (err) {
@@ -131,6 +132,42 @@ export function useMjProfiles({ pharmacyId }) {
     return true
   }, [fetchProfiles])
 
+  const swapSortOrder = useCallback(async (profileA, profileB) => {
+    const orderA = profileA.sort_order
+    const orderB = profileB.sort_order
+
+    // Optimistic update
+    setProfiles(prev => prev.map(p => {
+      if (p.id === profileA.id) return { ...p, sort_order: orderB }
+      if (p.id === profileB.id) return { ...p, sort_order: orderA }
+      return p
+    }).sort((a, b) => a.sort_order - b.sort_order))
+
+    const { error: errA } = await supabase
+      .from('mj_profiles')
+      .update({ sort_order: orderB })
+      .eq('id', profileA.id)
+
+    if (errA) {
+      console.error('Fehler beim Tauschen der Reihenfolge:', errA)
+      await fetchProfiles()
+      return false
+    }
+
+    const { error: errB } = await supabase
+      .from('mj_profiles')
+      .update({ sort_order: orderA })
+      .eq('id', profileB.id)
+
+    if (errB) {
+      console.error('Fehler beim Tauschen der Reihenfolge:', errB)
+      await fetchProfiles()
+      return false
+    }
+
+    return true
+  }, [fetchProfiles])
+
   const toggleActive = useCallback(async (profileId, active) => {
     const { error: err } = await supabase
       .from('mj_profiles')
@@ -156,6 +193,7 @@ export function useMjProfiles({ pharmacyId }) {
     fetchProfiles,
     createProfile,
     updateProfile,
+    swapSortOrder,
     toggleActive,
   }
 }

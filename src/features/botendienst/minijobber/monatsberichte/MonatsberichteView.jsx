@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { FilePdf, CalendarBlank, ListBullets } from '@phosphor-icons/react'
+import { FilePdf, CalendarBlank, ListBullets, CaretUp, CaretDown } from '@phosphor-icons/react'
 import { useMjMonthlyReports } from '../hooks/useMjMonthlyReports'
 import { useMjMonthlyConditions } from '../hooks/useMjMonthlyConditions'
 import { MjMonthSelector } from '../shared/MjMonthSelector'
@@ -14,7 +14,7 @@ const monthNames = [
   'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember',
 ]
 
-export function MonatsberichteView({ theme, pharmacyId, pharmacies, profiles, currentStaff }) {
+export function MonatsberichteView({ theme, pharmacyId, pharmacies, profiles, swapSortOrder, currentStaff }) {
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
@@ -30,7 +30,12 @@ export function MonatsberichteView({ theme, pharmacyId, pharmacies, profiles, cu
   const pharmacy = pharmacies?.find(p => p.id === pharmacyId)
 
   const activeProfiles = useMemo(
-    () => profiles.filter(p => p.active),
+    () => profiles.filter(p => p.active).sort((a, b) => {
+      if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order
+      const nameA = `${a.staff?.last_name} ${a.staff?.first_name}`.toLowerCase()
+      const nameB = `${b.staff?.last_name} ${b.staff?.first_name}`.toLowerCase()
+      return nameA.localeCompare(nameB)
+    }),
     [profiles]
   )
 
@@ -139,22 +144,44 @@ export function MonatsberichteView({ theme, pharmacyId, pharmacies, profiles, cu
       {/* Reports Grid */}
       {!loading && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {activeProfiles.map(profile => {
+          {activeProfiles.map((profile, idx) => {
             const data = staffData[profile.staff_id]
             const monthReport = getMonthReport(profile.staff_id)
             const currentBalance = data?.currentBalance ?? null
             const name = profile.staff
               ? `${profile.staff.first_name} ${profile.staff.last_name}`
               : 'Unbekannt'
+            const isFirst = idx === 0
+            const isLast = idx === activeProfiles.length - 1
 
             return (
               <div
                 key={profile.id}
                 className={`${theme.surface} border ${theme.border} rounded-xl ${theme.cardShadow}`}
               >
-                {/* Card Header: Name + aktueller Gesamtstand */}
+                {/* Card Header: Sort-Buttons + Name + aktueller Gesamtstand */}
                 <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-                  <span className={`font-semibold ${theme.textPrimary}`}>{name}</span>
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex flex-col -my-1">
+                      <button
+                        onClick={() => swapSortOrder(profile, activeProfiles[idx - 1])}
+                        disabled={isFirst}
+                        className={`p-0.5 rounded ${isFirst ? 'opacity-20 cursor-default' : `${theme.textSecondary} hover:bg-gray-100 cursor-pointer`}`}
+                        title="Nach oben"
+                      >
+                        <CaretUp size={14} weight="bold" />
+                      </button>
+                      <button
+                        onClick={() => swapSortOrder(profile, activeProfiles[idx + 1])}
+                        disabled={isLast}
+                        className={`p-0.5 rounded ${isLast ? 'opacity-20 cursor-default' : `${theme.textSecondary} hover:bg-gray-100 cursor-pointer`}`}
+                        title="Nach unten"
+                      >
+                        <CaretDown size={14} weight="bold" />
+                      </button>
+                    </div>
+                    <span className={`font-semibold ${theme.textPrimary}`}>{name}</span>
+                  </div>
                   {currentBalance !== null && (
                     <MjHoursDisplay hours={currentBalance} showSign className="font-bold text-base" />
                   )}

@@ -64,6 +64,7 @@ export default function MinijobberView({ theme, session, currentStaff, pharmacie
             pharmacyId={pharmacyId}
             pharmacies={pharmacies}
             profiles={profilesHook.profiles}
+            swapSortOrder={profilesHook.swapSortOrder}
             currentStaff={currentStaff}
           />
         )
