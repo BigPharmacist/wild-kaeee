@@ -118,33 +118,6 @@ export function ZeiterfassungView({ theme, pharmacyId, profiles }) {
         </div>
       </div>
 
-      {/* Stundenstände */}
-      {activeProfiles.length > 0 && (
-        <div className={`${theme.surface} border ${theme.border} rounded-xl p-3`}>
-          <div className="flex items-center justify-between mb-2">
-            <span className={`text-sm font-semibold ${theme.textPrimary}`}>Stundenstände</span>
-            <span className={`text-xs ${theme.textMuted}`}>kumuliert</span>
-          </div>
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {activeProfiles.map(p => {
-              const name = p.staff ? `${p.staff.first_name} ${p.staff.last_name}` : 'Unbekannt'
-              const initials = p.initials || name.split(' ').map(n => n[0]).join('').toUpperCase()
-              return (
-                <div key={p.id} className={`min-w-[160px] flex items-center justify-between gap-2 px-3 py-2 rounded-lg border ${theme.border} bg-white`}>
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-[#F59E0B]/10 flex items-center justify-center text-xs font-semibold text-[#F59E0B]">
-                      {initials}
-                    </div>
-                    <span className={`text-xs ${theme.textSecondary}`}>{name}</span>
-                  </div>
-                  <MjHoursDisplay hours={p.hours_balance} showSign className="text-sm font-semibold" />
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
       {/* Loading */}
       {loading && (
         <div className={`${theme.surface} border ${theme.border} rounded-xl p-12 flex items-center justify-center`}>
