@@ -19,11 +19,24 @@ function getMonday(d) {
   return date
 }
 
-function getShiftColor(shiftName) {
-  const name = (shiftName || '').toLowerCase()
-  if (name.includes('vormittag') || name.includes('früh')) return 'bg-blue-100 text-blue-700'
-  if (name.includes('nachmittag') || name.includes('spät')) return 'bg-green-100 text-green-700'
-  return 'bg-gray-100 text-gray-600'
+const staffColors = [
+  { bg: 'bg-blue-100', dot: 'bg-blue-500', text: 'text-blue-800' },
+  { bg: 'bg-emerald-100', dot: 'bg-emerald-500', text: 'text-emerald-800' },
+  { bg: 'bg-violet-100', dot: 'bg-violet-500', text: 'text-violet-800' },
+  { bg: 'bg-amber-100', dot: 'bg-amber-500', text: 'text-amber-800' },
+  { bg: 'bg-rose-100', dot: 'bg-rose-500', text: 'text-rose-800' },
+  { bg: 'bg-cyan-100', dot: 'bg-cyan-500', text: 'text-cyan-800' },
+  { bg: 'bg-orange-100', dot: 'bg-orange-500', text: 'text-orange-800' },
+  { bg: 'bg-fuchsia-100', dot: 'bg-fuchsia-500', text: 'text-fuchsia-800' },
+]
+
+function getStaffColor(staffId) {
+  let hash = 0
+  for (let i = 0; i < staffId.length; i++) {
+    hash = ((hash << 5) - hash) + staffId.charCodeAt(i)
+    hash |= 0
+  }
+  return staffColors[Math.abs(hash) % staffColors.length]
 }
 
 export function BotenWidgetContent({ theme, pharmacyId }) {
@@ -128,13 +141,16 @@ export function BotenWidgetContent({ theme, pharmacyId }) {
                       key={dateStr}
                       className={`rounded-md px-1 py-0.5 min-h-[22px] flex flex-col items-center justify-center ${
                         isToday ? 'ring-1 ring-[#F59E0B]/40 ' : ''
-                      }${dayEntries.length > 0 ? getShiftColor(shift.name) : 'bg-gray-50'}`}
+                      }${dayEntries.length > 0 || absentEntries.length > 0 ? 'bg-gray-50' : 'bg-gray-50'}`}
                     >
-                      {dayEntries.map(s => (
-                        <span key={s.id} className="text-[10px] font-semibold leading-tight truncate w-full text-center">
-                          {s.staff?.first_name}
-                        </span>
-                      ))}
+                      {dayEntries.map(s => {
+                        const color = getStaffColor(s.staff_id)
+                        return (
+                          <span key={s.id} className={`text-[10px] font-semibold leading-tight truncate w-full text-center ${color.text}`}>
+                            {s.staff?.first_name}
+                          </span>
+                        )
+                      })}
                       {absentEntries.map(s => (
                         <span key={s.id} className="text-[9px] text-gray-400 line-through leading-tight truncate w-full text-center">
                           {s.staff?.first_name}

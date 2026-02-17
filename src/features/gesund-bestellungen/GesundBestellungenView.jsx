@@ -32,12 +32,18 @@ function formatDayHeading(dateStr) {
   })
 }
 
+// order_date von Gesund.de ist lokale Zeit (CET/CEST), aber als UTC gespeichert.
+// Daher UTC-Komponenten direkt auslesen statt Timezone-Konvertierung.
 function formatTime(isoStr) {
   if (!isoStr) return ''
-  return new Date(isoStr).toLocaleTimeString('de-DE', {
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  const d = new Date(isoStr)
+  return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`
+}
+
+function formatDate(isoStr) {
+  if (!isoStr) return ''
+  const d = new Date(isoStr)
+  return `${String(d.getUTCDate()).padStart(2, '0')}.${String(d.getUTCMonth() + 1).padStart(2, '0')}.${d.getUTCFullYear()}`
 }
 
 const ORDER_TYPE_LABELS = {
@@ -56,20 +62,38 @@ const ORDER_TYPE_COLORS = {
 
 const STATUS_LABELS = {
   NEW: 'Neu',
+  PHARMACIST_NEW: 'Neu',
+  IN_PROGRESS: 'Offen',
   PHARMACIST_IN_PROGRESS: 'In Bearbeitung',
-  PHARMACIST_READY: 'Abholbereit',
   PHARMACIST_AWAIT_WHOLESALE: 'Warten auf Großhändler',
-  COMPLETED: 'Abgeschlossen',
-  CANCELLED: 'Storniert',
+  PHARMACIST_READY_COLLECT: 'Abholbereit',
+  PHARMACIST_READY_DELIVERY: 'Lieferbereit',
+  READY_COLLECT: 'Abholbereit',
+  READY_DELIVERY: 'Lieferbereit',
+  PHARMACIST_DONE_COLLECT: 'Abgeholt',
+  PHARMACIST_DONE_DELIVERY: 'Zugestellt',
+  DONE: 'Abgeschlossen',
+  CANCELED: 'Storniert',
+  PHARMACIST_CANCELLED: 'Storniert',
+  ENDED: 'Beendet',
 }
 
 const STATUS_COLORS = {
   NEW: 'bg-blue-100 text-blue-700',
+  PHARMACIST_NEW: 'bg-blue-100 text-blue-700',
+  IN_PROGRESS: 'bg-amber-100 text-amber-700',
   PHARMACIST_IN_PROGRESS: 'bg-amber-100 text-amber-700',
-  PHARMACIST_READY: 'bg-teal-100 text-teal-700',
   PHARMACIST_AWAIT_WHOLESALE: 'bg-orange-100 text-orange-700',
-  COMPLETED: 'bg-green-100 text-green-700',
-  CANCELLED: 'bg-red-100 text-red-700',
+  PHARMACIST_READY_COLLECT: 'bg-teal-100 text-teal-700',
+  PHARMACIST_READY_DELIVERY: 'bg-teal-100 text-teal-700',
+  READY_COLLECT: 'bg-teal-100 text-teal-700',
+  READY_DELIVERY: 'bg-teal-100 text-teal-700',
+  PHARMACIST_DONE_COLLECT: 'bg-green-100 text-green-700',
+  PHARMACIST_DONE_DELIVERY: 'bg-green-100 text-green-700',
+  DONE: 'bg-green-100 text-green-700',
+  CANCELED: 'bg-red-100 text-red-700',
+  PHARMACIST_CANCELLED: 'bg-red-100 text-red-700',
+  ENDED: 'bg-gray-100 text-gray-600',
 }
 
 const DISPATCH_LABELS = {
@@ -272,7 +296,7 @@ function OrderDetailPopup({ order, theme, onClose, getViewUrl, printFile }) {
               <div>
                 <p className={`text-xs ${theme.textMuted}`}>Bestellt am</p>
                 <p className={`text-sm font-medium ${theme.text}`}>
-                  {new Date(order.order_date).toLocaleDateString('de-DE')} {formatTime(order.order_date)}
+                  {formatDate(order.order_date)} {formatTime(order.order_date)}
                 </p>
               </div>
             </div>

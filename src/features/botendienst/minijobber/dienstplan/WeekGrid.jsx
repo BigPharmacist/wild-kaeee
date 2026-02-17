@@ -32,6 +32,27 @@ function getShiftLabelColors(shiftName) {
   return 'text-gray-600 bg-gray-100'
 }
 
+// Stabile Farbe pro Mitarbeiter (basierend auf ID-Hash)
+const staffColors = [
+  { dot: 'bg-blue-500', text: 'text-blue-800' },
+  { dot: 'bg-emerald-500', text: 'text-emerald-800' },
+  { dot: 'bg-violet-500', text: 'text-violet-800' },
+  { dot: 'bg-amber-500', text: 'text-amber-800' },
+  { dot: 'bg-rose-500', text: 'text-rose-800' },
+  { dot: 'bg-cyan-500', text: 'text-cyan-800' },
+  { dot: 'bg-orange-500', text: 'text-orange-800' },
+  { dot: 'bg-fuchsia-500', text: 'text-fuchsia-800' },
+]
+
+function getStaffColor(staffId) {
+  let hash = 0
+  for (let i = 0; i < staffId.length; i++) {
+    hash = ((hash << 5) - hash) + staffId.charCodeAt(i)
+    hash |= 0
+  }
+  return staffColors[Math.abs(hash) % staffColors.length]
+}
+
 export function WeekGrid({ theme, profiles, weekDates, schedules, shifts, holidayMap, dayNames, onCellClick }) {
   const profileMap = {}
   profiles.forEach(p => {
@@ -118,17 +139,19 @@ export function WeekGrid({ theme, profiles, weekDates, schedules, shifts, holida
                       {grouped[shiftName].map(sched => {
                         const profile = profileMap[sched.staff_id]
                         if (!profile) return null
+                        const color = getStaffColor(sched.staff_id)
                         return (
                           <div
                             key={sched.id}
                             onClick={() => onCellClick(sched.staff_id, dateStr)}
-                            className="px-2.5 py-1.5 cursor-pointer hover:bg-white/50 transition-colors"
+                            className="px-2.5 py-1.5 cursor-pointer hover:bg-white/50 transition-colors flex items-center gap-1.5"
                           >
-                            <span className={`text-base font-bold ${isAbsent ? 'text-red-700 line-through' : theme.textPrimary}`}>
+                            <span className={`w-2 h-2 rounded-full shrink-0 ${isAbsent ? 'bg-red-300' : color.dot}`} />
+                            <span className={`text-base font-bold ${isAbsent ? 'text-red-700 line-through' : color.text}`}>
                               {profile.firstName}
                             </span>
                             {sched.absent && sched.absent_reason && (
-                              <span className="ml-1.5 text-[10px] text-red-500">
+                              <span className="ml-1 text-[10px] text-red-500">
                                 ({sched.absent_reason})
                               </span>
                             )}

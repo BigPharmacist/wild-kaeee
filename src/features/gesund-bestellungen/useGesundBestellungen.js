@@ -36,11 +36,12 @@ export default function useGesundBestellungen() {
   }, [fetchOrders])
 
   // Orders nach Tag gruppieren (order_date, neueste zuerst)
+  // order_date ist lokale Zeit (CET/CEST), aber als UTC gespeichert → UTC-Datum verwenden
   const ordersByDay = useMemo(() => {
     const groups = {}
     for (const order of orders) {
       const date = new Date(order.order_date || order.created_at)
-      const dayKey = date.toISOString().split('T')[0]
+      const dayKey = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`
       if (!groups[dayKey]) {
         groups[dayKey] = []
       }
