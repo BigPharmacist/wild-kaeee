@@ -2,10 +2,16 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { X } from '@phosphor-icons/react'
 import { supabase } from '../../../../lib/supabase'
 import { MjHoursDisplay } from '../shared/MjHoursDisplay'
+import { MonatsberichtDetail } from './MonatsberichtDetail'
 
 const monthNames = [
   'Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun',
   'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez',
+]
+
+const monthNamesFull = [
+  'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
+  'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember',
 ]
 
 function EditableCell({ value, onSave, theme }) {
@@ -68,6 +74,7 @@ export function StundenkontoModal({ theme, isOpen, staffId, profile, pharmacyId,
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [detailMonth, setDetailMonth] = useState(null) // { year, month }
 
   const fetchFromDb = async () => {
     if (!staffId || !pharmacyId) return
@@ -201,7 +208,11 @@ export function StundenkontoModal({ theme, isOpen, staffId, profile, pharmacyId,
               <tbody>
                 {displayRows.map((r, i) => (
                   <tr key={`${r.year}-${r.month}`} className={`${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-amber-50/40`}>
-                    <td className={`px-3 py-2 font-medium ${theme.textPrimary} border-b border-gray-200`}>
+                    <td
+                      className={`px-3 py-2 font-medium ${theme.textPrimary} border-b border-gray-200 cursor-pointer hover:text-[#0D9488] hover:underline`}
+                      onClick={() => setDetailMonth({ year: r.year, month: r.month })}
+                      title="Details anzeigen"
+                    >
                       {monthNames[r.month - 1]} {r.year}
                     </td>
                     <td className={`px-3 py-2 text-right ${theme.textPrimary} border-b border-gray-200`}>
@@ -248,6 +259,23 @@ export function StundenkontoModal({ theme, isOpen, staffId, profile, pharmacyId,
           )}
         </div>
       </div>
+
+      {/* Monatsdetail-Modal */}
+      {detailMonth && (
+        <MonatsberichtDetail
+          theme={theme}
+          isOpen={!!detailMonth}
+          staffId={staffId}
+          profile={profile}
+          calculatedReport={null}
+          savedReport={null}
+          pharmacyId={pharmacyId}
+          year={detailMonth.year}
+          month={detailMonth.month}
+          monthName={monthNamesFull[detailMonth.month - 1]}
+          onClose={() => setDetailMonth(null)}
+        />
+      )}
     </div>
   )
 }
