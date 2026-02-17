@@ -14,15 +14,25 @@ function getISOWeek(d) {
   return Math.ceil((((date - yearStart) / 86400000) + 1) / 7)
 }
 
-function getShiftLabelColor(shiftName) {
-  const name = (shiftName || '').toLowerCase()
-  if (name.includes('vormittag') || name.includes('früh') || name.includes('morgen')) {
-    return 'bg-blue-50 text-blue-700'
+// Stabile Farbe pro Mitarbeiter (basierend auf ID-Hash)
+const staffColors = [
+  { dot: 'bg-blue-500', text: 'text-blue-800' },
+  { dot: 'bg-emerald-500', text: 'text-emerald-800' },
+  { dot: 'bg-violet-500', text: 'text-violet-800' },
+  { dot: 'bg-amber-500', text: 'text-amber-800' },
+  { dot: 'bg-rose-500', text: 'text-rose-800' },
+  { dot: 'bg-cyan-500', text: 'text-cyan-800' },
+  { dot: 'bg-orange-500', text: 'text-orange-800' },
+  { dot: 'bg-fuchsia-500', text: 'text-fuchsia-800' },
+]
+
+function getStaffColor(staffId) {
+  let hash = 0
+  for (let i = 0; i < staffId.length; i++) {
+    hash = ((hash << 5) - hash) + staffId.charCodeAt(i)
+    hash |= 0
   }
-  if (name.includes('nachmittag') || name.includes('spät')) {
-    return 'bg-green-50 text-green-700'
-  }
-  return 'bg-gray-50 text-gray-600'
+  return staffColors[Math.abs(hash) % staffColors.length]
 }
 
 export function MonthTable({ theme, profiles, schedules, shifts, holidayMap, year, month, onCellClick }) {
@@ -43,27 +53,40 @@ export function MonthTable({ theme, profiles, schedules, shifts, holidayMap, yea
     return a.name.localeCompare(b.name)
   })
 
-  // Tage des Monats generieren
+  // Tage des Monats generieren (Mo–Fr)
   const todayStr = toLocalDateStr(new Date())
   const daysInMonth = new Date(year, month + 1, 0).getDate()
   const days = Array.from({ length: daysInMonth }, (_, i) => {
     const d = new Date(year, month, i + 1)
     const dateStr = toLocalDateStr(d)
+    const dow = d.getDay()
     return {
       date: d,
       dateStr,
-      dayOfWeek: d.getDay(),
-      dayName: dayNamesShort[d.getDay()],
+      dayOfWeek: dow,
+      dayName: dayNamesShort[dow],
       isToday: dateStr === todayStr,
       isHoliday: !!holidayMap[dateStr],
       holidayName: holidayMap[dateStr] || null,
-      isSunday: d.getDay() === 0,
-      isWeekend: d.getDay() === 0 || d.getDay() === 6,
     }
-  })
+  }).filter(d => d.dayOfWeek >= 1 && d.dayOfWeek <= 5)
+
+  // Nach KW gruppieren
+  const weeks = []
+  let currentKw = null
+  let currentWeek = null
+  for (const day of days) {
+    const kw = getISOWeek(day.date)
+    if (kw !== currentKw) {
+      currentKw = kw
+      currentWeek = { kw, days: [] }
+      weeks.push(currentWeek)
+    }
+    currentWeek.days.push(day)
+  }
 
   // Schedules nach Datum + Schicht gruppieren
-  const scheduleMap = {} // dateStr -> shiftId -> [schedules]
+  const scheduleMap = {}
   schedules.forEach(s => {
     if (!scheduleMap[s.date]) scheduleMap[s.date] = {}
     const shiftId = s.shift_id || '_none'
@@ -72,116 +95,121 @@ export function MonthTable({ theme, profiles, schedules, shifts, holidayMap, yea
   })
 
   return (
-    <div className={`${theme.surface} border ${theme.border} rounded-xl overflow-hidden ${theme.cardShadow}`}>
-      <table className="w-full">
-        <thead>
-          <tr className={`border-b ${theme.border} bg-gray-50/80`}>
-            <th className={`text-left px-3 py-2.5 text-xs font-semibold ${theme.textSecondary} w-[140px]`}>
-              Datum
+    <div className={`${theme.surface} border ${theme.border} rounded-xl overflow-hidden ${theme.cardShadow} max-w-3xl`}>
+      <table className="w-full border-collapse">
+        <thead className="sticky top-0 z-10">
+          <tr className="border-b-2 border-[#CBD5E1] bg-white">
+            <th className={`text-left pl-3 pr-2 py-2 text-[11px] font-semibold uppercase tracking-wider ${theme.textMuted}`}>
+              Tag
             </th>
             {sortedShifts.map(shift => (
-              <th key={shift.id} className={`text-left px-3 py-2.5 text-xs font-semibold ${theme.textSecondary}`}>
+              <th key={shift.id} className={`text-left px-2 py-2 text-[11px] font-semibold uppercase tracking-wider ${theme.textMuted}`}>
                 {shift.name}
-                <span className={`ml-1.5 text-[10px] font-normal ${theme.textMuted}`}>
-                  {shift.start_time?.slice(0, 5)}–{shift.end_time?.slice(0, 5)}
+                <span className={`ml-1 text-[9px] font-normal normal-case tracking-normal ${theme.textMuted}`}>
+                  {shift.start_time?.slice(0, 5)}&ndash;{shift.end_time?.slice(0, 5)}
                 </span>
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {(() => {
-            let lastKw = null
-            let kwColorIdx = 0
-            return days.map(day => {
-            if (day.isSunday) return null
+          {weeks.map((week, wIdx) => (
+            week.days.map((day, dIdx) => {
+              const daySchedules = scheduleMap[day.dateStr] || {}
+              const isFirstOfWeek = dIdx === 0
+              const isLastOfWeek = dIdx === week.days.length - 1
 
-            const kw = getISOWeek(day.date)
-            const isFirstOfWeek = kw !== lastKw
-            if (isFirstOfWeek && lastKw !== null) kwColorIdx++
-            lastKw = kw
-            const weekBg = kwColorIdx % 2 === 1 ? 'bg-gray-100/80' : ''
-
-            const daySchedules = scheduleMap[day.dateStr] || {}
-
-            return (
-              <tr
-                key={day.dateStr}
-                className={`border-b last:border-b-0 ${theme.border} ${
-                  day.isToday ? 'bg-[#FEF3C7]/40' :
-                  day.isHoliday ? 'bg-red-50/40' :
-                  weekBg
-                } hover:bg-gray-50/80 transition-colors`}
-              >
-                {/* Datum-Spalte */}
-                <td className={`px-3 py-2 whitespace-nowrap`}>
-                  <div className="flex items-center gap-2">
-                    {isFirstOfWeek ? (
-                      <span className={`text-[10px] font-semibold w-7 ${theme.textMuted}`}>KW{kw}</span>
-                    ) : (
-                      <span className="w-7" />
-                    )}
-                    <span className={`text-xs font-bold w-5 ${
-                      day.isToday ? 'text-[#F59E0B]' : day.isHoliday ? 'text-red-500' : theme.textMuted
-                    }`}>
-                      {day.dayName}
-                    </span>
-                    <span className={`text-sm font-medium ${
-                      day.isToday ? 'text-[#F59E0B]' : day.isHoliday ? 'text-red-600' : theme.textPrimary
-                    }`}>
-                      {day.date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}
-                    </span>
-                    {day.isHoliday && (
-                      <span className="text-[10px] text-red-400 truncate max-w-[80px]" title={day.holidayName}>
-                        {day.holidayName}
-                      </span>
-                    )}
-                  </div>
-                </td>
-
-                {/* Eine Spalte pro Schicht */}
-                {sortedShifts.map(shift => {
-                  const entries = daySchedules[shift.id] || []
-                  return (
-                    <td
-                      key={shift.id}
-                      className="px-2 py-1.5 cursor-pointer"
-                      onClick={() => {
-                        const staffId = entries[0]?.staff_id || activeProfiles[0]?.staff_id
-                        if (staffId) onCellClick(staffId, day.dateStr)
-                      }}
-                    >
-                      {entries.length === 0 ? (
-                        <span className={`text-xs ${theme.textMuted}`}>—</span>
-                      ) : (
-                        <div className="flex flex-wrap gap-1">
-                          {entries.map(sched => {
-                            const profile = profileMap[sched.staff_id]
-                            if (!profile) return null
-                            const isAbsent = sched.absent
-                            return (
-                              <span
-                                key={sched.id}
-                                className={`inline-block px-2 py-0.5 rounded text-sm font-semibold ${
-                                  isAbsent
-                                    ? 'bg-red-50 text-red-400 line-through'
-                                    : getShiftLabelColor(shift.name)
-                                }`}
-                                title={isAbsent ? `${profile.firstName} (${sched.absent_reason || 'abwesend'})` : profile.firstName}
-                              >
-                                {profile.firstName}
-                              </span>
-                            )
-                          })}
-                        </div>
+              return (
+                <tr
+                  key={day.dateStr}
+                  className={`${
+                    isFirstOfWeek && wIdx > 0 ? 'border-t-[3px] border-[#CBD5E1]' :
+                    !isLastOfWeek ? 'border-b border-[#F1F5F9]' : ''
+                  } ${
+                    day.isToday ? 'bg-[#FEF3C7]/40' :
+                    day.isHoliday ? 'bg-red-50/40' :
+                    ''
+                  } hover:bg-[#F8FAFC] transition-colors`}
+                >
+                  {/* Datum-Spalte */}
+                  <td className="pl-3 pr-2 py-[5px] whitespace-nowrap">
+                    <div className="flex items-center gap-1.5">
+                      {isFirstOfWeek && (
+                        <span className="text-[9px] font-bold text-[#94A3B8] w-[26px] shrink-0">{week.kw}</span>
                       )}
-                    </td>
-                  )
-                })}
-              </tr>
-            )
-          })
-          })()}
+                      {!isFirstOfWeek && <span className="w-[26px] shrink-0" />}
+                      <span className={`text-[11px] font-semibold w-5 ${
+                        day.isToday ? 'text-[#F59E0B]' :
+                        day.isHoliday ? 'text-red-500' :
+                        theme.textMuted
+                      }`}>
+                        {day.dayName}
+                      </span>
+                      <span className={`text-[13px] tabular-nums ${
+                        day.isToday ? 'font-bold text-[#F59E0B]' :
+                        day.isHoliday ? 'font-semibold text-red-600' :
+                        `font-medium ${theme.textPrimary}`
+                      }`}>
+                        {day.date.getDate()}.
+                      </span>
+                      {day.isHoliday && (
+                        <span className="text-[9px] text-red-400 italic truncate max-w-[80px]" title={day.holidayName}>
+                          {day.holidayName}
+                        </span>
+                      )}
+                      {day.isToday && !day.isHoliday && (
+                        <span className="text-[9px] font-semibold text-[#F59E0B]">heute</span>
+                      )}
+                    </div>
+                  </td>
+
+                  {/* Schicht-Spalten */}
+                  {sortedShifts.map(shift => {
+                    const entries = daySchedules[shift.id] || []
+                    return (
+                      <td
+                        key={shift.id}
+                        className="px-2 py-[5px] cursor-pointer group"
+                        onClick={() => {
+                          const staffId = entries[0]?.staff_id || profiles?.[0]?.staff_id
+                          if (staffId) onCellClick(staffId, day.dateStr)
+                        }}
+                      >
+                        {entries.length === 0 ? (
+                          <span className="text-[11px] text-[#CBD5E1] group-hover:text-[#94A3B8] transition-colors">&mdash;</span>
+                        ) : (
+                          <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+                            {entries.map(sched => {
+                              const profile = profileMap[sched.staff_id]
+                              if (!profile) return null
+                              const isAbsent = sched.absent
+                              const color = getStaffColor(sched.staff_id)
+                              return (
+                                <span
+                                  key={sched.id}
+                                  className={`inline-flex items-center gap-1.5 text-[13px] font-medium ${
+                                    isAbsent
+                                      ? 'text-red-400 line-through'
+                                      : color.text
+                                  }`}
+                                  title={isAbsent ? `${profile.firstName} (${sched.absent_reason || 'abwesend'})` : profile.firstName}
+                                >
+                                  <span className={`w-2 h-2 rounded-full shrink-0 ${
+                                    isAbsent ? 'bg-red-300' : color.dot
+                                  }`} />
+                                  {profile.firstName}
+                                </span>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </td>
+                    )
+                  })}
+                </tr>
+              )
+            })
+          ))}
         </tbody>
       </table>
     </div>

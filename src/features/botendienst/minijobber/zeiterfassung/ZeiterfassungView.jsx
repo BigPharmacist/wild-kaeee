@@ -18,11 +18,25 @@ export function ZeiterfassungView({ theme, pharmacyId, profiles }) {
 
   const { workRecords, manualHours, loading, fetchWorkRecords, fetchOpenSchedules, createWorkRecord, updateWorkRecord, deleteWorkRecord, fetchManualHours, createManualHours, deleteManualHours } = useMjWorkRecords({ pharmacyId })
 
+  const openShiftSortOrder = ['vormittag', 'früh', 'morgen', 'nachmittag', 'spät']
+  const getOpenShiftRank = (name) => {
+    const n = (name || '').toLowerCase()
+    const idx = openShiftSortOrder.findIndex(k => n.includes(k))
+    return idx === -1 ? 99 : idx
+  }
+
   useEffect(() => {
     if (pharmacyId) {
       fetchWorkRecords(year, month)
       fetchManualHours(year, month)
-      fetchOpenSchedules(year, month).then(setOpenSchedules)
+      fetchOpenSchedules(year, month).then(data => {
+        const sorted = [...data].sort((a, b) => {
+          const dateCmp = (a.date || '').localeCompare(b.date || '')
+          if (dateCmp !== 0) return dateCmp
+          return getOpenShiftRank(a.shift?.name) - getOpenShiftRank(b.shift?.name)
+        })
+        setOpenSchedules(sorted)
+      })
     }
   }, [pharmacyId, year, month]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -197,10 +211,20 @@ export function ZeiterfassungView({ theme, pharmacyId, profiles }) {
             const total = totalActual + totalManual
 
             // Build combined list sorted by date, then assign alternating color per date
+            const shiftSortOrder = ['vormittag', 'früh', 'morgen', 'nachmittag', 'spät']
+            const getShiftRank = (name) => {
+              const n = (name || '').toLowerCase()
+              const idx = shiftSortOrder.findIndex(k => n.includes(k))
+              return idx === -1 ? 99 : idx
+            }
             const allEntries = [
-              ...records.map(wr => ({ type: 'record', date: wr.schedule?.date || '', data: wr })),
-              ...manuals.map(mh => ({ type: 'manual', date: mh.date, data: mh })),
-            ].sort((a, b) => a.date.localeCompare(b.date))
+              ...records.map(wr => ({ type: 'record', date: wr.schedule?.date || '', shiftName: wr.schedule?.shift?.name, data: wr })),
+              ...manuals.map(mh => ({ type: 'manual', date: mh.date, shiftName: '', data: mh })),
+            ].sort((a, b) => {
+              const dateCmp = a.date.localeCompare(b.date)
+              if (dateCmp !== 0) return dateCmp
+              return getShiftRank(a.shiftName) - getShiftRank(b.shiftName)
+            })
 
             const dateColorMap = {}
             let colorIdx = 0

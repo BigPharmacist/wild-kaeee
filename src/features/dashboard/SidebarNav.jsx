@@ -364,7 +364,9 @@ const SidebarNav = function SidebarNav() {
                       setMobileNavOpen(false)
                     }}
                   >
-                    {subItem.avatar ? (
+                    {subItem.icon ? (
+                      <img src={subItem.icon} alt="" className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
+                    ) : subItem.avatar ? (
                       <img src={subItem.avatar} alt="" className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
                     ) : subItem.avatar === null ? (
                       <span className="w-6 h-6 rounded-full bg-[#475569] flex items-center justify-center text-[10px] text-white flex-shrink-0">
@@ -571,7 +573,9 @@ const SidebarNav = function SidebarNav() {
                   }
                 }}
               >
-                {item.avatar ? (
+                {item.icon ? (
+                  <img src={item.icon} alt="" className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
+                ) : item.avatar ? (
                   <img src={item.avatar} alt="" className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
                 ) : item.avatar === null ? (
                   <span className="w-6 h-6 rounded-full bg-[#475569] flex items-center justify-center text-[10px] text-white flex-shrink-0">

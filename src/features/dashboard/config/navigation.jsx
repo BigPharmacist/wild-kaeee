@@ -74,9 +74,10 @@ export function createSecondaryNavMap({
       { id: 'map', label: 'Karte' },
       { id: 'customers', label: 'Kunden' },
       { id: 'history', label: 'Verlauf' },
-      { id: 'minijobber', label: 'Minijobber' },
       { id: 'divider' },
       { id: 'driver', label: 'Fahrer-Modus' },
+      { id: 'divider' },
+      { id: 'minijobber', label: 'Minijobber', icon: '/icons/minijobber.png' },
     ],
     post: [
       { id: 'email', label: 'Email' },
