@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
-import { Calculator, FilePdf, Lock, ArrowsClockwise } from '@phosphor-icons/react'
+import { Calculator, FilePdf, CalendarBlank } from '@phosphor-icons/react'
 import { useMjMonthlyReports } from '../hooks/useMjMonthlyReports'
+import { useMjMonthlyConditions } from '../hooks/useMjMonthlyConditions'
 import { MjMonthSelector } from '../shared/MjMonthSelector'
 import { MjHoursDisplay } from '../shared/MjHoursDisplay'
 import { MonatsberichtDetail } from './MonatsberichtDetail'
+import { ZeitraumPdfDialog } from './ZeitraumPdfDialog'
 import { generateMonatsberichtPdf } from './MonatsberichtPdf'
 
 const monthNames = [
@@ -18,8 +20,10 @@ export function MonatsberichteView({ theme, pharmacyId, pharmacies, profiles, cu
   const [calculating, setCalculating] = useState(false)
   const [calculatedReports, setCalculatedReports] = useState({})
   const [detailStaffId, setDetailStaffId] = useState(null)
+  const [showZeitraumPdf, setShowZeitraumPdf] = useState(false)
 
-  const { reports, loading, fetchReports, calculateReport, saveReport, finalizeReport } = useMjMonthlyReports({ pharmacyId })
+  const { reports, loading, fetchReports, calculateReport, calculateRangeReport, saveReport } = useMjMonthlyReports({ pharmacyId })
+  const { getEffectiveConditions } = useMjMonthlyConditions({ pharmacyId })
 
   const pharmacy = pharmacies?.find(p => p.id === pharmacyId)
 
@@ -34,8 +38,11 @@ export function MonatsberichteView({ theme, pharmacyId, pharmacies, profiles, cu
     setCalculating(true)
     const results = {}
 
-    for (const profile of profiles) {
-      const reportData = await calculateReport(profile.staff_id, profile, year, month)
+    for (const profile of activeProfiles) {
+      const conditions = await getEffectiveConditions(profile.staff_id, year, month)
+      if (!conditions) continue
+
+      const reportData = await calculateReport(profile.staff_id, conditions, year, month)
       if (reportData) {
         results[profile.staff_id] = reportData
         await saveReport(reportData)
@@ -47,17 +54,17 @@ export function MonatsberichteView({ theme, pharmacyId, pharmacies, profiles, cu
     setCalculating(false)
   }
 
-  const handleFinalize = async (reportId) => {
-    if (!confirm('Monatsbericht finalisieren? Danach können keine Änderungen mehr vorgenommen werden.')) return
-    await finalizeReport(reportId, currentStaff?.id)
-  }
-
   const handlePdf = async (profile) => {
     const staffId = profile.staff_id
     let reportData = calculatedReports[staffId]
 
     if (!reportData) {
-      reportData = await calculateReport(staffId, profile, year, month)
+      const conditions = await getEffectiveConditions(staffId, year, month)
+      if (!conditions) {
+        alert('Keine Konditionen für diesen Monat vorhanden')
+        return
+      }
+      reportData = await calculateReport(staffId, conditions, year, month)
     }
 
     if (!reportData) {
@@ -79,10 +86,7 @@ export function MonatsberichteView({ theme, pharmacyId, pharmacies, profiles, cu
     })
   }
 
-  // Zeige alle Profile die aktiv sind ODER Berichte/Daten im gewählten Monat haben
-  const activeProfiles = profiles.filter(p =>
-    p.active || reports.some(r => r.staff_id === p.staff_id) || calculatedReports[p.staff_id]
-  )
+  const activeProfiles = profiles.filter(p => p.active)
 
   return (
     <div className="space-y-4">
@@ -90,18 +94,27 @@ export function MonatsberichteView({ theme, pharmacyId, pharmacies, profiles, cu
       <div className={`${theme.surface} border ${theme.border} rounded-xl p-4`}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <MjMonthSelector theme={theme} year={year} month={month} onChange={(y, m) => { setYear(y); setMonth(m) }} />
-          <button
-            onClick={handleCalculateAll}
-            disabled={calculating}
-            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg ${theme.accent} text-white font-medium text-sm`}
-          >
-            {calculating ? (
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-            ) : (
-              <Calculator size={18} weight="bold" />
-            )}
-            {calculating ? 'Berechne...' : 'Alle berechnen'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowZeitraumPdf(true)}
+              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border ${theme.border} ${theme.textSecondary} hover:bg-gray-100 font-medium text-sm`}
+            >
+              <CalendarBlank size={18} />
+              Zeitraum-PDF
+            </button>
+            <button
+              onClick={handleCalculateAll}
+              disabled={calculating}
+              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg ${theme.accent} text-white font-medium text-sm`}
+            >
+              {calculating ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+              ) : (
+                <Calculator size={18} weight="bold" />
+              )}
+              {calculating ? 'Berechne...' : 'Alle berechnen'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -126,21 +139,11 @@ export function MonatsberichteView({ theme, pharmacyId, pharmacies, profiles, cu
             return (
               <div
                 key={profile.id}
-                className={`${theme.surface} border ${theme.border} rounded-xl ${theme.cardShadow} ${
-                  report?.finalized ? 'ring-2 ring-green-200' : ''
-                }`}
+                className={`${theme.surface} border ${theme.border} rounded-xl ${theme.cardShadow}`}
               >
                 {/* Card Header */}
                 <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-                  <div className="flex items-center gap-2">
-                    <span className={`font-semibold ${theme.textPrimary}`}>{name}</span>
-                    {report?.finalized && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                        <Lock size={10} weight="bold" />
-                        Finalisiert
-                      </span>
-                    )}
-                  </div>
+                  <span className={`font-semibold ${theme.textPrimary}`}>{name}</span>
                 </div>
 
                 {/* Card Body */}
@@ -189,15 +192,6 @@ export function MonatsberichteView({ theme, pharmacyId, pharmacies, profiles, cu
                     <FilePdf size={16} />
                     PDF
                   </button>
-                  {report && !report.finalized && (
-                    <button
-                      onClick={() => handleFinalize(report.id)}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-green-600 hover:bg-green-50"
-                    >
-                      <Lock size={14} />
-                      Finalisieren
-                    </button>
-                  )}
                 </div>
               </div>
             )
@@ -225,6 +219,19 @@ export function MonatsberichteView({ theme, pharmacyId, pharmacies, profiles, cu
           month={month}
           monthName={monthNames[month - 1]}
           onClose={() => setDetailStaffId(null)}
+        />
+      )}
+
+      {/* Zeitraum-PDF Dialog */}
+      {showZeitraumPdf && (
+        <ZeitraumPdfDialog
+          theme={theme}
+          isOpen={showZeitraumPdf}
+          pharmacyId={pharmacyId}
+          pharmacy={pharmacy}
+          profiles={activeProfiles}
+          calculateRangeReport={calculateRangeReport}
+          onClose={() => setShowZeitraumPdf(false)}
         />
       )}
     </div>

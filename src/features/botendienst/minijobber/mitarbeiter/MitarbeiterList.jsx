@@ -3,7 +3,7 @@ import { Plus, PencilSimple, Eye, EyeSlash, User } from '@phosphor-icons/react'
 import { MjStatusBadge } from '../shared/MjStatusBadge'
 import { MjHoursDisplay } from '../shared/MjHoursDisplay'
 import { MitarbeiterDetailModal } from './MitarbeiterDetailModal'
-import { HourlyRateHistory } from './HourlyRateHistory'
+import { MonthlyConditionsView } from './MonthlyConditionsView'
 
 const jobTypeColors = {
   Autobote: 'bg-blue-100 text-blue-700',
@@ -164,7 +164,7 @@ export function MitarbeiterList({ theme, pharmacyId, staff, profilesHook }) {
                     onClick={() => setShowRateHistory(profile)}
                     className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm ${theme.textSecondary} hover:bg-gray-100`}
                   >
-                    Verlauf
+                    Konditionen
                   </button>
                   <button
                     onClick={() => handleToggleActive(profile)}
@@ -193,12 +193,11 @@ export function MitarbeiterList({ theme, pharmacyId, staff, profilesHook }) {
       />
 
       {showRateHistory && (
-        <HourlyRateHistory
+        <MonthlyConditionsView
           theme={theme}
           isOpen={!!showRateHistory}
           profile={showRateHistory}
           pharmacyId={pharmacyId}
-          profilesHook={profilesHook}
           onClose={() => setShowRateHistory(null)}
         />
       )}

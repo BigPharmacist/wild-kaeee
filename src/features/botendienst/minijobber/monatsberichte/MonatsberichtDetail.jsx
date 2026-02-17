@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
 import { X } from '@phosphor-icons/react'
 import { useMjMonthlyReports } from '../hooks/useMjMonthlyReports'
+import { useMjMonthlyConditions } from '../hooks/useMjMonthlyConditions'
 import { MjShiftBadge } from '../shared/MjShiftBadge'
 import { MjHoursDisplay } from '../shared/MjHoursDisplay'
 
 export function MonatsberichtDetail({ theme, isOpen, staffId, profile, calculatedReport, savedReport, pharmacyId, year, month, monthName, onClose }) {
   const { calculateReport } = useMjMonthlyReports({ pharmacyId })
+  const { getEffectiveConditions } = useMjMonthlyConditions({ pharmacyId })
   const [reportData, setReportData] = useState(null)
   const [loading, setLoading] = useState(false)
 
@@ -15,13 +17,19 @@ export function MonatsberichtDetail({ theme, isOpen, staffId, profile, calculate
         setReportData(calculatedReport)
       } else {
         setLoading(true)
-        calculateReport(staffId, profile, year, month).then(data => {
-          setReportData(data)
-          setLoading(false)
+        getEffectiveConditions(staffId, year, month).then(conditions => {
+          if (!conditions) {
+            setLoading(false)
+            return
+          }
+          calculateReport(staffId, conditions, year, month).then(data => {
+            setReportData(data)
+            setLoading(false)
+          })
         })
       }
     }
-  }, [isOpen, staffId, profile, calculatedReport, year, month, calculateReport])
+  }, [isOpen, staffId, profile, calculatedReport, year, month, calculateReport, getEffectiveConditions])
 
   if (!isOpen) return null
 

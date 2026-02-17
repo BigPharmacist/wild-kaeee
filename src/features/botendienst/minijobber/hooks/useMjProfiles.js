@@ -79,22 +79,16 @@ export function useMjProfiles({ pharmacyId }) {
       return null
     }
 
-    // Create initial rate history entries
-    const today = new Date().toISOString().split('T')[0]
-    await Promise.all([
-      supabase.from('mj_hourly_rates').insert({
-        pharmacy_id: pharmacyId,
-        staff_id: staffId,
-        rate: profileData.hourly_rate,
-        valid_from: staffData.employed_since || today,
-      }),
-      supabase.from('mj_monthly_payments').insert({
-        pharmacy_id: pharmacyId,
-        staff_id: staffId,
-        amount: profileData.monthly_payment,
-        valid_from: staffData.employed_since || today,
-      }),
-    ])
+    // Create initial conditions entry for current month
+    const now = new Date()
+    await supabase.from('mj_monthly_conditions').insert({
+      pharmacy_id: pharmacyId,
+      staff_id: staffId,
+      year: now.getFullYear(),
+      month: now.getMonth() + 1,
+      hourly_rate: profileData.hourly_rate,
+      monthly_payment: profileData.monthly_payment,
+    })
 
     setProfiles(prev => [...prev, data])
     return data
@@ -153,80 +147,6 @@ export function useMjProfiles({ pharmacyId }) {
     return true
   }, [])
 
-  const fetchRateHistory = useCallback(async (staffId) => {
-    if (!pharmacyId || !staffId) return { hourlyRates: [], monthlyPayments: [] }
-
-    const [ratesRes, paymentsRes] = await Promise.all([
-      supabase
-        .from('mj_hourly_rates')
-        .select('*')
-        .eq('staff_id', staffId)
-        .eq('pharmacy_id', pharmacyId)
-        .order('valid_from', { ascending: false }),
-      supabase
-        .from('mj_monthly_payments')
-        .select('*')
-        .eq('staff_id', staffId)
-        .eq('pharmacy_id', pharmacyId)
-        .order('valid_from', { ascending: false }),
-    ])
-
-    return {
-      hourlyRates: ratesRes.data || [],
-      monthlyPayments: paymentsRes.data || [],
-    }
-  }, [pharmacyId])
-
-  const addRateEntry = useCallback(async (staffId, rate, validFrom) => {
-    if (!pharmacyId) return null
-
-    const { data, error: err } = await supabase
-      .from('mj_hourly_rates')
-      .insert({ pharmacy_id: pharmacyId, staff_id: staffId, rate, valid_from: validFrom })
-      .select()
-      .single()
-
-    if (err) {
-      console.error('Fehler beim Anlegen des Stundenlohns:', err)
-      setError(err.message)
-      return null
-    }
-
-    // Update current rate on profile
-    await supabase
-      .from('mj_profiles')
-      .update({ hourly_rate: rate })
-      .eq('staff_id', staffId)
-      .eq('pharmacy_id', pharmacyId)
-
-    return data
-  }, [pharmacyId])
-
-  const addPaymentEntry = useCallback(async (staffId, amount, validFrom) => {
-    if (!pharmacyId) return null
-
-    const { data, error: err } = await supabase
-      .from('mj_monthly_payments')
-      .insert({ pharmacy_id: pharmacyId, staff_id: staffId, amount, valid_from: validFrom })
-      .select()
-      .single()
-
-    if (err) {
-      console.error('Fehler beim Anlegen der Pauschale:', err)
-      setError(err.message)
-      return null
-    }
-
-    // Update current payment on profile
-    await supabase
-      .from('mj_profiles')
-      .update({ monthly_payment: amount })
-      .eq('staff_id', staffId)
-      .eq('pharmacy_id', pharmacyId)
-
-    return data
-  }, [pharmacyId])
-
   return {
     profiles,
     loading,
@@ -235,8 +155,5 @@ export function useMjProfiles({ pharmacyId }) {
     createProfile,
     updateProfile,
     toggleActive,
-    fetchRateHistory,
-    addRateEntry,
-    addPaymentEntry,
   }
 }

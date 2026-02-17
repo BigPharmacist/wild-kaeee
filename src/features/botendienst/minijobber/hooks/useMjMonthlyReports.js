@@ -26,16 +26,15 @@ export function useMjMonthlyReports({ pharmacyId }) {
   }, [pharmacyId])
 
   // Calculate cumulative balance for a staff member up to (but not including) the given month
+  // Sums ALL reports — no finalization filter
   const getCumulativeBalance = useCallback(async (staffId, year, month) => {
     if (!pharmacyId) return 0
 
-    // Get all finalized reports before the given month
     const { data, error } = await supabase
       .from('mj_monthly_reports')
       .select('hours_balance')
       .eq('pharmacy_id', pharmacyId)
       .eq('staff_id', staffId)
-      .eq('finalized', true)
       .or(`year.lt.${year},and(year.eq.${year},month.lt.${month})`)
       .order('year')
       .order('month')
@@ -49,7 +48,8 @@ export function useMjMonthlyReports({ pharmacyId }) {
   }, [pharmacyId])
 
   // Calculate report data for a specific employee and month
-  const calculateReport = useCallback(async (staffId, profile, year, month) => {
+  // conditions: { hourly_rate, monthly_payment } from mj_monthly_conditions
+  const calculateReport = useCallback(async (staffId, conditions, year, month) => {
     if (!pharmacyId) return null
 
     const startDate = `${year}-${String(month).padStart(2, '0')}-01`
@@ -97,8 +97,8 @@ export function useMjMonthlyReports({ pharmacyId }) {
     const manualHoursTotal = (manualEntries || []).reduce((sum, mh) => sum + parseFloat(mh.hours || 0), 0)
     const actualHours = actualHoursFromRecords + manualHoursTotal
 
-    const hourlyRate = parseFloat(profile.hourly_rate || 0)
-    const monthlyPayment = parseFloat(profile.monthly_payment || 0)
+    const hourlyRate = parseFloat(conditions.hourly_rate || 0)
+    const monthlyPayment = parseFloat(conditions.monthly_payment || 0)
     const paidHours = hourlyRate > 0 ? monthlyPayment / hourlyRate : 0
 
     const previousCumulative = await getCumulativeBalance(staffId, year, month)
@@ -121,6 +121,62 @@ export function useMjMonthlyReports({ pharmacyId }) {
       manualEntries: manualEntries || [],
     }
   }, [pharmacyId, getCumulativeBalance])
+
+  // Calculate report for an arbitrary date range (for Zeitraum-PDF)
+  const calculateRangeReport = useCallback(async (staffId, startDate, endDate) => {
+    if (!pharmacyId) return null
+
+    // Fetch schedules in range
+    const { data: schedules } = await supabase
+      .from('mj_schedules')
+      .select(`
+        id, date, absent,
+        shift:mj_shifts!mj_schedules_shift_id_fkey(id, name, hours)
+      `)
+      .eq('pharmacy_id', pharmacyId)
+      .eq('staff_id', staffId)
+      .gte('date', startDate)
+      .lte('date', endDate)
+
+    const scheduleIds = (schedules || []).map(s => s.id)
+    let workRecords = []
+    if (scheduleIds.length > 0) {
+      const { data } = await supabase
+        .from('mj_work_records')
+        .select('*, schedule:mj_schedules!mj_work_records_schedule_id_fkey(id, date, shift:mj_shifts!mj_schedules_shift_id_fkey(id, name, start_time, end_time, hours))')
+        .in('schedule_id', scheduleIds)
+
+      workRecords = data || []
+    }
+
+    // Fetch manual hours
+    const { data: manualEntries } = await supabase
+      .from('mj_manual_hours')
+      .select('*')
+      .eq('pharmacy_id', pharmacyId)
+      .eq('staff_id', staffId)
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .order('date')
+
+    const plannedHours = (schedules || [])
+      .filter(s => !s.absent)
+      .reduce((sum, s) => sum + parseFloat(s.shift?.hours || 0), 0)
+
+    const actualHoursFromRecords = workRecords.reduce((sum, wr) => sum + parseFloat(wr.actual_hours || 0), 0)
+    const manualHoursTotal = (manualEntries || []).reduce((sum, mh) => sum + parseFloat(mh.hours || 0), 0)
+    const actualHours = actualHoursFromRecords + manualHoursTotal
+
+    return {
+      staffId,
+      startDate,
+      endDate,
+      plannedHours: Math.round(plannedHours * 100) / 100,
+      actualHours: Math.round(actualHours * 100) / 100,
+      workRecords,
+      manualEntries: manualEntries || [],
+    }
+  }, [pharmacyId])
 
   const saveReport = useCallback(async (reportData) => {
     if (!pharmacyId) return null
@@ -161,34 +217,13 @@ export function useMjMonthlyReports({ pharmacyId }) {
     return data
   }, [pharmacyId])
 
-  const finalizeReport = useCallback(async (reportId, currentStaffId) => {
-    const { error } = await supabase
-      .from('mj_monthly_reports')
-      .update({
-        finalized: true,
-        finalized_at: new Date().toISOString(),
-        finalized_by: currentStaffId,
-      })
-      .eq('id', reportId)
-
-    if (error) {
-      console.error('Fehler beim Finalisieren:', error)
-      return false
-    }
-
-    setReports(prev => prev.map(r =>
-      r.id === reportId ? { ...r, finalized: true, finalized_at: new Date().toISOString() } : r
-    ))
-    return true
-  }, [])
-
   return {
     reports,
     loading,
     fetchReports,
     calculateReport,
+    calculateRangeReport,
     saveReport,
-    finalizeReport,
     getCumulativeBalance,
   }
 }
