@@ -160,13 +160,13 @@ export function MonatsberichteView({ theme, pharmacyId, pharmacies, profiles, sw
                 className={`${theme.surface} border ${theme.border} rounded-xl ${theme.cardShadow}`}
               >
                 {/* Card Header: Sort-Buttons + Name + aktueller Gesamtstand */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                <div className="flex items-center justify-between px-4 py-3 rounded-t-xl bg-[#1E293B]">
                   <div className="flex items-center gap-1.5">
                     <div className="flex flex-col -my-1">
                       <button
                         onClick={() => swapSortOrder(profile, activeProfiles[idx - 1])}
                         disabled={isFirst}
-                        className={`p-0.5 rounded ${isFirst ? 'opacity-20 cursor-default' : `${theme.textSecondary} hover:bg-gray-100 cursor-pointer`}`}
+                        className={`p-0.5 rounded ${isFirst ? 'opacity-20 cursor-default' : 'text-slate-400 hover:bg-slate-700 cursor-pointer'}`}
                         title="Nach oben"
                       >
                         <CaretUp size={14} weight="bold" />
@@ -174,16 +174,16 @@ export function MonatsberichteView({ theme, pharmacyId, pharmacies, profiles, sw
                       <button
                         onClick={() => swapSortOrder(profile, activeProfiles[idx + 1])}
                         disabled={isLast}
-                        className={`p-0.5 rounded ${isLast ? 'opacity-20 cursor-default' : `${theme.textSecondary} hover:bg-gray-100 cursor-pointer`}`}
+                        className={`p-0.5 rounded ${isLast ? 'opacity-20 cursor-default' : 'text-slate-400 hover:bg-slate-700 cursor-pointer'}`}
                         title="Nach unten"
                       >
                         <CaretDown size={14} weight="bold" />
                       </button>
                     </div>
-                    <span className={`font-semibold ${theme.textPrimary}`}>{name}</span>
+                    <span className="font-semibold text-white">{name}</span>
                   </div>
                   {currentBalance !== null && (
-                    <MjHoursDisplay hours={currentBalance} showSign className="font-bold text-base" />
+                    <MjHoursDisplay hours={currentBalance} showSign className="font-bold text-base !text-white" />
                   )}
                 </div>
 

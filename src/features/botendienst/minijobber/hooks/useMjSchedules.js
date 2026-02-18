@@ -226,6 +226,36 @@ export function useMjSchedules({ pharmacyId }) {
     return await bulkInsertSchedules(entries)
   }, [pharmacyId, bulkInsertSchedules])
 
+  const copyWeekToWeek = useCallback(async (srcStartDate, srcEndDate, targetStartDate) => {
+    if (!pharmacyId) return false
+
+    const { data: srcSchedules, error } = await supabase
+      .from('mj_schedules')
+      .select('staff_id, shift_id, date, absent, absent_reason')
+      .eq('pharmacy_id', pharmacyId)
+      .gte('date', srcStartDate)
+      .lte('date', srcEndDate)
+
+    if (error) {
+      console.error('Fehler beim Laden der Quell-Woche:', error)
+      return false
+    }
+
+    if (!srcSchedules || srcSchedules.length === 0) return false
+
+    const offsetDays = Math.round((new Date(targetStartDate) - new Date(srcStartDate)) / 86400000)
+
+    const entries = srcSchedules.map(s => ({
+      staff_id: s.staff_id,
+      shift_id: s.shift_id,
+      date: addDays(s.date, offsetDays),
+      absent: s.absent,
+      absent_reason: s.absent_reason,
+    }))
+
+    return await bulkInsertSchedules(entries)
+  }, [pharmacyId, bulkInsertSchedules])
+
   // Standard Weeks
   const fetchStandardWeeks = useCallback(async () => {
     if (!pharmacyId) return
@@ -335,6 +365,7 @@ export function useMjSchedules({ pharmacyId }) {
     deleteSchedulesForWeek,
     bulkInsertSchedules,
     copyFromTwoWeeksAgo,
+    copyWeekToWeek,
     fetchStandardWeeks,
     saveStandardWeek,
     applyStandardWeek,

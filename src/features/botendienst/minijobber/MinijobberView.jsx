@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
-import { Users, CalendarBlank, Clock, FileText, GearSix, Info } from '@phosphor-icons/react'
+import { Users, CalendarBlank, Clock, FileText, GearSix, Info, ChartBar } from '@phosphor-icons/react'
 import { useMjProfiles } from './hooks/useMjProfiles'
+import { buildStaffColorMap } from './shared/staffColors'
 import { MitarbeiterList } from './mitarbeiter/MitarbeiterList'
 import { DienstplanView } from './dienstplan/DienstplanView'
 import { ZeiterfassungView } from './zeiterfassung/ZeiterfassungView'
 import { MonatsberichteView } from './monatsberichte/MonatsberichteView'
 import { EinstellungenView } from './einstellungen/EinstellungenView'
 import { InfoView } from './info/InfoView'
+import { StatistikenView } from './statistiken/StatistikenView'
 
 const subTabs = [
   { id: 'dienstplan', label: 'Dienstplan', icon: CalendarBlank },
@@ -14,6 +16,7 @@ const subTabs = [
   { id: 'berichte', label: 'Berichte', icon: FileText },
   { id: 'mitarbeiter', label: 'Mitarbeiter', icon: Users },
   { id: 'einstellungen', label: 'Einstellungen', icon: GearSix },
+  { id: 'statistiken', label: 'Statistik', icon: ChartBar },
   { id: 'info', label: 'Info', icon: Info },
 ]
 
@@ -28,6 +31,11 @@ export default function MinijobberView({ theme, session, currentStaff, pharmacie
       profilesHook.fetchProfiles()
     }
   }, [pharmacyId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Build color map synchronously before children render
+  if (profilesHook.profiles.length > 0) {
+    buildStaffColorMap(profilesHook.profiles)
+  }
 
   const renderContent = () => {
     switch (activeSubTab) {
@@ -71,6 +79,14 @@ export default function MinijobberView({ theme, session, currentStaff, pharmacie
       case 'einstellungen':
         return (
           <EinstellungenView
+            theme={theme}
+            pharmacyId={pharmacyId}
+            profiles={profilesHook.profiles}
+          />
+        )
+      case 'statistiken':
+        return (
+          <StatistikenView
             theme={theme}
             pharmacyId={pharmacyId}
             profiles={profilesHook.profiles}

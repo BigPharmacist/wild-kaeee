@@ -1,15 +1,15 @@
-import { useState, useEffect, useMemo } from 'react'
-import { CaretLeft, CaretRight, Copy, GridFour, CalendarBlank, ListBullets, FilePdf } from '@phosphor-icons/react'
+import { useState, useEffect, useMemo, useRef } from 'react'
+import { CaretLeft, CaretRight, Copy, GridFour, CalendarBlank, ListBullets, FilePdf, WhatsappLogo, X, PaperPlaneTilt, Warning } from '@phosphor-icons/react'
 import { useMjSchedules } from '../hooks/useMjSchedules'
 import { WeekGrid } from './WeekGrid'
 import { MonthTable } from './MonthTable'
-import { ShiftEditModal } from './ShiftEditModal'
+import { StaffPickerModal } from './StaffPickerModal'
 import { StandardWeekManager } from './StandardWeekManager'
 import { generateDienstplanPdf } from './DienstplanPdf'
-import { MjHoursDisplay } from '../shared/MjHoursDisplay'
+import { useEmail } from '../../../../context/EmailContext'
+import { JMAPClient } from '../../../../lib/jmap'
 
-const dayNames = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
-const dayNamesFull = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag']
+const dayNames = ['Mo', 'Di', 'Mi', 'Do', 'Fr']
 
 function getMonday(d) {
   const date = new Date(d)
@@ -38,14 +38,23 @@ export function DienstplanView({ theme, pharmacyId, profiles, pharmacyName }) {
   const [currentMonth, setCurrentMonth] = useState(() => ({ year: new Date().getFullYear(), month: new Date().getMonth() }))
   const [editModal, setEditModal] = useState(null)
   const [showStandardWeeks, setShowStandardWeeks] = useState(false)
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false)
+  const [whatsAppText, setWhatsAppText] = useState('')
+  const [sendingWhatsApp, setSendingWhatsApp] = useState(false)
+  const [whatsAppMessage, setWhatsAppMessage] = useState(null)
+  const [copySourceWeek, setCopySourceWeek] = useState(null)
+  const [pasteTarget, setPasteTarget] = useState(null)
+  const whatsAppTextRef = useRef(null)
+
+  const { emailAccounts } = useEmail()
 
   const schedulesHook = useMjSchedules({ pharmacyId })
   const { schedules, shifts, holidays, loading, fetchShifts, fetchSchedules, fetchHolidays,
     createScheduleEntry, updateScheduleEntry, deleteScheduleEntry,
-    copyFromTwoWeeksAgo, deleteSchedulesForWeek } = schedulesHook
+    copyFromTwoWeeksAgo, copyWeekToWeek, deleteSchedulesForWeek } = schedulesHook
 
   // Calculate week dates
-  const weekDates = Array.from({ length: 6 }, (_, i) => addDays(currentWeekStart, i))
+  const weekDates = Array.from({ length: 5 }, (_, i) => addDays(currentWeekStart, i))
   const weekEnd = weekDates[weekDates.length - 1]
 
   // Month date range
@@ -72,6 +81,17 @@ export function DienstplanView({ theme, pharmacyId, profiles, pharmacyName }) {
     }
   }, [pharmacyId, shifts, viewMode, currentWeekStart, monthFirstDay, monthLastDay, fetchSchedules]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Escape to cancel copy mode
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setCopySourceWeek(null)
+    }
+    if (copySourceWeek) {
+      document.addEventListener('keydown', handleKeyDown)
+      return () => document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [copySourceWeek])
+
   // Week navigation
   const goToPreviousWeek = () => setCurrentWeekStart(prev => addDays(prev, -7))
   const goToNextWeek = () => setCurrentWeekStart(prev => addDays(prev, 7))
@@ -88,8 +108,11 @@ export function DienstplanView({ theme, pharmacyId, profiles, pharmacyName }) {
   })
   const goToThisMonth = () => setCurrentMonth({ year: new Date().getFullYear(), month: new Date().getMonth() })
 
-  const handleCellClick = (staffId, date) => {
-    setEditModal({ staffId, date, existingSchedules: schedules.filter(s => s.staff_id === staffId && s.date === date) })
+  const handleCellClick = (shiftId, date, currentStaffId) => {
+    const existingEntry = currentStaffId
+      ? schedules.find(s => s.staff_id === currentStaffId && s.date === date && s.shift_id === shiftId)
+      : null
+    setEditModal({ shiftId, date, currentStaffId, existingEntry })
   }
 
   const handleCopyFromTwoWeeksAgo = async () => {
@@ -108,26 +131,97 @@ export function DienstplanView({ theme, pharmacyId, profiles, pharmacyName }) {
     await deleteSchedulesForWeek(startStr, endStr)
   }
 
-  const handleSaveSchedule = async (staffId, date, shiftId) => {
+  const handleAssignStaff = async (staffId) => {
+    if (!editModal) return
+    const { shiftId, date, existingEntry } = editModal
+    if (existingEntry) {
+      // Reassign: delete old, create new
+      await deleteScheduleEntry(existingEntry.id)
+    }
     await createScheduleEntry(staffId, shiftId, date)
     setEditModal(null)
   }
 
-  const handleDeleteSchedule = async (scheduleId) => {
-    await deleteScheduleEntry(scheduleId)
+  const handleRemoveAssignment = async () => {
+    if (!editModal?.existingEntry) return
+    await deleteScheduleEntry(editModal.existingEntry.id)
     setEditModal(null)
   }
 
-  const handleMarkAbsent = async (scheduleId, absent, reason) => {
-    await updateScheduleEntry(scheduleId, { absent, absent_reason: reason || null })
+  const handleToggleAbsent = async (absent) => {
+    if (!editModal?.existingEntry) return
+    await updateScheduleEntry(editModal.existingEntry.id, { absent, absent_reason: absent ? 'Abwesend' : null })
     setEditModal(null)
+  }
+
+  const handleConfirmPaste = async () => {
+    if (!copySourceWeek || !pasteTarget) return
+    const success = await copyWeekToWeek(copySourceWeek.startDate, copySourceWeek.endDate, pasteTarget.startDate)
+    if (success) {
+      fetchSchedules(formatDate(monthFirstDay), formatDate(monthLastDay))
+    }
+    setCopySourceWeek(null)
+    setPasteTarget(null)
+  }
+
+  const monthNamesDE = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']
+
+  const openWhatsAppModal = () => {
+    setWhatsAppText('')
+    setWhatsAppMessage(null)
+    setShowWhatsAppModal(true)
+    setTimeout(() => whatsAppTextRef.current?.focus(), 50)
+  }
+
+  const handleSendWhatsApp = async () => {
+    setSendingWhatsApp(true)
+    setWhatsAppMessage(null)
+    try {
+      const infoAccount = emailAccounts.find(a => a.email === 'info@apothekeamdamm.de')
+      if (!infoAccount) throw new Error('E-Mail-Konto info@apothekeamdamm.de nicht gefunden')
+
+      const blob = generateDienstplanPdf({
+        year: currentMonth.year,
+        month: currentMonth.month,
+        schedules, shifts, profiles, holidays, pharmacyName,
+        returnBlob: true,
+      })
+
+      const monthName = monthNamesDE[currentMonth.month]
+      const fileName = `Dienstplan_${monthName}_${currentMonth.year}.pdf`
+
+      const baseText = `Dienstplan Botendienst für ${monthName} ${currentMonth.year} im Anhang.`
+      const fullText = whatsAppText.trim()
+        ? `${baseText}\n\n${whatsAppText.trim()}`
+        : baseText
+
+      const tempJmap = new JMAPClient()
+      await tempJmap.authenticate(infoAccount.email, infoAccount.password)
+
+      const pdfFile = new File([blob], fileName, { type: 'application/pdf' })
+      const uploaded = await tempJmap.uploadBlob(pdfFile)
+
+      await tempJmap.sendEmail({
+        to: ['bot@apothekeamdamm.de'],
+        subject: `Dienstplan ${monthName} ${currentMonth.year}`,
+        textBody: fullText,
+        attachments: [{ blobId: uploaded.blobId, type: 'application/pdf', name: fileName, size: uploaded.size }],
+      })
+
+      setShowWhatsAppModal(false)
+      setWhatsAppMessage({ type: 'success', text: 'Dienstplan per WhatsApp gesendet' })
+      setTimeout(() => setWhatsAppMessage(null), 3000)
+    } catch (err) {
+      console.error('WhatsApp-Versand fehlgeschlagen:', err)
+      setWhatsAppMessage({ type: 'error', text: err.message || 'Versand fehlgeschlagen' })
+    } finally {
+      setSendingWhatsApp(false)
+    }
   }
 
   // Holiday lookup
   const holidayMap = {}
   holidays.forEach(h => { holidayMap[h.date] = h.name })
-
-  const activeProfiles = profiles.filter(p => p.active)
 
   return (
     <div className="space-y-4">
@@ -190,21 +284,35 @@ export function DienstplanView({ theme, pharmacyId, profiles, pharmacyName }) {
           </div>
 
           {viewMode === 'month' && (
-            <button
-              onClick={() => generateDienstplanPdf({
-                year: currentMonth.year,
-                month: currentMonth.month,
-                schedules,
-                shifts,
-                profiles,
-                holidays,
-                pharmacyName,
-              })}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 border border-red-200`}
-            >
-              <FilePdf size={14} weight="bold" />
-              PDF
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => generateDienstplanPdf({
+                  year: currentMonth.year,
+                  month: currentMonth.month,
+                  schedules,
+                  shifts,
+                  profiles,
+                  holidays,
+                  pharmacyName,
+                })}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 border border-red-200"
+              >
+                <FilePdf size={14} weight="bold" />
+                PDF
+              </button>
+              <button
+                onClick={openWhatsAppModal}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-green-700 bg-green-50 hover:bg-green-100 border border-green-200"
+              >
+                <WhatsappLogo size={14} weight="bold" />
+                WhatsApp
+              </button>
+              {whatsAppMessage && (
+                <span className={`text-xs font-medium ${whatsAppMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+                  {whatsAppMessage.text}
+                </span>
+              )}
+            </div>
           )}
 
           {viewMode === 'week' && (
@@ -235,33 +343,6 @@ export function DienstplanView({ theme, pharmacyId, profiles, pharmacyName }) {
         </div>
       </div>
 
-      {/* Stundenstände */}
-      {activeProfiles.length > 0 && (
-        <div className={`${theme.surface} border ${theme.border} rounded-xl p-3`}>
-          <div className="flex items-center justify-between mb-2">
-            <span className={`text-sm font-semibold ${theme.textPrimary}`}>Stundenstände</span>
-            <span className={`text-xs ${theme.textMuted}`}>kumuliert</span>
-          </div>
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {activeProfiles.map(p => {
-              const name = p.staff ? `${p.staff.first_name} ${p.staff.last_name}` : 'Unbekannt'
-              const initials = p.initials || name.split(' ').map(n => n[0]).join('').toUpperCase()
-              return (
-                <div key={p.id} className={`min-w-[160px] flex items-center justify-between gap-2 px-3 py-2 rounded-lg border ${theme.border} bg-white`}>
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-[#F59E0B]/10 flex items-center justify-center text-xs font-semibold text-[#F59E0B]">
-                      {initials}
-                    </div>
-                    <span className={`text-xs ${theme.textSecondary}`}>{name}</span>
-                  </div>
-                  <MjHoursDisplay hours={p.hours_balance} showSign className="text-sm font-semibold" />
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
       {/* Grid / Table */}
       {loading && schedules.length === 0 ? (
         <div className={`${theme.surface} border ${theme.border} rounded-xl p-12 flex items-center justify-center`}>
@@ -288,22 +369,25 @@ export function DienstplanView({ theme, pharmacyId, profiles, pharmacyName }) {
           year={currentMonth.year}
           month={currentMonth.month}
           onCellClick={handleCellClick}
+          copySourceWeek={copySourceWeek}
+          onCopySource={setCopySourceWeek}
+          onPasteWeek={setPasteTarget}
         />
       )}
 
-      {/* Shift Edit Modal */}
+      {/* Staff Picker Modal */}
       {editModal && (
-        <ShiftEditModal
+        <StaffPickerModal
           theme={theme}
-          isOpen={!!editModal}
-          staffId={editModal.staffId}
+          shiftId={editModal.shiftId}
           date={editModal.date}
-          existingSchedules={editModal.existingSchedules}
+          currentStaffId={editModal.currentStaffId}
+          existingEntry={editModal.existingEntry}
           shifts={shifts}
           profiles={profiles}
-          onSave={handleSaveSchedule}
-          onDelete={handleDeleteSchedule}
-          onMarkAbsent={handleMarkAbsent}
+          onAssign={handleAssignStaff}
+          onRemove={handleRemoveAssignment}
+          onMarkAbsent={handleToggleAbsent}
           onClose={() => setEditModal(null)}
         />
       )}
@@ -323,6 +407,110 @@ export function DienstplanView({ theme, pharmacyId, profiles, pharmacyName }) {
             fetchSchedules(formatDate(currentWeekStart), formatDate(weekEnd))
           }}
         />
+      )}
+
+      {/* Copy Week Confirmation Modal */}
+      {pasteTarget && copySourceWeek && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className={`${theme.surface} rounded-xl shadow-xl w-full max-w-sm mx-4`}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#CBD5E1]">
+              <div className="flex items-center gap-2">
+                <Warning size={20} weight="bold" className="text-amber-500" />
+                <h3 className={`text-sm font-semibold ${theme.textPrimary}`}>
+                  Woche kopieren
+                </h3>
+              </div>
+              <button
+                onClick={() => setPasteTarget(null)}
+                className={`p-1 rounded-lg ${theme.textSecondary} hover:bg-gray-100`}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="px-5 py-4">
+              <p className={`text-sm ${theme.textPrimary}`}>
+                KW {copySourceWeek.kw} → KW {pasteTarget.kw} kopieren?
+              </p>
+              <p className={`text-xs ${theme.textSecondary} mt-1`}>
+                Bestehende Einträge in KW {pasteTarget.kw} werden überschrieben.
+              </p>
+            </div>
+            <div className="flex justify-end gap-2 px-5 py-3 border-t border-[#CBD5E1]">
+              <button
+                onClick={() => setPasteTarget(null)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium ${theme.textSecondary} hover:bg-gray-100 border ${theme.border}`}
+              >
+                Abbrechen
+              </button>
+              <button
+                onClick={handleConfirmPaste}
+                className="px-4 py-1.5 rounded-lg text-xs font-medium text-white bg-[#F59E0B] hover:bg-[#D97706]"
+              >
+                Kopieren
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* WhatsApp Send Modal */}
+      {showWhatsAppModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className={`${theme.surface} rounded-xl shadow-xl w-full max-w-md mx-4`}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#CBD5E1]">
+              <div className="flex items-center gap-2">
+                <WhatsappLogo size={20} weight="bold" className="text-green-600" />
+                <h3 className={`text-sm font-semibold ${theme.textPrimary}`}>
+                  Dienstplan per WhatsApp senden
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowWhatsAppModal(false)}
+                className={`p-1 rounded-lg ${theme.textSecondary} hover:bg-gray-100`}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="px-5 py-4 space-y-3">
+              <p className={`text-xs ${theme.textSecondary}`}>
+                {monthNamesDE[currentMonth.month]} {currentMonth.year} — PDF wird als Anhang mitgesendet.
+              </p>
+              <textarea
+                ref={whatsAppTextRef}
+                value={whatsAppText}
+                onChange={e => setWhatsAppText(e.target.value)}
+                placeholder="Zusätzliche Nachricht (optional)"
+                rows={3}
+                className={`w-full rounded-lg border ${theme.border} px-3 py-2 text-sm ${theme.textPrimary} placeholder-[#94A3B8] focus:border-green-500 focus:ring-1 focus:ring-green-500 resize-none`}
+              />
+              {whatsAppMessage && (
+                <p className={`text-xs font-medium ${whatsAppMessage.type === 'error' ? 'text-red-600' : 'text-green-600'}`}>
+                  {whatsAppMessage.text}
+                </p>
+              )}
+            </div>
+            <div className="flex justify-end gap-2 px-5 py-3 border-t border-[#CBD5E1]">
+              <button
+                onClick={() => setShowWhatsAppModal(false)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium ${theme.textSecondary} hover:bg-gray-100 border ${theme.border}`}
+              >
+                Abbrechen
+              </button>
+              <button
+                onClick={handleSendWhatsApp}
+                disabled={sendingWhatsApp}
+                className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-medium text-white bg-green-600 hover:bg-green-700 disabled:opacity-50"
+              >
+                {sendingWhatsApp ? (
+                  <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white" />
+                ) : (
+                  <PaperPlaneTilt size={14} weight="bold" />
+                )}
+                Senden
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

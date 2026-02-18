@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { X, FloppyDisk, Play } from '@phosphor-icons/react'
 
-const weekDays = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag']
+const weekDays = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag']
 
 export function StandardWeekManager({ theme, isOpen, pharmacyId, profiles, schedulesHook, targetWeekStart, onClose, onApplied }) {
   const { shifts, standardWeeks, fetchStandardWeeks, saveStandardWeek, applyStandardWeek } = schedulesHook

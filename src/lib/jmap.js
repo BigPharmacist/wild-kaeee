@@ -561,4 +561,5 @@ class JMAPClient {
 
 // Singleton Export
 export const jmap = new JMAPClient()
+export { JMAPClient }
 export default jmap

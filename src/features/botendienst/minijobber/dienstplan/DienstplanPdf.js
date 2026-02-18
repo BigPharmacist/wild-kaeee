@@ -31,7 +31,7 @@ const COLORS = {
   shiftNachmittag: [220, 252, 231], // Grün
 }
 
-export function generateDienstplanPdf({ year, month, schedules, shifts, profiles, holidays, pharmacyName }) {
+export function generateDienstplanPdf({ year, month, schedules, shifts, profiles, holidays, pharmacyName, returnBlob }) {
   const doc = new jsPDF('p', 'mm', 'a4') // Hochformat
   const pageWidth = 210
   const pageHeight = 297
@@ -78,14 +78,14 @@ export function generateDienstplanPdf({ year, month, schedules, shifts, profiles
   const days = []
   for (let i = 1; i <= daysInMonth; i++) {
     const d = new Date(year, month, i)
-    if (d.getDay() === 0) continue
+    if (d.getDay() === 0 || d.getDay() === 6) continue
     days.push({
       date: d,
       dateStr: toLocalDateStr(d),
       dayName: dayNamesShort[d.getDay()],
       isHoliday: !!holidayMap[toLocalDateStr(d)],
       holidayName: holidayMap[toLocalDateStr(d)],
-      isSaturday: d.getDay() === 6,
+      isSaturday: false,
       weekday: d.getDay(),
     })
   }
@@ -302,7 +302,10 @@ export function generateDienstplanPdf({ year, month, schedules, shifts, profiles
   doc.text(`Erstellt am ${today}`, margin, pageHeight - 10)
   doc.text(`${monthNames[month]} ${year}`, pageWidth - margin, pageHeight - 10, { align: 'right' })
 
-  // Speichern
+  // Speichern oder Blob zurückgeben
+  if (returnBlob) {
+    return doc.output('blob')
+  }
   doc.save(`Dienstplan_${monthNames[month]}_${year}.pdf`)
 }
 
