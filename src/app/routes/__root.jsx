@@ -1,8 +1,9 @@
 import { createRootRoute } from '@tanstack/react-router'
-import { lazy, Suspense } from 'react'
+import { Suspense } from 'react'
 import { LoadingSpinner } from '../../shared/ui'
+import { lazyWithRetry } from '../../lib/lazyWithRetry'
 
-const AuthenticatedLayout = lazy(() => import('../../features/dashboard/AuthenticatedLayout'))
+const AuthenticatedLayout = lazyWithRetry(() => import('../../features/dashboard/AuthenticatedLayout'))
 
 export const Route = createRootRoute({
   component: RootLayout,

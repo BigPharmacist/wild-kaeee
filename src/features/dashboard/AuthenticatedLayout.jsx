@@ -1,15 +1,16 @@
-import { lazy, Suspense, useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
 import { Outlet, useNavigate } from '@tanstack/react-router'
 import { useAuth, useTheme, useNavigation, useStaff } from '../../context'
 import { useFaxCounts } from '../fax'
 import { LoadingSpinner } from '../../shared/ui'
+import { lazyWithRetry } from '../../lib/lazyWithRetry'
 
-const AuthView = lazy(() => import('../auth/AuthView'))
-const TokenDriverView = lazy(() => import('../botendienst/TokenDriverView'))
-const DashboardHeader = lazy(() => import('./DashboardHeader'))
-const SidebarNav = lazy(() => import('./SidebarNav'))
-const FloatingAiChat = lazy(() => import('../../shared/ui/FloatingAiChat'))
-const ContactScanManager = lazy(() => import('../contacts/ContactScanManager'))
+const AuthView = lazyWithRetry(() => import('../auth/AuthView'))
+const TokenDriverView = lazyWithRetry(() => import('../botendienst/TokenDriverView'))
+const DashboardHeader = lazyWithRetry(() => import('./DashboardHeader'))
+const SidebarNav = lazyWithRetry(() => import('./SidebarNav'))
+const FloatingAiChat = lazyWithRetry(() => import('../../shared/ui/FloatingAiChat'))
+const ContactScanManager = lazyWithRetry(() => import('../contacts/ContactScanManager'))
 
 /**
  * Inner layout for authenticated users - renders the app shell

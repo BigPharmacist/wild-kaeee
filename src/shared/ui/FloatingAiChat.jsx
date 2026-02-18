@@ -1,9 +1,10 @@
-import { useState, useRef, useEffect, lazy, Suspense } from 'react'
+import { useState, useRef, useEffect, Suspense } from 'react'
 import { X, PaperPlaneTilt, CircleNotch, Robot, User, Globe } from '@phosphor-icons/react'
 import { supabase } from '../../lib/supabase'
 import remarkGfm from 'remark-gfm'
+import { lazyWithRetry } from '../../lib/lazyWithRetry'
 
-const ReactMarkdown = lazy(() => import('react-markdown'))
+const ReactMarkdown = lazyWithRetry(() => import('react-markdown'))
 
 // Kaeee-Icon Komponente (weiß oder farbig)
 const KaeeeIcon = ({ size = 20, white = false, className = '' }) => (

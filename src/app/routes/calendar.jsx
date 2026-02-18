@@ -1,10 +1,11 @@
 import { createRoute } from '@tanstack/react-router'
-import { lazy, Suspense, useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
 import { LoadingSpinner } from '../../shared/ui'
+import { lazyWithRetry } from '../../lib/lazyWithRetry'
 import { useNavigation } from '../../context'
 import { Route as rootRoute } from './__root'
 
-const CalendarPage = lazy(() => import('../../features/calendar/CalendarPage'))
+const CalendarPage = lazyWithRetry(() => import('../../features/calendar/CalendarPage'))
 
 export const Route = createRoute({
   getParentRoute: () => rootRoute,

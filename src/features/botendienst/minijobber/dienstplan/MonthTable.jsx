@@ -1,4 +1,4 @@
-import { Copy, ClipboardText, X } from '@phosphor-icons/react'
+import { Copy, ClipboardText, X, Trash } from '@phosphor-icons/react'
 import { toLocalDateStr } from '../shared/staffColors'
 import { GanttWeekBlock } from './GanttWeekBlock'
 
@@ -21,7 +21,7 @@ function padWeekDays(weekDays) {
   return padded.map((d, i) => d || { empty: true, dayName: dayNamesWeek[i] })
 }
 
-export function MonthTable({ theme, profiles, schedules, shifts, holidayMap, year, month, onCellClick, copySourceWeek, onCopySource, onPasteWeek }) {
+export function MonthTable({ theme, profiles, schedules, shifts, holidayMap, year, month, onCellClick, copySourceWeek, onCopySource, onPasteWeek, onDeleteWeek }) {
   const todayStr = toLocalDateStr(new Date())
   const daysInMonth = new Date(year, month + 1, 0).getDate()
 
@@ -65,8 +65,8 @@ export function MonthTable({ theme, profiles, schedules, shifts, holidayMap, yea
           key={week.kw}
           className={`${theme.surface} border ${theme.border} rounded-2xl overflow-hidden shadow-[0_4px_12px_rgba(30,41,59,0.08)]`}
         >
-          {/* ── KW Header with Copy/Paste ── */}
-          <div className="flex items-center gap-2 px-4 py-2 bg-[#F8FAFC] border-b border-[#CBD5E1]">
+          {/* ── KW Header with Copy/Paste/Delete ── */}
+          <div className="group/kwrow flex items-center gap-2 px-4 py-2 bg-[#F8FAFC] border-b border-[#CBD5E1]">
             <div className="group/kw flex items-center shrink-0">
               {copySourceWeek?.kw === week.kw ? (
                 /* Source week selected */
@@ -112,6 +112,14 @@ export function MonthTable({ theme, profiles, schedules, shifts, holidayMap, yea
                 </>
               )}
             </div>
+            <div className="flex-1" />
+            <button
+              onClick={() => onDeleteWeek(week.startDate, week.endDate, week.kw)}
+              className="p-1 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover/kwrow:opacity-100 transition-all"
+              title={`KW ${week.kw} löschen`}
+            >
+              <Trash size={14} weight="bold" />
+            </button>
           </div>
 
           {/* ── Week grid ── */}

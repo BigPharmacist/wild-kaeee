@@ -1,4 +1,4 @@
-import { memo, useState, useEffect, useRef, lazy, Suspense } from 'react'
+import { memo, useState, useEffect, useRef, Suspense } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { Sparkle, CheckCircle, Warning, Clock, CaretLeft, CaretRight } from '@phosphor-icons/react'
 import { useTheme, useAuth, usePharmacy, useStaff, useEmail, useNavigation } from '../../context'
@@ -8,10 +8,11 @@ import useDashboardEvents from './useDashboardEvents'
 import usePlanData from './usePlanData'
 import NewsWidget from './NewsWidget'
 import { BotenWidgetContent } from './BotenWidget'
+import { lazyWithRetry } from '../../lib/lazyWithRetry'
 
-const WeatherModal = lazy(() => import('./modals/WeatherModal'))
-const BiowetterModal = lazy(() => import('./modals/BiowetterModal'))
-const ReactMarkdown = lazy(() => import('react-markdown'))
+const WeatherModal = lazyWithRetry(() => import('./modals/WeatherModal'))
+const BiowetterModal = lazyWithRetry(() => import('./modals/BiowetterModal'))
+const ReactMarkdown = lazyWithRetry(() => import('react-markdown'))
 import remarkGfm from 'remark-gfm'
 
 const DashboardHome = memo(function DashboardHome() {

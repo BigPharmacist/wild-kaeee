@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { X, FilePdf } from '@phosphor-icons/react'
 import { generateZeitraumPdf } from './MonatsberichtPdf'
+import { PdfPreviewModal } from '../shared/PdfPreviewModal'
 
 export function ZeitraumPdfDialog({ theme, isOpen, pharmacyId, pharmacy, profiles, calculateRangeReport, onClose }) {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [staffId, setStaffId] = useState('')
   const [generating, setGenerating] = useState(false)
+  const [pdfPreview, setPdfPreview] = useState(null)
 
   const handleGenerate = async () => {
     if (!startDate || !endDate || !staffId) return
@@ -25,7 +27,7 @@ export function ZeitraumPdfDialog({ theme, isOpen, pharmacyId, pharmacy, profile
       ? `${profile.staff.first_name} ${profile.staff.last_name}`
       : 'Unbekannt'
 
-    generateZeitraumPdf({
+    const result = generateZeitraumPdf({
       pharmacy,
       employeeName: name,
       startDate,
@@ -33,8 +35,8 @@ export function ZeitraumPdfDialog({ theme, isOpen, pharmacyId, pharmacy, profile
       reportData,
     })
 
+    setPdfPreview(result)
     setGenerating(false)
-    onClose()
   }
 
   if (!isOpen) return null
@@ -106,6 +108,16 @@ export function ZeitraumPdfDialog({ theme, isOpen, pharmacyId, pharmacy, profile
           </button>
         </div>
       </div>
+
+      {/* PDF Preview */}
+      {pdfPreview && (
+        <PdfPreviewModal
+          theme={theme}
+          blob={pdfPreview.blob}
+          fileName={pdfPreview.fileName}
+          onClose={() => { setPdfPreview(null); onClose() }}
+        />
+      )}
     </div>
   )
 }

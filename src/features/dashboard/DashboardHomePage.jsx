@@ -1,6 +1,6 @@
-import { lazy } from 'react'
+import { lazyWithRetry } from '../../lib/lazyWithRetry'
 
-const DashboardHome = lazy(() => import('./DashboardHome'))
+const DashboardHome = lazyWithRetry(() => import('./DashboardHome'))
 
 export default function DashboardHomePage() {
   return (

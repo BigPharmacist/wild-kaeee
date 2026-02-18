@@ -5,7 +5,6 @@ export function useMjSchedules({ pharmacyId }) {
   const [schedules, setSchedules] = useState([])
   const [shifts, setShifts] = useState([])
   const [holidays, setHolidays] = useState([])
-  const [standardWeeks, setStandardWeeks] = useState([])
   const [loading, setLoading] = useState(false)
 
   const fetchShifts = useCallback(async () => {
@@ -186,48 +185,31 @@ export function useMjSchedules({ pharmacyId }) {
     return true
   }, [pharmacyId])
 
-  const copyFromTwoWeeksAgo = useCallback(async (targetStartDate, targetEndDate) => {
-    if (!pharmacyId) return false
-
-    // Calculate 2 weeks ago
-    const start = new Date(targetStartDate)
-    const twoWeeksAgo = new Date(start)
-    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14)
-    const twoWeeksAgoEnd = new Date(targetEndDate)
-    twoWeeksAgoEnd.setDate(twoWeeksAgoEnd.getDate() - 14)
-
-    const srcStart = twoWeeksAgo.toISOString().split('T')[0]
-    const srcEnd = twoWeeksAgoEnd.toISOString().split('T')[0]
-
-    // Fetch source schedules
-    const { data: srcSchedules, error } = await supabase
-      .from('mj_schedules')
-      .select('staff_id, shift_id, date, absent, absent_reason')
-      .eq('pharmacy_id', pharmacyId)
-      .gte('date', srcStart)
-      .lte('date', srcEnd)
-
-    if (error) {
-      console.error('Fehler beim Laden der Quell-Woche:', error)
-      return false
-    }
-
-    if (!srcSchedules || srcSchedules.length === 0) return false
-
-    // Map to new dates (+14 days)
-    const entries = srcSchedules.map(s => ({
-      staff_id: s.staff_id,
-      shift_id: s.shift_id,
-      date: addDays(s.date, 14),
-      absent: s.absent,
-      absent_reason: s.absent_reason,
-    }))
-
-    return await bulkInsertSchedules(entries)
-  }, [pharmacyId, bulkInsertSchedules])
-
   const copyWeekToWeek = useCallback(async (srcStartDate, srcEndDate, targetStartDate) => {
     if (!pharmacyId) return false
+
+    // Montag der Quellwoche bestimmen
+    const srcFirst = new Date(srcStartDate)
+    const srcDow = srcFirst.getDay() || 7 // So=7
+    const srcMonday = new Date(srcFirst)
+    srcMonday.setDate(srcFirst.getDate() - (srcDow - 1))
+
+    // Montag der Zielwoche bestimmen
+    const tgtFirst = new Date(targetStartDate)
+    const tgtDow = tgtFirst.getDay() || 7
+    const tgtMonday = new Date(tgtFirst)
+    tgtMonday.setDate(tgtFirst.getDate() - (tgtDow - 1))
+
+    // Feiertage der Zielwoche laden
+    const tgtFriday = new Date(tgtMonday)
+    tgtFriday.setDate(tgtMonday.getDate() + 4)
+    const { data: holidaysData } = await supabase
+      .from('mj_holidays')
+      .select('date')
+      .eq('pharmacy_id', pharmacyId)
+      .gte('date', toISODate(tgtMonday))
+      .lte('date', toISODate(tgtFriday))
+    const holidaySet = new Set((holidaysData || []).map(h => h.date))
 
     const { data: srcSchedules, error } = await supabase
       .from('mj_schedules')
@@ -243,97 +225,33 @@ export function useMjSchedules({ pharmacyId }) {
 
     if (!srcSchedules || srcSchedules.length === 0) return false
 
-    const offsetDays = Math.round((new Date(targetStartDate) - new Date(srcStartDate)) / 86400000)
+    // Wochentag-basiertes Mapping: gleicher Wochentag in Zielwoche
+    const offsetDays = Math.round((tgtMonday - srcMonday) / 86400000)
 
-    const entries = srcSchedules.map(s => ({
-      staff_id: s.staff_id,
-      shift_id: s.shift_id,
-      date: addDays(s.date, offsetDays),
-      absent: s.absent,
-      absent_reason: s.absent_reason,
-    }))
-
-    return await bulkInsertSchedules(entries)
-  }, [pharmacyId, bulkInsertSchedules])
-
-  // Standard Weeks
-  const fetchStandardWeeks = useCallback(async () => {
-    if (!pharmacyId) return
-
-    const { data, error } = await supabase
-      .from('mj_standard_weeks')
-      .select('*')
-      .eq('pharmacy_id', pharmacyId)
-      .order('week_number')
-
-    if (error) {
-      console.error('Fehler beim Laden der Standard-Wochen:', error)
-    } else {
-      setStandardWeeks(data || [])
-    }
-  }, [pharmacyId])
-
-  const saveStandardWeek = useCallback(async (weekNumber, name, scheduleData) => {
-    if (!pharmacyId) return null
-
-    const { data, error } = await supabase
-      .from('mj_standard_weeks')
-      .upsert({
-        pharmacy_id: pharmacyId,
-        week_number: weekNumber,
-        name,
-        schedule_data: scheduleData,
-      }, { onConflict: 'pharmacy_id,week_number' })
-      .select()
-      .single()
-
-    if (error) {
-      console.error('Fehler beim Speichern der Standard-Woche:', error)
-      return null
-    }
-
-    setStandardWeeks(prev => {
-      const idx = prev.findIndex(w => w.week_number === weekNumber)
-      if (idx >= 0) {
-        const updated = [...prev]
-        updated[idx] = data
-        return updated
-      }
-      return [...prev, data]
-    })
-    return data
-  }, [pharmacyId])
-
-  const applyStandardWeek = useCallback(async (weekNumber, targetStartDate) => {
-    const week = standardWeeks.find(w => w.week_number === weekNumber)
-    if (!week?.schedule_data) return false
-
-    const dayMap = { Montag: 0, Dienstag: 1, Mittwoch: 2, Donnerstag: 3, Freitag: 4, Samstag: 5 }
-    const start = new Date(targetStartDate)
-    const entries = []
-
-    for (const [dayName, assignments] of Object.entries(week.schedule_data)) {
-      const dayOffset = dayMap[dayName]
-      if (dayOffset === undefined) continue
-
-      const date = new Date(start)
-      date.setDate(date.getDate() + dayOffset)
-      const dateStr = date.toISOString().split('T')[0]
-
-      for (const assignment of assignments) {
-        if (assignment.staff_id && assignment.shift_id) {
-          entries.push({
-            staff_id: assignment.staff_id,
-            shift_id: assignment.shift_id,
-            date: dateStr,
-          })
+    const entries = srcSchedules
+      .map(s => {
+        const targetDate = addDays(s.date, offsetDays)
+        return {
+          staff_id: s.staff_id,
+          shift_id: s.shift_id,
+          date: targetDate,
+          absent: s.absent,
+          absent_reason: s.absent_reason,
         }
-      }
-    }
+      })
+      .filter(e => {
+        // Wochenenden ausschließen
+        const d = new Date(e.date)
+        const dow = d.getDay()
+        if (dow === 0 || dow === 6) return false
+        // Feiertage ausschließen
+        if (holidaySet.has(e.date)) return false
+        return true
+      })
 
     if (entries.length === 0) return false
     return await bulkInsertSchedules(entries)
-  }, [standardWeeks, bulkInsertSchedules])
+  }, [pharmacyId, bulkInsertSchedules])
 
   const toggleShiftActive = useCallback(async (shiftId, active) => {
     const { error } = await supabase
@@ -354,7 +272,6 @@ export function useMjSchedules({ pharmacyId }) {
     schedules,
     shifts,
     holidays,
-    standardWeeks,
     loading,
     fetchShifts,
     fetchSchedules,
@@ -364,11 +281,7 @@ export function useMjSchedules({ pharmacyId }) {
     deleteScheduleEntry,
     deleteSchedulesForWeek,
     bulkInsertSchedules,
-    copyFromTwoWeeksAgo,
     copyWeekToWeek,
-    fetchStandardWeeks,
-    saveStandardWeek,
-    applyStandardWeek,
     toggleShiftActive,
   }
 }
@@ -378,4 +291,11 @@ function addDays(dateStr, days) {
   const d = new Date(dateStr)
   d.setDate(d.getDate() + days)
   return d.toISOString().split('T')[0]
+}
+
+function toISODate(d) {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 }

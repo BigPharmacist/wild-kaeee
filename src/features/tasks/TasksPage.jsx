@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, lazy } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useTheme, useStaff, useAuth, useSecondaryNav, useNavigation } from '../../context'
 import { useTasksQuery } from './api/useTasksQuery'
 import { useQuickCreateTask } from './api/useCreateTask'
@@ -10,7 +10,8 @@ import TasksView from './TasksView'
 import TaskFormModal from './TaskFormModal'
 import TaskCompleteModal from './TaskCompleteModal'
 
-const ProjectFormModal = lazy(() => import('../projects/ProjectFormModal'))
+import { lazyWithRetry } from '../../lib/lazyWithRetry'
+const ProjectFormModal = lazyWithRetry(() => import('../projects/ProjectFormModal'))
 
 // Projekte-Hook (wird später auch auf TanStack Query migriert)
 import useProjects from '../projects/useProjects'

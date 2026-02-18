@@ -1,6 +1,7 @@
-import { lazy, Suspense } from 'react'
+import { Suspense } from 'react'
+import { lazyWithRetry } from '../../lib/lazyWithRetry'
 
-const ReactMarkdown = lazy(() => import('react-markdown'))
+const ReactMarkdown = lazyWithRetry(() => import('react-markdown'))
 import remarkGfm from 'remark-gfm'
 
 // Wrapper component for lazy-loaded ReactMarkdown

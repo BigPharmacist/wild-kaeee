@@ -1,14 +1,14 @@
-import { lazy } from 'react'
 import { supabase, supabaseUrl } from '../../lib/supabase'
 import { downloadAmkPdf, downloadRecallPdf } from '../../lib/pdfGenerator'
 import { useTheme, useAuth, usePharmacy, useStaff, useNavigation } from '../../context'
 import { useApoState } from './hooks/useApoState'
 import { Icons } from '../../shared/ui'
+import { lazyWithRetry } from '../../lib/lazyWithRetry'
 
-const ApoView = lazy(() => import('./ApoView'))
-const ApoDetailModal = lazy(() => import('./ApoDetailModal'))
-const ApoDokumentationModal = lazy(() => import('./ApoDokumentationModal'))
-const ReactMarkdown = lazy(() => import('react-markdown'))
+const ApoView = lazyWithRetry(() => import('./ApoView'))
+const ApoDetailModal = lazyWithRetry(() => import('./ApoDetailModal'))
+const ApoDokumentationModal = lazyWithRetry(() => import('./ApoDokumentationModal'))
+const ReactMarkdown = lazyWithRetry(() => import('react-markdown'))
 import remarkGfm from 'remark-gfm'
 
 export default function ApoPage() {

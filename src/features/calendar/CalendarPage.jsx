@@ -1,15 +1,16 @@
-import { useState, useEffect, useCallback, lazy } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useTheme, useStaff, useAuth } from '../../context'
 import { useCalendarsQuery, useCalendarEventsQuery, useCalendarPermissionsQuery, useCreateEvent, useUpdateEvent, useDeleteEvent, useCreateCalendar, useUpdateCalendar, useAddCalendarPermission, useRemoveCalendarPermission } from './api'
 import { useCalendarView, useEventForm, useCalendarForm } from './hooks'
 import { supabase, supabaseUrl } from '../../lib/supabase'
 import CalendarView from './CalendarView'
 import { Icons } from '../../shared/ui'
+import { lazyWithRetry } from '../../lib/lazyWithRetry'
 
-const EventModal = lazy(() => import('./modals/EventModal'))
-const CalendarModal = lazy(() => import('./modals/CalendarModal'))
-const PermissionsModal = lazy(() => import('./modals/PermissionsModal'))
-const FaxPdfPopup = lazy(() => import('../fax/modals/FaxPdfPopup'))
+const EventModal = lazyWithRetry(() => import('./modals/EventModal'))
+const CalendarModal = lazyWithRetry(() => import('./modals/CalendarModal'))
+const PermissionsModal = lazyWithRetry(() => import('./modals/PermissionsModal'))
+const FaxPdfPopup = lazyWithRetry(() => import('../fax/modals/FaxPdfPopup'))
 
 /**
  * CalendarPage - Self-sufficient calendar page with modals

@@ -1,17 +1,18 @@
-import { useEffect, lazy } from 'react'
+import { useEffect } from 'react'
 import { useNavigation, useAuth, usePharmacy, useStaff, useTheme, useContactsContext, useEmail, usePhotosContext } from '../../context'
+import { lazyWithRetry } from '../../lib/lazyWithRetry'
 
 import useNews from '../dashboard/useNews'
 import useEnhance from '../photos/hooks/useEnhance'
 import { Icons } from '../../shared/ui'
 
-const SettingsView = lazy(() => import('./SettingsView'))
-const EmailSettingsSection = lazy(() => import('../email/EmailSettingsSection'))
-const ContactsSettingsSection = lazy(() => import('../contacts/ContactsSettingsSection'))
+const SettingsView = lazyWithRetry(() => import('./SettingsView'))
+const EmailSettingsSection = lazyWithRetry(() => import('../email/EmailSettingsSection'))
+const ContactsSettingsSection = lazyWithRetry(() => import('../contacts/ContactsSettingsSection'))
 // Modals
-const PharmacyModal = lazy(() => import('./modals/PharmacyModal'))
-const StaffModal = lazy(() => import('./modals/StaffModal'))
-const EmailAccountModal = lazy(() => import('../email/EmailAccountModal'))
+const PharmacyModal = lazyWithRetry(() => import('./modals/PharmacyModal'))
+const StaffModal = lazyWithRetry(() => import('./modals/StaffModal'))
+const EmailAccountModal = lazyWithRetry(() => import('../email/EmailAccountModal'))
 
 export default function SettingsPage() {
   const { theme } = useTheme()

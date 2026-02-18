@@ -122,6 +122,12 @@ export function WeekBlock({ theme, days, schedules, shifts, profiles, onCellClic
             return
           }
 
+          if (day.isHoliday) {
+            if (currentBar) { segments.push(currentBar); currentBar = null }
+            segments.push({ type: 'holiday', colStart: i, colSpan: 1, day })
+            return
+          }
+
           const entries = entriesPerDay[i]
           const primaryEntry = entries[0] || null
           const staffId = primaryEntry?.staff_id || null
@@ -183,6 +189,16 @@ export function WeekBlock({ theme, days, schedules, shifts, profiles, onCellClic
 
                     if (seg.type === 'empty') {
                       return <div key={`empty-${seg.colStart}`} className="min-h-[44px]" style={gridStyle} />
+                    }
+
+                    if (seg.type === 'holiday') {
+                      return (
+                        <div
+                          key={`holiday-${seg.colStart}`}
+                          className="min-h-[44px] bg-red-100/80"
+                          style={gridStyle}
+                        />
+                      )
                     }
 
                     if (seg.type === 'add') {

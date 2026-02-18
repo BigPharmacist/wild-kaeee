@@ -1,10 +1,11 @@
 import { createRoute, Navigate } from '@tanstack/react-router'
-import { lazy, Suspense, useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
 import { LoadingSpinner } from '../../shared/ui'
+import { lazyWithRetry } from '../../lib/lazyWithRetry'
 import { useNavigation, useStaff } from '../../context'
 import { Route as rootRoute } from './__root'
 
-const TasksPage = lazy(() => import('../../features/tasks/TasksPage'))
+const TasksPage = lazyWithRetry(() => import('../../features/tasks/TasksPage'))
 
 export const Route = createRoute({
   getParentRoute: () => rootRoute,

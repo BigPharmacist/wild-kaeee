@@ -1,9 +1,10 @@
-import { useEffect, useMemo, lazy } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useTheme } from '../../context'
 import { useRechnungen } from './useRechnungen'
 import { Icons, LoadingSpinner } from '../../shared/ui'
+import { lazyWithRetry } from '../../lib/lazyWithRetry'
 
-const PaperlessPdfModal = lazy(() => import('./modals/PaperlessPdfModal'))
+const PaperlessPdfModal = lazyWithRetry(() => import('./modals/PaperlessPdfModal'))
 
 const COLUMNS = [
   { key: 'phoenix', label: 'Phoenix', color: 'bg-blue-100 text-blue-800 border-blue-200' },

@@ -104,7 +104,7 @@ export function generateDienstplanPdf({ year, month, schedules, shifts, profiles
     // Akzentlinie oben
     doc.setFillColor(...COLORS.accent)
     doc.rect(margin, yPos, contentWidth, 1.5, 'F')
-    yPos += 5
+    yPos += 8
 
     // Titel
     doc.setFontSize(18)
@@ -233,6 +233,13 @@ export function generateDienstplanPdf({ year, month, schedules, shifts, profiles
     doc.setFont('helvetica', 'normal')
     doc.text(day.date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }), margin + 9, y + 5)
 
+    if (day.isHoliday && day.holidayName) {
+      doc.setFontSize(6)
+      doc.setFont('helvetica', 'italic')
+      doc.setTextColor(...COLORS.holidayText)
+      doc.text(day.holidayName, margin + dateColWidth - 1, y + 5, { align: 'right' })
+    }
+
     // Schicht-Spalten
     const dayData = scheduleMap[day.dateStr] || {}
     let colX = margin + dateColWidth
@@ -302,11 +309,13 @@ export function generateDienstplanPdf({ year, month, schedules, shifts, profiles
   doc.text(`Erstellt am ${today}`, margin, pageHeight - 10)
   doc.text(`${monthNames[month]} ${year}`, pageWidth - margin, pageHeight - 10, { align: 'right' })
 
+  const fileName = `Dienstplan_${monthNames[month]}_${year}.pdf`
+
   // Speichern oder Blob zurückgeben
   if (returnBlob) {
     return doc.output('blob')
   }
-  doc.save(`Dienstplan_${monthNames[month]}_${year}.pdf`)
+  return { blob: doc.output('blob'), fileName }
 }
 
 // Hilfsfunktion: abgerundetes Rechteck

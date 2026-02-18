@@ -1,10 +1,11 @@
 import { createRoute } from '@tanstack/react-router'
-import { lazy, Suspense, useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
 import { LoadingSpinner } from '../../shared/ui'
+import { lazyWithRetry } from '../../lib/lazyWithRetry'
 import { Route as rootRoute } from './__root'
 import { useNavigation } from '../../context'
 
-const PostPage = lazy(() => import('../../features/post/PostPage'))
+const PostPage = lazyWithRetry(() => import('../../features/post/PostPage'))
 
 export const Route = createRoute({
   getParentRoute: () => rootRoute,

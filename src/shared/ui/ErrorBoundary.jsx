@@ -20,7 +20,8 @@ class ErrorBoundary extends Component {
     const isChunkError = error?.name === 'ChunkLoadError' ||
       error?.message?.includes('Loading chunk') ||
       error?.message?.includes('Failed to fetch dynamically imported module') ||
-      error?.message?.includes('Unable to preload CSS')
+      error?.message?.includes('Unable to preload CSS') ||
+      error?.message?.includes('is not a valid JavaScript MIME type')
 
     return { hasError: true, error, isChunkError }
   }

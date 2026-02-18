@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback, lazy } from 'react'
+import { useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { supabase } from '../../lib/supabase'
 import {
@@ -11,9 +11,10 @@ import {
 import { useNavigation, useStaff, useTheme, useContactsContext, usePhotosContext, useHeaderActions } from '../../context'
 import { contactScan } from '../contacts'
 import { Icons } from '../../shared/ui'
+import { lazyWithRetry } from '../../lib/lazyWithRetry'
 
-const ContactDetailModal = lazy(() => import('./ContactDetailModal'))
-const ContactFormModal = lazy(() => import('./ContactFormModal'))
+const ContactDetailModal = lazyWithRetry(() => import('./ContactDetailModal'))
+const ContactFormModal = lazyWithRetry(() => import('./ContactFormModal'))
 
 /**
  * ContactScanManager - Global component for contact scan flow + modals

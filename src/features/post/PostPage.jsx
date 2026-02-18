@@ -1,13 +1,14 @@
-import { useState, lazy } from 'react'
+import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { supabase, supabaseUrl } from '../../lib/supabase'
 import { useTheme, useNavigation, useEmail } from '../../context'
 import { Icons } from '../../shared/ui'
+import { lazyWithRetry } from '../../lib/lazyWithRetry'
 
-const EmailView = lazy(() => import('../email/EmailView'))
-const FaxView = lazy(() => import('../fax/FaxView'))
-const FaxPdfPopup = lazy(() => import('../fax/modals/FaxPdfPopup'))
-const GesundBestellungenView = lazy(() => import('../gesund-bestellungen/GesundBestellungenView'))
+const EmailView = lazyWithRetry(() => import('../email/EmailView'))
+const FaxView = lazyWithRetry(() => import('../fax/FaxView'))
+const FaxPdfPopup = lazyWithRetry(() => import('../fax/modals/FaxPdfPopup'))
+const GesundBestellungenView = lazyWithRetry(() => import('../gesund-bestellungen/GesundBestellungenView'))
 
 export default function PostPage() {
   const { theme } = useTheme()

@@ -1,12 +1,13 @@
-import { useEffect, lazy } from 'react'
+import { useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useTheme, useNavigation, usePhotosContext } from '../../context'
 import { Icons } from '../../shared/ui'
+import { lazyWithRetry } from '../../lib/lazyWithRetry'
 
-const PhotosView = lazy(() => import('./PhotosView'))
-const ColorsView = lazy(() => import('../colors/ColorsView'))
-const PhotoEditorModal = lazy(() => import('./modals/PhotoEditorModal'))
-const ReactCrop = lazy(() => import('react-image-crop').then(m => ({ default: m.default })))
+const PhotosView = lazyWithRetry(() => import('./PhotosView'))
+const ColorsView = lazyWithRetry(() => import('../colors/ColorsView'))
+const PhotoEditorModal = lazyWithRetry(() => import('./modals/PhotoEditorModal'))
+const ReactCrop = lazyWithRetry(() => import('react-image-crop').then(m => ({ default: m.default })))
 import 'react-image-crop/dist/ReactCrop.css'
 
 export default function MiscPage() {

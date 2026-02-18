@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { CaretLeft, CaretRight, Copy, GridFour, CalendarBlank, ListBullets, FilePdf, WhatsappLogo, X, PaperPlaneTilt, Warning } from '@phosphor-icons/react'
+import { CaretLeft, CaretRight, CalendarBlank, ListBullets, FilePdf, WhatsappLogo, X, PaperPlaneTilt, Warning } from '@phosphor-icons/react'
 import { useMjSchedules } from '../hooks/useMjSchedules'
 import { WeekGrid } from './WeekGrid'
 import { MonthTable } from './MonthTable'
 import { StaffPickerModal } from './StaffPickerModal'
-import { StandardWeekManager } from './StandardWeekManager'
 import { generateDienstplanPdf } from './DienstplanPdf'
+import { PdfPreviewModal } from '../shared/PdfPreviewModal'
 import { useEmail } from '../../../../context/EmailContext'
 import { JMAPClient } from '../../../../lib/jmap'
 
@@ -37,13 +37,13 @@ export function DienstplanView({ theme, pharmacyId, profiles, pharmacyName }) {
   const [currentWeekStart, setCurrentWeekStart] = useState(() => getMonday(new Date()))
   const [currentMonth, setCurrentMonth] = useState(() => ({ year: new Date().getFullYear(), month: new Date().getMonth() }))
   const [editModal, setEditModal] = useState(null)
-  const [showStandardWeeks, setShowStandardWeeks] = useState(false)
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false)
   const [whatsAppText, setWhatsAppText] = useState('')
   const [sendingWhatsApp, setSendingWhatsApp] = useState(false)
   const [whatsAppMessage, setWhatsAppMessage] = useState(null)
   const [copySourceWeek, setCopySourceWeek] = useState(null)
   const [pasteTarget, setPasteTarget] = useState(null)
+  const [pdfPreview, setPdfPreview] = useState(null)
   const whatsAppTextRef = useRef(null)
 
   const { emailAccounts } = useEmail()
@@ -51,7 +51,7 @@ export function DienstplanView({ theme, pharmacyId, profiles, pharmacyName }) {
   const schedulesHook = useMjSchedules({ pharmacyId })
   const { schedules, shifts, holidays, loading, fetchShifts, fetchSchedules, fetchHolidays,
     createScheduleEntry, updateScheduleEntry, deleteScheduleEntry,
-    copyFromTwoWeeksAgo, copyWeekToWeek, deleteSchedulesForWeek } = schedulesHook
+    copyWeekToWeek, deleteSchedulesForWeek } = schedulesHook
 
   // Calculate week dates
   const weekDates = Array.from({ length: 5 }, (_, i) => addDays(currentWeekStart, i))
@@ -115,20 +115,17 @@ export function DienstplanView({ theme, pharmacyId, profiles, pharmacyName }) {
     setEditModal({ shiftId, date, currentStaffId, existingEntry })
   }
 
-  const handleCopyFromTwoWeeksAgo = async () => {
-    const startStr = formatDate(currentWeekStart)
-    const endStr = formatDate(weekEnd)
-    const success = await copyFromTwoWeeksAgo(startStr, endStr)
-    if (success) {
-      fetchSchedules(startStr, endStr)
-    }
-  }
-
   const handleDeleteWeek = async () => {
     if (!confirm('Alle Einträge dieser Woche löschen?')) return
     const startStr = formatDate(currentWeekStart)
     const endStr = formatDate(weekEnd)
     await deleteSchedulesForWeek(startStr, endStr)
+  }
+
+  const handleDeleteMonthWeek = async (startDate, endDate, kw) => {
+    if (!confirm(`Alle Einträge in KW ${kw} löschen?`)) return
+    await deleteSchedulesForWeek(startDate, endDate)
+    fetchSchedules(formatDate(monthFirstDay), formatDate(monthLastDay))
   }
 
   const handleAssignStaff = async (staffId) => {
@@ -286,15 +283,18 @@ export function DienstplanView({ theme, pharmacyId, profiles, pharmacyName }) {
           {viewMode === 'month' && (
             <div className="flex items-center gap-2">
               <button
-                onClick={() => generateDienstplanPdf({
-                  year: currentMonth.year,
-                  month: currentMonth.month,
-                  schedules,
-                  shifts,
-                  profiles,
-                  holidays,
-                  pharmacyName,
-                })}
+                onClick={() => {
+                  const result = generateDienstplanPdf({
+                    year: currentMonth.year,
+                    month: currentMonth.month,
+                    schedules,
+                    shifts,
+                    profiles,
+                    holidays,
+                    pharmacyName,
+                  })
+                  setPdfPreview(result)
+                }}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 border border-red-200"
               >
                 <FilePdf size={14} weight="bold" />
@@ -317,21 +317,6 @@ export function DienstplanView({ theme, pharmacyId, profiles, pharmacyName }) {
 
           {viewMode === 'week' && (
             <div className="flex items-center gap-2">
-              <button
-                onClick={handleCopyFromTwoWeeksAgo}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium ${theme.textSecondary} hover:bg-gray-100 border ${theme.border}`}
-                title="Schichtplan von vor 2 Wochen kopieren"
-              >
-                <Copy size={14} />
-                Vor 2 Wo. kopieren
-              </button>
-              <button
-                onClick={() => setShowStandardWeeks(true)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium ${theme.textSecondary} hover:bg-gray-100 border ${theme.border}`}
-              >
-                <GridFour size={14} />
-                Standard-Woche
-              </button>
               <button
                 onClick={handleDeleteWeek}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-red-600 hover:bg-red-50 border border-red-200"
@@ -372,6 +357,7 @@ export function DienstplanView({ theme, pharmacyId, profiles, pharmacyName }) {
           copySourceWeek={copySourceWeek}
           onCopySource={setCopySourceWeek}
           onPasteWeek={setPasteTarget}
+          onDeleteWeek={handleDeleteMonthWeek}
         />
       )}
 
@@ -389,23 +375,6 @@ export function DienstplanView({ theme, pharmacyId, profiles, pharmacyName }) {
           onRemove={handleRemoveAssignment}
           onMarkAbsent={handleToggleAbsent}
           onClose={() => setEditModal(null)}
-        />
-      )}
-
-      {/* Standard Week Manager */}
-      {showStandardWeeks && (
-        <StandardWeekManager
-          theme={theme}
-          isOpen={showStandardWeeks}
-          pharmacyId={pharmacyId}
-          profiles={profiles}
-          schedulesHook={schedulesHook}
-          targetWeekStart={formatDate(currentWeekStart)}
-          onClose={() => setShowStandardWeeks(false)}
-          onApplied={() => {
-            setShowStandardWeeks(false)
-            fetchSchedules(formatDate(currentWeekStart), formatDate(weekEnd))
-          }}
         />
       )}
 
@@ -511,6 +480,16 @@ export function DienstplanView({ theme, pharmacyId, profiles, pharmacyName }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* PDF Preview */}
+      {pdfPreview && (
+        <PdfPreviewModal
+          theme={theme}
+          blob={pdfPreview.blob}
+          fileName={pdfPreview.fileName}
+          onClose={() => setPdfPreview(null)}
+        />
       )}
     </div>
   )

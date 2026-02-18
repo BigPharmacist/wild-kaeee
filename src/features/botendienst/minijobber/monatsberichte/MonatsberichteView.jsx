@@ -8,6 +8,7 @@ import { MonatsberichtDetail } from './MonatsberichtDetail'
 import { StundenkontoModal } from './StundenkontoModal'
 import { ZeitraumPdfDialog } from './ZeitraumPdfDialog'
 import { generateMonatsberichtPdf } from './MonatsberichtPdf'
+import { PdfPreviewModal } from '../shared/PdfPreviewModal'
 
 const monthNames = [
   'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
@@ -23,6 +24,7 @@ export function MonatsberichteView({ theme, pharmacyId, pharmacies, profiles, sw
   const [detailStaffId, setDetailStaffId] = useState(null)
   const [stundenkontoStaffId, setStundenkontoStaffId] = useState(null)
   const [showZeitraumPdf, setShowZeitraumPdf] = useState(false)
+  const [pdfPreview, setPdfPreview] = useState(null)
 
   const { fetchAllReportsForStaff, calculateReport, calculateRangeReport, loading } = useMjMonthlyReports({ pharmacyId })
   const { getEffectiveConditions } = useMjMonthlyConditions({ pharmacyId })
@@ -105,7 +107,7 @@ export function MonatsberichteView({ theme, pharmacyId, pharmacies, profiles, sw
       ? `${profile.staff.first_name} ${profile.staff.last_name}`
       : 'Unbekannt'
 
-    generateMonatsberichtPdf({
+    const result = generateMonatsberichtPdf({
       pharmacy,
       employeeName: name,
       year,
@@ -113,6 +115,7 @@ export function MonatsberichteView({ theme, pharmacyId, pharmacies, profiles, sw
       monthName: monthNames[month - 1],
       reportData,
     })
+    setPdfPreview(result)
   }
 
   return (
@@ -272,6 +275,16 @@ export function MonatsberichteView({ theme, pharmacyId, pharmacies, profiles, sw
           pharmacyId={pharmacyId}
           allReports={staffData[stundenkontoStaffId]?.allReports}
           onClose={() => setStundenkontoStaffId(null)}
+        />
+      )}
+
+      {/* PDF Preview */}
+      {pdfPreview && (
+        <PdfPreviewModal
+          theme={theme}
+          blob={pdfPreview.blob}
+          fileName={pdfPreview.fileName}
+          onClose={() => setPdfPreview(null)}
         />
       )}
 

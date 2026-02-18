@@ -20,28 +20,31 @@ function getMonday(d) {
 }
 
 const staffColors = [
-  { bg: 'bg-blue-100', dot: 'bg-blue-500', text: 'text-blue-800' },
-  { bg: 'bg-emerald-100', dot: 'bg-emerald-500', text: 'text-emerald-800' },
-  { bg: 'bg-violet-100', dot: 'bg-violet-500', text: 'text-violet-800' },
-  { bg: 'bg-amber-100', dot: 'bg-amber-500', text: 'text-amber-800' },
-  { bg: 'bg-rose-100', dot: 'bg-rose-500', text: 'text-rose-800' },
-  { bg: 'bg-cyan-100', dot: 'bg-cyan-500', text: 'text-cyan-800' },
-  { bg: 'bg-orange-100', dot: 'bg-orange-500', text: 'text-orange-800' },
-  { bg: 'bg-fuchsia-100', dot: 'bg-fuchsia-500', text: 'text-fuchsia-800' },
+  { bg: 'bg-[#A8637A]', barBg: 'bg-[#f2b8c6]', text: 'text-white', initials: 'text-[10px]' },
+  { bg: 'bg-[#5A9660]', barBg: 'bg-[#a6e0b8]', text: 'text-white', initials: 'text-[10px]' },
+  { bg: 'bg-[#7E6AAF]', barBg: 'bg-[#d4b0e3]', text: 'text-white', initials: 'text-[10px]' },
+  { bg: 'bg-[#B08840]', barBg: 'bg-[#fad6a6]', text: 'text-white', initials: 'text-[10px]' },
+  { bg: 'bg-[#5B82A8]', barBg: 'bg-[#addbef]', text: 'text-white', initials: 'text-[10px]' },
+  { bg: 'bg-[#4A9298]', barBg: 'bg-[#a8e5e2]', text: 'text-white', initials: 'text-[10px]' },
+  { bg: 'bg-[#B07848]', barBg: 'bg-[#e8c9a0]', text: 'text-white', initials: 'text-[10px]' },
+  { bg: 'bg-[#9468A8]', barBg: 'bg-[#c9b8e8]', text: 'text-white', initials: 'text-[10px]' },
 ]
 
+// Stable color map built from sorted staff IDs
+const colorMap = new Map()
+function buildColorMap(schedules) {
+  colorMap.clear()
+  const ids = [...new Set(schedules.map(s => s.staff_id))].sort()
+  ids.forEach((id, i) => colorMap.set(id, staffColors[i % staffColors.length]))
+}
 function getStaffColor(staffId) {
-  let hash = 0
-  for (let i = 0; i < staffId.length; i++) {
-    hash = ((hash << 5) - hash) + staffId.charCodeAt(i)
-    hash |= 0
-  }
-  return staffColors[Math.abs(hash) % staffColors.length]
+  return colorMap.get(staffId) || staffColors[0]
 }
 
 export function BotenWidgetContent({ theme, pharmacyId }) {
   const [schedules, setSchedules] = useState([])
   const [shifts, setShifts] = useState([])
+  const [holidays, setHolidays] = useState([])
   const [loading, setLoading] = useState(true)
 
   const monday = getMonday(new Date())
@@ -60,7 +63,7 @@ export function BotenWidgetContent({ theme, pharmacyId }) {
     if (!pharmacyId) return
     setLoading(true)
 
-    const [{ data: shiftsData }, { data: schedulesData }] = await Promise.all([
+    const [{ data: shiftsData }, { data: schedulesData }, { data: holidaysData }] = await Promise.all([
       supabase
         .from('mj_shifts')
         .select('*')
@@ -69,21 +72,42 @@ export function BotenWidgetContent({ theme, pharmacyId }) {
         .order('start_time'),
       supabase
         .from('mj_schedules')
-        .select('*, staff:staff!mj_schedules_staff_id_fkey(first_name), shift:mj_shifts!mj_schedules_shift_id_fkey(name, active)')
+        .select('*, staff:staff!mj_schedules_staff_id_fkey(first_name, last_name), shift:mj_shifts!mj_schedules_shift_id_fkey(name, active)')
+        .eq('pharmacy_id', pharmacyId)
+        .gte('date', toLocalDateStr(monday))
+        .lte('date', toLocalDateStr(friday)),
+      supabase
+        .from('mj_holidays')
+        .select('date, name')
         .eq('pharmacy_id', pharmacyId)
         .gte('date', toLocalDateStr(monday))
         .lte('date', toLocalDateStr(friday)),
     ])
 
     setShifts(shiftsData || [])
-    // Nur Schedules mit aktiven Schichten
-    setSchedules((schedulesData || []).filter(s => s.shift?.active !== false))
+    const filtered = (schedulesData || []).filter(s => s.shift?.active !== false)
+    setSchedules(filtered)
+    setHolidays(holidaysData || [])
+    buildColorMap(filtered)
     setLoading(false)
   }, [pharmacyId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  // Shift-Reihenfolge
+  // Holiday map
+  const holidayMap = {}
+  holidays.forEach(h => { holidayMap[h.date] = h.name })
+
+  // Schedule map: date → shiftId → [entries]
+  const scheduleMap = {}
+  schedules.forEach(s => {
+    if (!scheduleMap[s.date]) scheduleMap[s.date] = {}
+    const sid = s.shift_id || '_none'
+    if (!scheduleMap[s.date][sid]) scheduleMap[s.date][sid] = []
+    scheduleMap[s.date][sid].push(s)
+  })
+
+  // Shift order
   const shiftOrder = ['Vormittag', 'Nachmittag']
   const sortedShifts = [...shifts].sort((a, b) => {
     const iA = shiftOrder.indexOf(a.name)
@@ -92,6 +116,19 @@ export function BotenWidgetContent({ theme, pharmacyId }) {
     if (iA !== -1) return -1
     if (iB !== -1) return 1
     return a.name.localeCompare(b.name)
+  })
+
+  // Days with metadata
+  const days = weekDates.map(date => {
+    const dateStr = toLocalDateStr(date)
+    return {
+      date,
+      dateStr,
+      dayName: dayLabels[date.getDay() - 1],
+      isToday: dateStr === todayStr,
+      isHoliday: !!holidayMap[dateStr],
+      holidayName: holidayMap[dateStr] || null,
+    }
   })
 
   if (loading) {
@@ -103,75 +140,139 @@ export function BotenWidgetContent({ theme, pharmacyId }) {
   }
 
   return (
-    <div>
-      {/* Tage-Header */}
-          <div className="grid grid-cols-5 gap-1 mb-1.5">
-            {weekDates.map((date, i) => {
-              const dateStr = toLocalDateStr(date)
-              const isToday = dateStr === todayStr
-              return (
-                <div key={dateStr} className="text-center">
-                  <span className={`text-[10px] font-semibold ${isToday ? theme.accentText : theme.textMuted}`}>
-                    {dayLabels[i]}
-                  </span>
-                  <br />
-                  <span className={`text-[9px] ${isToday ? theme.accentText : theme.textMuted}`}>
-                    {date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}
-                  </span>
-                </div>
-              )
-            })}
+    <div className="space-y-0.5">
+      {/* Day headers */}
+      <div className="grid grid-cols-5">
+        {days.map(day => (
+          <div
+            key={day.dateStr}
+            className={`text-center py-1 ${
+              day.isToday ? 'bg-[#FEF3C7]/50 rounded-t-md' :
+              day.isHoliday ? 'bg-red-50/50 rounded-t-md' : ''
+            }`}
+          >
+            <span className={`text-[10px] font-bold ${
+              day.isToday ? 'text-[#92400E]' :
+              day.isHoliday ? 'text-red-600' :
+              theme.textMuted
+            }`}>
+              {day.dayName}
+            </span>
+            <span className={`text-[9px] ml-0.5 ${
+              day.isToday ? 'text-[#92400E]/70' :
+              day.isHoliday ? 'text-red-400' :
+              theme.textMuted
+            }`}>
+              {day.date.getDate()}.
+            </span>
           </div>
+        ))}
+      </div>
 
-          {/* Pro Schicht eine Zeile */}
-          {sortedShifts.map(shift => (
-            <div key={shift.id} className="mb-1.5">
-              <p className={`text-[9px] font-medium ${theme.textMuted} mb-0.5 uppercase tracking-wider`}>
-                {shift.name}
-              </p>
-              <div className="grid grid-cols-5 gap-1">
-                {weekDates.map(date => {
-                  const dateStr = toLocalDateStr(date)
-                  const isToday = dateStr === todayStr
-                  const dayEntries = schedules.filter(s => s.date === dateStr && s.shift_id === shift.id && !s.absent)
-                  const absentEntries = schedules.filter(s => s.date === dateStr && s.shift_id === shift.id && s.absent)
+      {/* Shift rows with Gantt bars */}
+      {sortedShifts.map(shift => {
+        // Build segments
+        const entriesPerDay = days.map(day => scheduleMap[day.dateStr]?.[shift.id] || [])
+        const segments = []
+        let currentBar = null
 
+        days.forEach((day, i) => {
+          if (day.isHoliday) {
+            if (currentBar) { segments.push(currentBar); currentBar = null }
+            segments.push({ type: 'holiday', colStart: i, colSpan: 1 })
+            return
+          }
+
+          const entries = entriesPerDay[i]
+          const primary = entries.find(e => !e.absent) || null
+          const staffId = primary?.staff_id || null
+
+          if (!primary) {
+            if (currentBar) { segments.push(currentBar); currentBar = null }
+            segments.push({ type: 'empty', colStart: i, colSpan: 1, absent: entries.some(e => e.absent), absentName: entries[0]?.staff?.first_name })
+            return
+          }
+
+          if (currentBar && staffId === currentBar.staffId) {
+            currentBar.colSpan++
+          } else {
+            if (currentBar) segments.push(currentBar)
+            currentBar = {
+              type: 'staff',
+              staffId,
+              colStart: i,
+              colSpan: 1,
+              name: primary.staff?.first_name || '?',
+              initials: ((primary.staff?.first_name?.[0] || '') + (primary.staff?.last_name?.[0] || '')).toUpperCase(),
+            }
+          }
+        })
+        if (currentBar) segments.push(currentBar)
+
+        return (
+          <div key={shift.id}>
+            <div className="relative">
+              {/* Background columns for today/holiday */}
+              <div className="absolute inset-0 grid grid-cols-5">
+                {days.map((day, i) => (
+                  <div
+                    key={`bg-${i}`}
+                    className={`${
+                      day.isToday ? 'bg-[#FEF3C7]/30' :
+                      day.isHoliday ? 'bg-red-100/60' : ''
+                    }`}
+                  />
+                ))}
+              </div>
+
+              {/* Bars */}
+              <div className="relative grid grid-cols-5" style={{ minHeight: '26px' }}>
+                {segments.map(seg => {
+                  const gridStyle = { gridColumn: `${seg.colStart + 1} / span ${seg.colSpan}` }
+
+                  if (seg.type === 'holiday') {
+                    return <div key={`h-${seg.colStart}`} style={gridStyle} />
+                  }
+
+                  if (seg.type === 'empty') {
+                    return (
+                      <div key={`e-${seg.colStart}`} className="flex items-center justify-center" style={gridStyle}>
+                        {seg.absent ? (
+                          <span className="text-[9px] text-gray-400 line-through">{seg.absentName}</span>
+                        ) : (
+                          <span className={`text-[9px] ${theme.textMuted}`}>–</span>
+                        )}
+                      </div>
+                    )
+                  }
+
+                  // Staff Gantt bar
+                  const color = getStaffColor(seg.staffId)
                   return (
-                    <div
-                      key={dateStr}
-                      className={`rounded-md px-1 py-0.5 min-h-[22px] flex flex-col items-center justify-center ${
-                        isToday ? 'ring-1 ring-[#F59E0B]/40 ' : ''
-                      }${dayEntries.length > 0 || absentEntries.length > 0 ? 'bg-gray-50' : 'bg-gray-50'}`}
-                    >
-                      {dayEntries.map(s => {
-                        const color = getStaffColor(s.staff_id)
-                        return (
-                          <span key={s.id} className={`text-[10px] font-semibold leading-tight truncate w-full text-center ${color.text}`}>
-                            {s.staff?.first_name}
-                          </span>
-                        )
-                      })}
-                      {absentEntries.map(s => (
-                        <span key={s.id} className="text-[9px] text-gray-400 line-through leading-tight truncate w-full text-center">
-                          {s.staff?.first_name}
+                    <div key={`s-${seg.staffId}-${seg.colStart}`} className="p-0.5" style={gridStyle}>
+                      <div className={`${color.barBg} rounded-md h-full flex items-center gap-1 px-1.5 min-h-[22px]`}>
+                        <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold shrink-0 ${color.bg} ${color.text}`}>
+                          {seg.initials}
                         </span>
-                      ))}
-                      {dayEntries.length === 0 && absentEntries.length === 0 && (
-                        <span className={`text-[10px] ${theme.textMuted}`}>–</span>
-                      )}
+                        <span className={`text-[10px] font-semibold truncate ${theme.textPrimary}`}>
+                          {seg.name}
+                        </span>
+                      </div>
                     </div>
                   )
                 })}
               </div>
             </div>
-          ))}
+          </div>
+        )
+      })}
 
-          {/* Footer */}
-          <p className={`text-[10px] ${theme.textMuted} pt-1`}>
-            KW {getWeekNumber(monday)}
-          </p>
-        </div>
-      )
+      {/* Footer */}
+      <p className={`text-[10px] ${theme.textMuted} pt-1`}>
+        KW {getWeekNumber(monday)}
+      </p>
+    </div>
+  )
 }
 
 function getWeekNumber(d) {

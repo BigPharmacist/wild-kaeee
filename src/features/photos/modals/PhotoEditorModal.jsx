@@ -1,6 +1,7 @@
-import { lazy, Suspense } from 'react'
+import { Suspense } from 'react'
+import { lazyWithRetry } from '../../../lib/lazyWithRetry'
 
-const ReactCrop = lazy(() => import('react-image-crop').then(m => ({ default: m.default })))
+const ReactCrop = lazyWithRetry(() => import('react-image-crop').then(m => ({ default: m.default })))
 
 /**
  * Modal for editing photos (crop, brightness, contrast)

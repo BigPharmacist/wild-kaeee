@@ -1,9 +1,10 @@
 import { createRoute } from '@tanstack/react-router'
-import { lazy, Suspense } from 'react'
+import { Suspense } from 'react'
 import { LoadingSpinner } from '../../shared/ui'
+import { lazyWithRetry } from '../../lib/lazyWithRetry'
 import { Route as rootRoute } from './__root'
 
-const EmailPage = lazy(() => import('../../features/email/EmailPage'))
+const EmailPage = lazyWithRetry(() => import('../../features/email/EmailPage'))
 
 export const Route = createRoute({
   getParentRoute: () => rootRoute,
