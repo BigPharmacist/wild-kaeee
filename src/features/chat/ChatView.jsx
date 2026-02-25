@@ -1,5 +1,18 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import { Check, Checks, Trash, ArrowUp, PencilSimple, X, ArrowClockwise, Smiley, Paperclip, File, DownloadSimple, Image } from '@phosphor-icons/react'
+
+const URL_REGEX = /(https?:\/\/[^\s<]+)/g
+
+function linkifyText(text) {
+  if (!text) return text
+  const parts = text.split(URL_REGEX)
+  if (parts.length === 1) return text
+  return parts.map((part, i) =>
+    URL_REGEX.test(part) ? (
+      <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="underline text-[#0D9488] hover:text-[#0F766E] break-all">{part}</a>
+    ) : part
+  )
+}
 
 const ChatView = ({
   theme,
@@ -302,7 +315,7 @@ const ChatView = ({
                             </div>
                           ) : (
                             <>
-                              {entry.message && <p className="text-sm leading-relaxed whitespace-pre-wrap text-left">{entry.message}</p>}
+                              {entry.message && <p className="text-sm leading-relaxed whitespace-pre-wrap text-left">{linkifyText(entry.message)}</p>}
                               <FileAttachment entry={entry} />
                             </>
                           )}
@@ -379,7 +392,7 @@ const ChatView = ({
                             <p className={`text-sm italic ${theme.textMuted}`}>Nachricht gelöscht</p>
                           ) : (
                             <>
-                              {entry.message && <p className="text-sm leading-relaxed whitespace-pre-wrap">{entry.message}</p>}
+                              {entry.message && <p className="text-sm leading-relaxed whitespace-pre-wrap">{linkifyText(entry.message)}</p>}
                               <FileAttachment entry={entry} />
                             </>
                           )}
