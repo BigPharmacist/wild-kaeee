@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Plus, PencilSimple, Eye, EyeSlash, User } from '@phosphor-icons/react'
 import { MjStatusBadge } from '../shared/MjStatusBadge'
 import { MjHoursDisplay } from '../shared/MjHoursDisplay'
+import { getStaffColor } from '../shared/staffColors'
 import { MitarbeiterDetailModal } from './MitarbeiterDetailModal'
 import { MonthlyConditionsView } from './MonthlyConditionsView'
 
@@ -110,6 +111,9 @@ export function MitarbeiterList({ theme, pharmacyId, staff, profilesHook }) {
               : 'Unbekannt'
             const initials = profile.initials || name.split(' ').map(n => n[0]).join('').toUpperCase()
 
+            const staffColor = profile.active ? getStaffColor(profile.staff_id) : null
+            const colorHex = staffColor?.bg.match(/#[0-9A-Fa-f]+/)?.[0]
+
             return (
               <div
                 key={profile.id}
@@ -120,7 +124,13 @@ export function MitarbeiterList({ theme, pharmacyId, staff, profilesHook }) {
                 {/* Card Header */}
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-[#F59E0B]/10 flex items-center justify-center text-sm font-bold text-[#F59E0B]">
+                    <div
+                      className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold"
+                      style={colorHex
+                        ? { backgroundColor: colorHex + '1A', color: colorHex }
+                        : { backgroundColor: 'rgb(245 158 11 / 0.1)', color: '#F59E0B' }
+                      }
+                    >
                       {initials}
                     </div>
                     <div>

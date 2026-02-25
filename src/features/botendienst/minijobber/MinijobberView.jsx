@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Users, CalendarBlank, Clock, FileText, GearSix, Info, ChartBar } from '@phosphor-icons/react'
 import { useMjProfiles } from './hooks/useMjProfiles'
-import { buildStaffColorMap } from './shared/staffColors'
+import { buildStaffColorMap, buildStaffColorIndexMap } from './shared/staffColors'
 import { MitarbeiterList } from './mitarbeiter/MitarbeiterList'
 import { DienstplanView } from './dienstplan/DienstplanView'
 import { ZeiterfassungView } from './zeiterfassung/ZeiterfassungView'
@@ -32,9 +32,10 @@ export default function MinijobberView({ theme, session, currentStaff, pharmacie
     }
   }, [pharmacyId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Build color map synchronously before children render
+  // Build color maps synchronously before children render
   if (profilesHook.profiles.length > 0) {
     buildStaffColorMap(profilesHook.profiles)
+    buildStaffColorIndexMap(profilesHook.profiles)
   }
 
   const renderContent = () => {

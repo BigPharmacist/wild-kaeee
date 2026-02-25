@@ -71,6 +71,7 @@ export function useMjProfiles({ pharmacyId }) {
         hours_balance: profileData.initial_balance || 0,
         job_type: profileData.job_type || 'Autobote',
         initials: profileData.initials || null,
+        color_index: profileData.color_index ?? null,
         active: true,
       })
       .select('*, staff:staff!mj_profiles_staff_id_fkey(id, first_name, last_name, email, mobile, street, postal_code, city, employed_since, exit_date)')

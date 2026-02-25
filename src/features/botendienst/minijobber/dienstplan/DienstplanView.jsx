@@ -6,8 +6,6 @@ import { MonthTable } from './MonthTable'
 import { StaffPickerModal } from './StaffPickerModal'
 import { generateDienstplanPdf } from './DienstplanPdf'
 import { PdfPreviewModal } from '../shared/PdfPreviewModal'
-import { useEmail } from '../../../../context/EmailContext'
-import { JMAPClient } from '../../../../lib/jmap'
 
 const dayNames = ['Mo', 'Di', 'Mi', 'Do', 'Fr']
 
@@ -45,8 +43,6 @@ export function DienstplanView({ theme, pharmacyId, profiles, pharmacyName }) {
   const [pasteTarget, setPasteTarget] = useState(null)
   const [pdfPreview, setPdfPreview] = useState(null)
   const whatsAppTextRef = useRef(null)
-
-  const { emailAccounts } = useEmail()
 
   const schedulesHook = useMjSchedules({ pharmacyId })
   const { schedules, shifts, holidays, loading, fetchShifts, fetchSchedules, fetchHolidays,
@@ -174,9 +170,6 @@ export function DienstplanView({ theme, pharmacyId, profiles, pharmacyName }) {
     setSendingWhatsApp(true)
     setWhatsAppMessage(null)
     try {
-      const infoAccount = emailAccounts.find(a => a.email === 'info@apothekeamdamm.de')
-      if (!infoAccount) throw new Error('E-Mail-Konto info@apothekeamdamm.de nicht gefunden')
-
       const blob = generateDienstplanPdf({
         year: currentMonth.year,
         month: currentMonth.month,
@@ -192,18 +185,30 @@ export function DienstplanView({ theme, pharmacyId, profiles, pharmacyName }) {
         ? `${baseText}\n\n${whatsAppText.trim()}`
         : baseText
 
-      const tempJmap = new JMAPClient()
-      await tempJmap.authenticate(infoAccount.email, infoAccount.password)
+      // Convert blob to base64 (chunked to avoid call stack overflow)
+      const arrayBuffer = await blob.arrayBuffer()
+      const bytes = new Uint8Array(arrayBuffer)
+      let binary = ''
+      for (let i = 0; i < bytes.length; i += 8192) {
+        binary += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192))
+      }
+      const base64 = btoa(binary)
 
-      const pdfFile = new File([blob], fileName, { type: 'application/pdf' })
-      const uploaded = await tempJmap.uploadBlob(pdfFile)
-
-      await tempJmap.sendEmail({
-        to: ['bot@apothekeamdamm.de'],
-        subject: `Dienstplan ${monthName} ${currentMonth.year}`,
-        textBody: fullText,
-        attachments: [{ blobId: uploaded.blobId, type: 'application/pdf', name: fileName, size: uploaded.size }],
+      const res = await fetch('/api/wa/', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer bfd1b0f60654a512fdc21a08dfeb44f542d5f1bba3843478',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: fullText,
+          pdf: base64,
+          filename: fileName,
+        }),
       })
+
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error || `HTTP ${res.status}`)
 
       setShowWhatsAppModal(false)
       setWhatsAppMessage({ type: 'success', text: 'Dienstplan per WhatsApp gesendet' })

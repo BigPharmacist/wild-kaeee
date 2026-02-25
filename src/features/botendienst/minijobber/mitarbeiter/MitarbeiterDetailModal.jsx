@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { X, User, Check } from '@phosphor-icons/react'
+import { staffColors, getStaffColorIndex } from '../shared/staffColors'
 
 const jobTypes = ['Autobote', 'Fahrradbote', 'Sonstiges']
 
@@ -20,6 +21,7 @@ export function MitarbeiterDetailModal({ theme, isOpen, profile, onClose, onSave
     initial_balance: '0',
     job_type: 'Autobote',
     initials: '',
+    color_index: null,
   })
   const [saving, setSaving] = useState(false)
 
@@ -41,6 +43,7 @@ export function MitarbeiterDetailModal({ theme, isOpen, profile, onClose, onSave
         initial_balance: String(profile.initial_balance || '0'),
         job_type: profile.job_type || 'Autobote',
         initials: profile.initials || '',
+        color_index: profile.color_index ?? getStaffColorIndex(profile.staff_id),
       })
     } else {
       setStaffForm({
@@ -49,7 +52,7 @@ export function MitarbeiterDetailModal({ theme, isOpen, profile, onClose, onSave
       })
       setProfileForm({
         hourly_rate: '12.41', monthly_payment: '538.00', initial_balance: '0',
-        job_type: 'Autobote', initials: '',
+        job_type: 'Autobote', initials: '', color_index: null,
       })
     }
   }, [profile, isOpen])
@@ -67,6 +70,7 @@ export function MitarbeiterDetailModal({ theme, isOpen, profile, onClose, onSave
         : 0,
       job_type: profileForm.job_type,
       initials: profileForm.initials || null,
+      color_index: profileForm.color_index,
     }
 
     if (profile) {
@@ -255,6 +259,31 @@ export function MitarbeiterDetailModal({ theme, isOpen, profile, onClose, onSave
                 placeholder="z.B. MKR"
                 className={`w-full px-4 py-2.5 rounded-lg border ${theme.input}`}
               />
+            </div>
+          </div>
+
+          {/* Color Picker */}
+          <div>
+            <label className={`block text-sm font-medium ${theme.textSecondary} mb-2`}>Dienstplan-Farbe</label>
+            <div className="flex flex-wrap gap-2">
+              {staffColors.map((color, idx) => {
+                const hex = color.bg.match(/#[0-9A-Fa-f]+/)?.[0] || '#888'
+                const isSelected = profileForm.color_index === idx
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setProfileForm({ ...profileForm, color_index: idx })}
+                    className={`w-9 h-9 rounded-full border-2 transition-all flex items-center justify-center ${
+                      isSelected ? 'border-gray-800 scale-110' : 'border-transparent hover:scale-105'
+                    }`}
+                    style={{ backgroundColor: hex }}
+                    title={`Farbe ${idx + 1}`}
+                  >
+                    {isSelected && <Check size={16} className="text-white" weight="bold" />}
+                  </button>
+                )
+              })}
             </div>
           </div>
 

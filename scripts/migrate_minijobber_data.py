@@ -256,6 +256,12 @@ def generate_sync_sql(data, pharmacy_id, matthias_cloud_id, matthias_staff_id):
         staff = lid(emp_id, "employees")
         shift = lid(shift_id, "shifts")
 
+        # Lokal erstellte Duplikate entfernen (gleiche staff+date+shift, andere ID)
+        sql.append(
+            f"DELETE FROM mj_schedules "
+            f"WHERE staff_id = {staff} AND date = {esc(sched['date'])} AND shift_id = {shift} "
+            f"AND id != {local};"
+        )
         sql.append(
             f"INSERT INTO mj_schedules (id, pharmacy_id, staff_id, shift_id, date, absent, absent_reason) "
             f"VALUES ({local}, '{PH}', {staff}, {shift}, "
@@ -484,7 +490,8 @@ def main():
     print("Ausführen...", file=sys.stderr)
     result = subprocess.run(
         ["docker", "compose", "exec", "-T", "db",
-         "psql", "-U", "supabase_admin", "-d", "postgres"],
+         "psql", "-U", "supabase_admin", "-d", "postgres",
+         "-v", "ON_ERROR_STOP=1"],
         input=sql_text,
         capture_output=True,
         text=True,

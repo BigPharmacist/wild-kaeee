@@ -19,20 +19,71 @@ export const staffColors = [
   { bg: 'bg-[#9468A8]', text: 'text-white', dot: 'bg-[#805594]', ring: 'ring-[#9468A8]', barBg: 'bg-[#c9b8e8]' },
 ]
 
-// Stable color map: built once from sorted staff_ids, each gets a unique color
+// Stable color map: uses stored color_index, falls back to index-based assignment
 const colorMap = new Map()
 
 export function buildStaffColorMap(profiles) {
   colorMap.clear()
   const active = profiles.filter(p => p.active)
-  const sorted = [...active].sort((a, b) => a.staff_id.localeCompare(b.staff_id))
-  sorted.forEach((p, i) => {
-    colorMap.set(p.staff_id, staffColors[i % staffColors.length])
-  })
+  // Profiles with a stored color_index use it directly
+  // Profiles without one get assigned from remaining colors
+  const usedIndices = new Set()
+  const withColor = []
+  const withoutColor = []
+
+  for (const p of active) {
+    if (p.color_index != null && p.color_index >= 0 && p.color_index < staffColors.length) {
+      colorMap.set(p.staff_id, staffColors[p.color_index])
+      usedIndices.add(p.color_index)
+      withColor.push(p)
+    } else {
+      withoutColor.push(p)
+    }
+  }
+
+  // Assign remaining profiles to unused colors (fallback)
+  let fallbackIdx = 0
+  for (const p of withoutColor.sort((a, b) => a.staff_id.localeCompare(b.staff_id))) {
+    while (usedIndices.has(fallbackIdx) && fallbackIdx < staffColors.length) fallbackIdx++
+    colorMap.set(p.staff_id, staffColors[fallbackIdx % staffColors.length])
+    usedIndices.add(fallbackIdx)
+    fallbackIdx++
+  }
 }
 
 export function getStaffColor(staffId) {
   return colorMap.get(staffId) || staffColors[0]
+}
+
+// Returns the index into staffColors[] for a given staff member
+const colorIndexMap = new Map()
+
+export function buildStaffColorIndexMap(profiles) {
+  colorIndexMap.clear()
+  const active = profiles.filter(p => p.active)
+  const usedIndices = new Set()
+  const withoutColor = []
+
+  for (const p of active) {
+    if (p.color_index != null && p.color_index >= 0 && p.color_index < staffColors.length) {
+      colorIndexMap.set(p.staff_id, p.color_index)
+      usedIndices.add(p.color_index)
+    } else {
+      withoutColor.push(p)
+    }
+  }
+
+  let fallbackIdx = 0
+  for (const p of withoutColor.sort((a, b) => a.staff_id.localeCompare(b.staff_id))) {
+    while (usedIndices.has(fallbackIdx) && fallbackIdx < staffColors.length) fallbackIdx++
+    colorIndexMap.set(p.staff_id, fallbackIdx % staffColors.length)
+    usedIndices.add(fallbackIdx)
+    fallbackIdx++
+  }
+}
+
+export function getStaffColorIndex(staffId) {
+  return colorIndexMap.get(staffId) ?? 0
 }
 
 export function getStaffInitials(profile) {
