@@ -16,6 +16,7 @@ export default function useGesundUnreadCount() {
       .from('gesund_orders')
       .select('id', { count: 'exact', head: true })
       .is('seen_at', null)
+      .in('status', ['NEW', 'PHARMACIST_NEW'])
 
     if (!error) {
       setCount(c1 || 0)
@@ -47,7 +48,7 @@ export default function useGesundUnreadCount() {
     const channel = supabase
       .channel(`gesund_orders_unread_${Date.now()}`)
       .on('postgres_changes', {
-        event: 'INSERT',
+        event: '*',
         schema: 'public',
         table: 'gesund_orders',
       }, () => {
