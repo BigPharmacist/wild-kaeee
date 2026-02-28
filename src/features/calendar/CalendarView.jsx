@@ -215,6 +215,8 @@ const CalendarView = memo(function CalendarView({
 
     let ticking = false
     const handleScroll = () => {
+      // Kein Infinite-Scroll bevor der initiale Scroll zu "Heute" stattgefunden hat
+      if (!hasScrolledToToday.current) return
       if (ticking) return
       ticking = true
       requestAnimationFrame(() => {
