@@ -48,6 +48,12 @@ export default function useGesundBestellungen() {
     fetchOrders(true)
   }, [fetchOrders])
 
+  // Heutiges UTC-Datum
+  const todayKey = useMemo(() => {
+    const now = new Date()
+    return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`
+  }, [])
+
   // Orders nach Tag gruppieren (order_date, neueste zuerst)
   // order_date ist lokale Zeit (CET/CEST), aber als UTC gespeichert → UTC-Datum verwenden
   const ordersByDay = useMemo(() => {
@@ -65,6 +71,15 @@ export default function useGesundBestellungen() {
       .sort(([a], [b]) => b.localeCompare(a))
       .map(([date, dayOrders]) => ({ date, orders: dayOrders }))
   }, [orders])
+
+  // Heutige Bestellungen separat
+  const todayOrders = useMemo(() => {
+    return orders.filter(order => {
+      const date = new Date(order.order_date || order.created_at)
+      const dayKey = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`
+      return dayKey === todayKey
+    })
+  }, [orders, todayKey])
 
   // Initial fetch
   useEffect(() => {
@@ -133,23 +148,24 @@ export default function useGesundBestellungen() {
     }
   }, [])
 
-  // Ältere Woche on-demand laden
-  const loadWeek = useCallback(async (weekStart) => {
-    const weekEnd = new Date(weekStart)
-    weekEnd.setDate(weekEnd.getDate() + 7)
+  // Einzelnen Tag on-demand laden (für freie Datumsauswahl)
+  const loadDay = useCallback(async (dateStr) => {
+    const dayStart = new Date(dateStr + 'T00:00:00Z')
+    const dayEnd = new Date(dayStart)
+    dayEnd.setUTCDate(dayEnd.getUTCDate() + 1)
     const { data, error } = await supabase
       .from('gesund_orders_list')
       .select('*')
-      .gte('order_date', weekStart.toISOString())
-      .lt('order_date', weekEnd.toISOString())
+      .gte('order_date', dayStart.toISOString())
+      .lt('order_date', dayEnd.toISOString())
       .order('order_date', { ascending: false })
 
     if (error) {
-      console.error('Fehler beim Laden älterer Bestellungen:', error)
+      console.error('Fehler beim Laden der Bestellungen:', error)
       return []
     }
     return data || []
   }, [])
 
-  return { ordersByDay, loading, refreshing, refresh, getViewUrl, printFile, markSeen, loadWeek }
+  return { ordersByDay, todayOrders, loading, refreshing, refresh, getViewUrl, printFile, markSeen, loadDay }
 }
