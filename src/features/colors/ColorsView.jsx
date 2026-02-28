@@ -124,7 +124,7 @@ const ColorsView = ({ theme }) => {
             <h4 className={`font-semibold ${theme.text}`}>Standard Card</h4>
             <p className={`text-sm ${theme.textMuted} mt-1`}>Mit Hover-Effekt</p>
           </div>
-          <div className={`${theme.panel} rounded-xl p-4 border-l-4 border-l-[#F59E0B] border ${theme.border} ${theme.cardShadow}`}>
+          <div className={`${theme.panel} rounded-xl p-4 border-l-4 border-l-[#DC2626] border ${theme.border} ${theme.cardShadow}`}>
             <h4 className={`font-semibold ${theme.text}`}>Orange Card</h4>
             <p className={`text-sm ${theme.textMuted} mt-1`}>Mit Orange Rand</p>
           </div>
@@ -167,7 +167,7 @@ const ColorsView = ({ theme }) => {
           <span className={`px-3 py-2 rounded-lg text-sm font-medium ${theme.text} ${theme.navHover}`}>
             Hover
           </span>
-          <span className={`px-3 py-2 rounded-lg text-sm font-medium border-l-4 border-l-[#F59E0B] ${theme.sidebarBg} text-white`}>
+          <span className={`px-3 py-2 rounded-lg text-sm font-medium border-l-4 border-l-[#DC2626] ${theme.sidebarBg} text-white`}>
             Sidebar Active
           </span>
         </div>
@@ -177,7 +177,7 @@ const ColorsView = ({ theme }) => {
       <div className={`${theme.panel} rounded-2xl p-6 border ${theme.border} ${theme.cardShadow} mb-6`}>
         <h3 className={`text-lg font-semibold mb-4 ${theme.text}`}>Badges</h3>
         <div className="flex flex-wrap gap-2">
-          <span className="text-xs uppercase tracking-wide px-2 py-1 rounded-full bg-[#F59E0B]/15 text-[#F59E0B] border border-[#F59E0B]/20">
+          <span className="text-xs uppercase tracking-wide px-2 py-1 rounded-full bg-[#DC2626]/15 text-[#DC2626] border border-[#DC2626]/20">
             Orange
           </span>
           <span className="text-xs uppercase tracking-wide px-2 py-1 rounded-full bg-[#0D9488]/15 text-[#0D9488] border border-[#0D9488]/20">
@@ -186,7 +186,7 @@ const ColorsView = ({ theme }) => {
           <span className="text-xs uppercase tracking-wide px-2 py-1 rounded-full bg-[#1E293B]/15 text-[#1E293B] border border-[#1E293B]/20">
             Navy
           </span>
-          <span className="text-xs uppercase tracking-wide px-2 py-1 rounded-full bg-[#FEF3C7] text-[#1E293B] border border-[#F59E0B]/20">
+          <span className="text-xs uppercase tracking-wide px-2 py-1 rounded-full bg-[#FEE2E2] text-[#1E293B] border border-[#DC2626]/20">
             Creme
           </span>
           <span className="text-xs uppercase tracking-wide px-2 py-1 rounded-full bg-[#FF6500]/15 text-[#FF6500] border border-[#FF6500]/20">
@@ -265,12 +265,12 @@ const ColorsView = ({ theme }) => {
                 <span className={theme.textMuted}>#64748B Blau-Grau</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-[#F59E0B]" />
-                <span className={theme.textMuted}>#F59E0B Orange (Primary)</span>
+                <div className="w-4 h-4 rounded bg-[#DC2626]" />
+                <span className={theme.textMuted}>#DC2626 Orange (Primary)</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-[#FEF3C7]" />
-                <span className={theme.textMuted}>#FEF3C7 Creme-Gelb</span>
+                <div className="w-4 h-4 rounded bg-[#FEE2E2]" />
+                <span className={theme.textMuted}>#FEE2E2 Creme-Gelb</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded bg-[#FF6500]" />

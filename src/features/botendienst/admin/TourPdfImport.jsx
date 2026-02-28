@@ -112,8 +112,8 @@ export function TourPdfImport({
               onDragLeave={() => setDragOver(false)}
               className={`border-2 border-dashed rounded-xl p-12 text-center transition-colors ${
                 dragOver
-                  ? 'border-[#F59E0B] bg-amber-50'
-                  : `${theme.border} hover:border-[#F59E0B]`
+                  ? 'border-[#DC2626] bg-red-50'
+                  : `${theme.border} hover:border-[#DC2626]`
               }`}
             >
               <FileText size={48} className={`mx-auto ${theme.textMuted} mb-4`} />
@@ -157,7 +157,7 @@ export function TourPdfImport({
                     cx="40"
                     cy="40"
                     r="36"
-                    stroke="#F59E0B"
+                    stroke="#DC2626"
                     strokeWidth="8"
                     fill="none"
                     strokeDasharray={`${2 * Math.PI * 36}`}
@@ -203,12 +203,12 @@ export function TourPdfImport({
             <div className="space-y-4">
               {/* Erkanntes Datum und Name */}
               {(parsedTourDate || parsedTourName) && (
-                <div className={`p-3 rounded-lg bg-amber-50 border border-amber-200`}>
+                <div className={`p-3 rounded-lg bg-red-50 border border-red-200`}>
                   <div className="flex items-center gap-4 text-sm">
                     {parsedTourDate && (
                       <div>
-                        <span className="text-amber-700 font-medium">Tourdatum: </span>
-                        <span className="text-amber-900 font-semibold">
+                        <span className="text-red-700 font-medium">Tourdatum: </span>
+                        <span className="text-red-900 font-semibold">
                           {new Date(parsedTourDate).toLocaleDateString('de-DE', {
                             weekday: 'long',
                             day: '2-digit',
@@ -220,8 +220,8 @@ export function TourPdfImport({
                     )}
                     {parsedTourName && (
                       <div>
-                        <span className="text-amber-700 font-medium">Tour: </span>
-                        <span className="text-amber-900">{parsedTourName}</span>
+                        <span className="text-red-700 font-medium">Tour: </span>
+                        <span className="text-red-900">{parsedTourName}</span>
                       </div>
                     )}
                   </div>
@@ -382,7 +382,7 @@ export function TourPdfImport({
           <div className="flex items-center justify-between p-4 border-t border-gray-100">
             <p className={`text-sm ${theme.textMuted}`}>
               {parsedStops.filter(s => !s.street).length > 0 && (
-                <span className="text-amber-600">
+                <span className="text-red-700">
                   {parsedStops.filter(s => !s.street).length} Stop(s) ohne Adresse
                 </span>
               )}

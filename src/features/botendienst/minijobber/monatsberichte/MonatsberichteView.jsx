@@ -139,7 +139,7 @@ export function MonatsberichteView({ theme, pharmacyId, pharmacies, profiles, sw
       {/* Loading */}
       {loading && (
         <div className={`${theme.surface} border ${theme.border} rounded-xl p-12 flex flex-col items-center justify-center gap-3`}>
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#F59E0B]" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#DC2626]" />
           <span className={`text-sm ${theme.textMuted}`}>Stundenkonten werden geladen…</span>
         </div>
       )}

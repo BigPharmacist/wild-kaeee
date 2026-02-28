@@ -81,7 +81,7 @@ export function TokenSignatureModal({ driverName, onClose, onSave, loading }) {
             value={signerName}
             onChange={(e) => setSignerName(e.target.value)}
             placeholder="Name eingeben..."
-            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:border-red-500 focus:ring-1 focus:ring-red-500"
           />
         </div>
 

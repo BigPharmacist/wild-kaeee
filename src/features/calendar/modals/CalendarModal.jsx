@@ -64,7 +64,7 @@ function CalendarModal({
                 className="w-10 h-10 rounded-lg cursor-pointer border-0"
               />
               <div className="flex gap-2">
-                {['#0D9488', '#F59E0B', '#FEF3C7', '#FF6500', '#1E293B', '#64748B'].map((color) => (
+                {['#0D9488', '#DC2626', '#FEE2E2', '#FF6500', '#1E293B', '#64748B'].map((color) => (
                   <button
                     key={color}
                     type="button"

@@ -79,9 +79,9 @@ export function AddressDisplay({
 
       {/* Delivery Notes */}
       {deliveryNotes && (
-        <div className="flex items-start gap-2 p-2 rounded-lg bg-amber-50 border border-amber-200">
-          <Note size={18} className="text-amber-600 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-amber-800">{deliveryNotes}</p>
+        <div className="flex items-start gap-2 p-2 rounded-lg bg-red-50 border border-red-200">
+          <Note size={18} className="text-red-700 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-red-800">{deliveryNotes}</p>
         </div>
       )}
 

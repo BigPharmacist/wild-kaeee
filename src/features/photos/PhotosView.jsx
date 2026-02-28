@@ -29,7 +29,7 @@ const PhotosView = ({
             {allPhotos.map((photo) => (
               <div
                 key={photo.name}
-                className={`${theme.panel} rounded-xl border ${theme.border} ${theme.cardShadow} overflow-hidden hover:ring-2 hover:ring-[#F59E0B] transition-all relative group`}
+                className={`${theme.panel} rounded-xl border ${theme.border} ${theme.cardShadow} overflow-hidden hover:ring-2 hover:ring-[#DC2626] transition-all relative group`}
               >
                 <button
                   type="button"
@@ -102,7 +102,7 @@ const PhotosView = ({
               {businessCards.map((card) => (
                 <div
                   key={card.id}
-                  className={`${theme.panel} rounded-xl border ${theme.border} ${theme.cardShadow} overflow-hidden hover:ring-2 hover:ring-[#F59E0B] transition-all relative group`}
+                  className={`${theme.panel} rounded-xl border ${theme.border} ${theme.cardShadow} overflow-hidden hover:ring-2 hover:ring-[#DC2626] transition-all relative group`}
                 >
                   <button
                     type="button"

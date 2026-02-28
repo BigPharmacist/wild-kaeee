@@ -184,7 +184,7 @@ export function TokenDriverView({ token }) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <CircleNotch size={48} className="animate-spin text-amber-500 mx-auto mb-4" />
+          <CircleNotch size={48} className="animate-spin text-red-500 mx-auto mb-4" />
           <p className="text-gray-600">Tour wird geladen...</p>
         </div>
       </div>
@@ -210,7 +210,7 @@ export function TokenDriverView({ token }) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md text-center">
-          <Warning size={48} className="text-amber-500 mx-auto mb-4" />
+          <Warning size={48} className="text-red-500 mx-auto mb-4" />
           <h1 className="text-xl font-semibold text-gray-900 mb-2">
             Tour nicht verfügbar
           </h1>
@@ -219,7 +219,7 @@ export function TokenDriverView({ token }) {
           </p>
           <button
             onClick={refresh}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 text-white hover:bg-amber-600"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-700"
           >
             <ArrowClockwise size={18} />
             Erneut versuchen

@@ -90,7 +90,7 @@ export function CompletionScreen({
                 onChange={(e) => setCompletionNotes(e.target.value)}
                 placeholder="z.B. Kunde hat sich beschwert, besondere Vorkommnisse..."
                 rows={3}
-                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 resize-none"
+                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-red-500 focus:ring-1 focus:ring-red-500 resize-none"
               />
             </div>
 
@@ -172,8 +172,8 @@ export function CompletionScreen({
                   disabled={endingShift}
                   className={`w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-medium text-white transition-all ${
                     endingShift
-                      ? 'bg-amber-400 cursor-wait'
-                      : 'bg-amber-500 hover:bg-amber-600 active:scale-98'
+                      ? 'bg-red-400 cursor-wait'
+                      : 'bg-red-500 hover:bg-red-700 active:scale-98'
                   }`}
                 >
                   {endingShift ? (
@@ -192,10 +192,10 @@ export function CompletionScreen({
             ) : (
               /* Arbeitszeit-Zusammenfassung */
               <div className="mt-6 pt-6 border-t border-gray-200">
-                <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
+                <div className="bg-red-50 rounded-xl p-4 border border-red-200">
                   <div className="flex items-center justify-center gap-2 mb-3">
-                    <Clock size={20} className="text-amber-600" />
-                    <span className="font-semibold text-amber-800">Arbeitszeit</span>
+                    <Clock size={20} className="text-red-700" />
+                    <span className="font-semibold text-red-800">Arbeitszeit</span>
                   </div>
                   {workingTime && (
                     <div className="space-y-2 text-sm">
@@ -211,9 +211,9 @@ export function CompletionScreen({
                           {workingTime.end.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr
                         </span>
                       </div>
-                      <div className="pt-2 border-t border-amber-200 flex justify-between">
-                        <span className="font-medium text-amber-800">Dauer:</span>
-                        <span className="font-bold text-amber-800">
+                      <div className="pt-2 border-t border-red-200 flex justify-between">
+                        <span className="font-medium text-red-800">Dauer:</span>
+                        <span className="font-bold text-red-800">
                           {workingTime.hours}h {workingTime.minutes}min
                         </span>
                       </div>

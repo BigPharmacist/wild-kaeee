@@ -90,8 +90,8 @@ export function MitarbeiterDetailModal({ theme, isOpen, profile, onClose, onSave
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-100 sticky top-0 bg-white rounded-t-2xl z-10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#F59E0B]/10 flex items-center justify-center">
-              <User size={20} className="text-[#F59E0B]" />
+            <div className="w-10 h-10 rounded-full bg-[#DC2626]/10 flex items-center justify-center">
+              <User size={20} className="text-[#DC2626]" />
             </div>
             <h2 className={`text-lg font-semibold ${theme.textPrimary}`}>
               {profile ? 'Minijobber bearbeiten' : 'Neuer Minijobber'}

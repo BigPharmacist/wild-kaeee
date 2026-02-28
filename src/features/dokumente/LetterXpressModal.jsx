@@ -252,9 +252,9 @@ export default function LetterXpressModal({
 
           {/* Live-Warnung */}
           {options.live && !jobId && (
-            <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-50 border border-amber-200">
-              <Warning className="w-4 h-4 text-amber-600 flex-shrink-0" weight="fill" />
-              <p className="text-xs text-amber-800">Live-Modus: Brief wird gedruckt und versendet!</p>
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-red-50 border border-red-200">
+              <Warning className="w-4 h-4 text-red-700 flex-shrink-0" weight="fill" />
+              <p className="text-xs text-red-800">Live-Modus: Brief wird gedruckt und versendet!</p>
             </div>
           )}
 

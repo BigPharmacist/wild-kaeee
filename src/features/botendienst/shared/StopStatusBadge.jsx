@@ -21,8 +21,8 @@ const statusConfig = {
   },
   skipped: {
     label: 'Übersprungen',
-    bg: 'bg-amber-100',
-    text: 'text-amber-700',
+    bg: 'bg-red-100',
+    text: 'text-red-700',
     icon: X,
   },
   rescheduled: {

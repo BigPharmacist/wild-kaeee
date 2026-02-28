@@ -224,7 +224,7 @@ const ArchivView = ({
               className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border ${theme.border} ${theme.bgHover} transition-colors`}
               title="Als Ansicht speichern"
             >
-              <Star size={20} className="text-amber-500" />
+              <Star size={20} className="text-red-500" />
               <span className="hidden sm:inline text-sm">Speichern</span>
             </button>
           )}
@@ -339,7 +339,7 @@ const ArchivView = ({
             </span>
           )}
           {selectedType && (
-            <span className={`px-2 py-1 rounded-full text-xs bg-amber-500/10 text-amber-600 border border-amber-500/20`}>
+            <span className={`px-2 py-1 rounded-full text-xs bg-red-500/10 text-red-700 border border-red-500/20`}>
               {documentTypes.find(t => t.id === parseInt(selectedType))?.name}
             </span>
           )}
@@ -458,7 +458,7 @@ const ArchivView = ({
 
                       {/* Dokumenttyp */}
                       {docType && (
-                        <span className="inline-block px-2 py-0.5 rounded text-xs bg-amber-500/10 text-amber-600">
+                        <span className="inline-block px-2 py-0.5 rounded text-xs bg-red-500/10 text-red-700">
                           {docType.name}
                         </span>
                       )}
@@ -537,7 +537,7 @@ const ArchivView = ({
                         </td>
                         <td className={`px-3 py-1.5 hidden md:table-cell`}>
                           {docType ? (
-                            <span className="inline-block px-1.5 py-0.5 rounded text-xs bg-amber-500/10 text-amber-600">
+                            <span className="inline-block px-1.5 py-0.5 rounded text-xs bg-red-500/10 text-red-700">
                               {docType.name}
                             </span>
                           ) : (
@@ -670,8 +670,8 @@ const ArchivView = ({
 
           <div className={`relative ${theme.panel} rounded-2xl shadow-2xl w-full max-w-md p-6`}>
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 rounded-lg bg-amber-100">
-                <Star size={24} className="text-amber-500" />
+              <div className="p-2 rounded-lg bg-red-100">
+                <Star size={24} className="text-red-500" />
               </div>
               <div>
                 <h3 className={`text-lg font-semibold ${theme.textPrimary}`}>
@@ -698,7 +698,7 @@ const ArchivView = ({
                   </span>
                 )}
                 {selectedType && (
-                  <span className="px-2 py-1 rounded-full text-xs bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                  <span className="px-2 py-1 rounded-full text-xs bg-red-500/10 text-red-700 border border-red-500/20">
                     {documentTypes.find(t => t.id === parseInt(selectedType))?.name}
                   </span>
                 )}

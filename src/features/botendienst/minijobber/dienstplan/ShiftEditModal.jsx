@@ -104,7 +104,7 @@ export function ShiftEditModal({ theme, isOpen, staffId, date, existingSchedules
                   <button
                     key={shift.id}
                     onClick={() => onSave(staffId, date, shift.id)}
-                    className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm border ${theme.border} ${theme.textSecondary} hover:bg-[#FEF3C7]/30`}
+                    className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm border ${theme.border} ${theme.textSecondary} hover:bg-[#FEE2E2]/30`}
                   >
                     <Plus size={14} />
                     {shift.name}

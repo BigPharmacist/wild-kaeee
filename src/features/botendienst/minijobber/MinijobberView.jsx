@@ -118,7 +118,7 @@ export default function MinijobberView({ theme, session, currentStaff, pharmacie
               onClick={() => setActiveSubTab(tab.id)}
               className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 isActive
-                  ? 'bg-[#F59E0B] text-white'
+                  ? 'bg-[#DC2626] text-white'
                   : `${theme.surface} border ${theme.border} ${theme.textSecondary} hover:bg-gray-50`
               }`}
             >

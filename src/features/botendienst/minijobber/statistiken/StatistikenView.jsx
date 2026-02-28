@@ -10,7 +10,7 @@ import { useMjStatistiken } from '../hooks/useMjStatistiken'
 const MONTH_LABELS = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
 
 const COLORS = [
-  '#F59E0B', '#0D9488', '#6366F1', '#EC4899', '#8B5CF6',
+  '#DC2626', '#0D9488', '#6366F1', '#EC4899', '#8B5CF6',
   '#EF4444', '#14B8A6', '#F97316', '#3B82F6', '#84CC16',
 ]
 
@@ -242,7 +242,7 @@ export function StatistikenView({ theme, pharmacyId, profiles }) {
               <YAxis tick={{ fontSize: 11 }} tickFormatter={formatNumber} />
               <Tooltip content={<CustomTooltip formatter={v => `${formatNumber(v)} Std.`} />} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Bar dataKey="soll" name="Soll" fill="#F59E0B" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="soll" name="Soll" fill="#DC2626" radius={[4, 4, 0, 0]} />
               <Bar dataKey="ist" name="Ist" fill="#0D9488" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -260,7 +260,7 @@ export function StatistikenView({ theme, pharmacyId, profiles }) {
               <XAxis dataKey="month" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `${v.toLocaleString('de-DE')} €`} />
               <Tooltip content={<CustomTooltip formatter={formatEuro} />} />
-              <Area type="monotone" dataKey="kosten" name="Kosten" stroke="#F59E0B" fill="#FEF3C7" strokeWidth={2} />
+              <Area type="monotone" dataKey="kosten" name="Kosten" stroke="#DC2626" fill="#FEE2E2" strokeWidth={2} />
             </AreaChart>
           </ResponsiveContainer>
         ) : (
@@ -279,7 +279,7 @@ export function StatistikenView({ theme, pharmacyId, profiles }) {
               <Tooltip content={<CustomTooltip formatter={formatPercent} />} />
               <Bar dataKey="quote" name="Abwesenheit" fill="#64748B" radius={[0, 4, 4, 0]}>
                 {abwesenheitData.map((entry, i) => (
-                  <Cell key={i} fill={entry.quote > 15 ? '#E11D48' : entry.quote > 5 ? '#F59E0B' : '#0D9488'} />
+                  <Cell key={i} fill={entry.quote > 15 ? '#E11D48' : entry.quote > 5 ? '#DC2626' : '#0D9488'} />
                 ))}
               </Bar>
             </BarChart>
@@ -351,7 +351,7 @@ export function StatistikenView({ theme, pharmacyId, profiles }) {
               <ReferenceLine x={0} stroke="#64748B" strokeDasharray="3 3" />
               <Bar dataKey="abweichung" name="Ø Abweichung" radius={[0, 4, 4, 0]}>
                 {puenktlichkeitData.map((entry, i) => (
-                  <Cell key={i} fill={Math.abs(entry.abweichung) <= 5 ? '#0D9488' : Math.abs(entry.abweichung) <= 15 ? '#F59E0B' : '#E11D48'} />
+                  <Cell key={i} fill={Math.abs(entry.abweichung) <= 5 ? '#0D9488' : Math.abs(entry.abweichung) <= 15 ? '#DC2626' : '#E11D48'} />
                 ))}
               </Bar>
             </BarChart>

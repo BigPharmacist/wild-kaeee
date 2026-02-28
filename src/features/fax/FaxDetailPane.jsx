@@ -317,7 +317,7 @@ export default function FaxDetailPane({
                 {/* Termin-Status */}
                 <div className="flex-shrink-0">
                   {terminCreating ? (
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 text-amber-700 border border-amber-200">
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 text-red-700 border border-red-200">
                       <SpinnerGap size={18} className="animate-spin" />
                       <span className="text-sm font-medium">Termin wird erstellt...</span>
                     </div>

@@ -70,7 +70,7 @@ function PhotoEditorModal({
                 max="150"
                 value={brightness}
                 onChange={(e) => setBrightness(Number(e.target.value))}
-                className="w-full accent-[#F59E0B]"
+                className="w-full accent-[#DC2626]"
               />
             </div>
             <div>
@@ -83,7 +83,7 @@ function PhotoEditorModal({
                 max="150"
                 value={contrast}
                 onChange={(e) => setContrast(Number(e.target.value))}
-                className="w-full accent-[#F59E0B]"
+                className="w-full accent-[#DC2626]"
               />
             </div>
 

@@ -187,7 +187,7 @@ export function TourDetail({
                 href={tour.source_pdf_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-sm text-[#F59E0B] hover:text-[#D97706] hover:underline"
+                className="inline-flex items-center gap-1 text-sm text-[#DC2626] hover:text-[#B91C1C] hover:underline"
                 title="Quell-PDF öffnen"
               >
                 <FileText size={16} />
@@ -349,7 +349,7 @@ export function TourDetail({
           {canAddStops && (
             <button
               onClick={onAddStop}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-[#F59E0B] text-white hover:bg-[#D97706]"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-[#DC2626] text-white hover:bg-[#B91C1C]"
             >
               <Plus size={16} weight="bold" />
               Stop hinzufügen
@@ -359,7 +359,7 @@ export function TourDetail({
 
         {stopsLoading ? (
           <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#F59E0B]" />
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#DC2626]" />
           </div>
         ) : stops.length === 0 ? (
           <div className="text-center py-8">
@@ -369,7 +369,7 @@ export function TourDetail({
               <div className="flex justify-center gap-2 mt-3">
                 <button
                   onClick={onAddStop}
-                  className="text-sm text-[#F59E0B] hover:underline"
+                  className="text-sm text-[#DC2626] hover:underline"
                 >
                   Stop manuell hinzufügen
                 </button>
@@ -378,7 +378,7 @@ export function TourDetail({
                     <span className={theme.textMuted}>oder</span>
                     <button
                       onClick={onOpenPdfImport}
-                      className="text-sm text-[#F59E0B] hover:underline"
+                      className="text-sm text-[#DC2626] hover:underline"
                     >
                       PDF importieren
                     </button>
@@ -423,7 +423,7 @@ export function TourDetail({
                         isCompleted
                           ? 'bg-green-500 border-green-500 cursor-pointer hover:scale-125'
                           : isSkipped
-                            ? 'bg-amber-500 border-amber-500'
+                            ? 'bg-red-500 border-red-500'
                             : 'bg-white border-gray-300'
                       } ${isClickable && !isCompleted && !isSkipped ? 'cursor-pointer hover:scale-125' : ''}`}
                       title={isClickable ? 'Details anzeigen' : ''}
@@ -437,7 +437,7 @@ export function TourDetail({
                         isCompleted
                           ? 'bg-green-50/50 border-green-200'
                           : isSkipped
-                            ? 'bg-amber-50/50 border-amber-200'
+                            ? 'bg-red-50/50 border-red-200'
                             : `${theme.surface} ${theme.border}`
                       } hover:shadow-sm transition-shadow`}
                     >
@@ -452,7 +452,7 @@ export function TourDetail({
                             isCompleted
                               ? 'bg-green-500 text-white'
                               : isSkipped
-                                ? 'bg-amber-500 text-white'
+                                ? 'bg-red-500 text-white'
                                 : stop.priority === 'urgent'
                                   ? 'bg-red-100 text-red-700'
                                   : 'bg-gray-100 text-gray-600'
@@ -499,7 +499,7 @@ export function TourDetail({
                         {/* Spalte 4: Betrag (75px) */}
                         <div className="flex items-center justify-end">
                           {stop.cash_amount > 0 ? (
-                            <span className={`text-sm font-semibold flex items-center gap-0.5 ${stop.cash_collected ? 'text-green-600' : 'text-amber-600'}`}>
+                            <span className={`text-sm font-semibold flex items-center gap-0.5 ${stop.cash_collected ? 'text-green-600' : 'text-red-700'}`}>
                               {formatCurrency(stop.cash_amount)}
                               {stop.cash_collected && <Check size={14} weight="bold" />}
                             </span>
@@ -513,7 +513,7 @@ export function TourDetail({
                           {hasPhoto ? <Camera size={16} className="text-blue-500" /> : <Camera size={16} className="text-gray-200" />}
                           {hasSignature ? <PencilSimpleLine size={16} className="text-purple-500" /> : <PencilSimpleLine size={16} className="text-gray-200" />}
                           {(stop.stop_notes || stop.customer?.delivery_notes) ? (
-                            <Note size={16} className="text-amber-500" title={stop.stop_notes || stop.customer?.delivery_notes} />
+                            <Note size={16} className="text-red-500" title={stop.stop_notes || stop.customer?.delivery_notes} />
                           ) : (
                             <Note size={16} className="text-gray-200" />
                           )}
@@ -576,13 +576,13 @@ export function TourDetail({
                     selectedStopDetail.status === 'completed'
                       ? 'bg-green-100'
                       : selectedStopDetail.status === 'skipped'
-                        ? 'bg-amber-100'
+                        ? 'bg-red-100'
                         : 'bg-gray-100'
                   }`}>
                     {selectedStopDetail.status === 'completed' ? (
                       <Check size={20} className="text-green-600" weight="bold" />
                     ) : selectedStopDetail.status === 'skipped' ? (
-                      <X size={20} className="text-amber-600" weight="bold" />
+                      <X size={20} className="text-red-700" weight="bold" />
                     ) : (
                       <Package size={20} className="text-gray-600" />
                     )}
@@ -676,16 +676,16 @@ export function TourDetail({
 
                 {/* Notizen */}
                 {(selectedStopDetail.stop_notes || selectedStopDetail.cash_notes) && (
-                  <div className="p-3 rounded-lg bg-amber-50 border border-amber-200">
+                  <div className="p-3 rounded-lg bg-red-50 border border-red-200">
                     <div className="flex items-start gap-2">
-                      <Note size={18} className="text-amber-600" />
+                      <Note size={18} className="text-red-700" />
                       <div>
-                        <p className="text-sm font-medium text-amber-800">Notizen</p>
+                        <p className="text-sm font-medium text-red-800">Notizen</p>
                         {selectedStopDetail.stop_notes && (
-                          <p className="text-sm text-amber-700 mt-1">{selectedStopDetail.stop_notes}</p>
+                          <p className="text-sm text-red-700 mt-1">{selectedStopDetail.stop_notes}</p>
                         )}
                         {selectedStopDetail.cash_notes && (
-                          <p className="text-sm text-amber-700 mt-1">Kassierung: {selectedStopDetail.cash_notes}</p>
+                          <p className="text-sm text-red-700 mt-1">Kassierung: {selectedStopDetail.cash_notes}</p>
                         )}
                       </div>
                     </div>
@@ -702,7 +702,7 @@ export function TourDetail({
                         <p className="text-lg font-semibold text-green-600">
                           {formatCurrency(selectedStopDetail.cash_collected_amount || selectedStopDetail.cash_amount)}
                           {selectedStopDetail.cash_collected_amount && selectedStopDetail.cash_collected_amount < selectedStopDetail.cash_amount && (
-                            <span className="text-sm font-normal text-amber-600 ml-2">
+                            <span className="text-sm font-normal text-red-700 ml-2">
                               (von {formatCurrency(selectedStopDetail.cash_amount)})
                             </span>
                           )}
@@ -787,7 +787,7 @@ export function TourDetail({
       {canAddStops && (
         <button
           onClick={onAddStop}
-          className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-[#F59E0B] text-white shadow-lg hover:bg-[#D97706] hover:scale-110 transition-all flex items-center justify-center z-40"
+          className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-[#DC2626] text-white shadow-lg hover:bg-[#B91C1C] hover:scale-110 transition-all flex items-center justify-center z-40"
           title="Neuen Stop hinzufügen"
         >
           <Plus size={28} weight="bold" />

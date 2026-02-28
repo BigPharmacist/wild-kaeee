@@ -13,6 +13,6 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 5173,
-    allowedHosts: ['kaeee.de']
+    allowedHosts: ['kaeee.de', 'wild.kaeee.de']
   }
 })

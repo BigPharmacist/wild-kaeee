@@ -228,7 +228,7 @@ function ApoDetailModal({
                             )}
                             <span className={`text-sm font-medium ${theme.text}`}>{thema.titel || 'Kein Titel'}</span>
                             {thema.ist_arbeitsrecht && (
-                              <span className={`text-xs px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400`}>
+                              <span className={`text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400`}>
                                 Arbeitsrecht
                               </span>
                             )}
@@ -251,7 +251,7 @@ function ApoDetailModal({
                           )}
                           <span className={`text-sm font-medium ${theme.text}`}>{thema.titel || 'Kein Titel'}</span>
                           {thema.ist_arbeitsrecht && (
-                            <span className={`text-xs px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400`}>
+                            <span className={`text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400`}>
                               Arbeitsrecht
                             </span>
                           )}

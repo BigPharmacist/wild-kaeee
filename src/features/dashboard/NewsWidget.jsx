@@ -136,7 +136,7 @@ const NewsWidget = memo(function NewsWidget({
                 type="button"
                 onClick={() => setCurrentIndex(idx)}
                 className={`w-1.5 h-1.5 rounded-full transition-colors ${
-                  idx === currentIndex ? 'bg-[#F59E0B]' : 'bg-gray-300 hover:bg-gray-400'
+                  idx === currentIndex ? 'bg-[#DC2626]' : 'bg-gray-300 hover:bg-gray-400'
                 }`}
                 title={`News ${idx + 1}`}
               />
@@ -208,7 +208,7 @@ const NewsWidget = memo(function NewsWidget({
                       li: ({ children }) => <li className="mb-1">{children}</li>,
                       strong: ({ children }) => <strong className={theme.text}>{children}</strong>,
                       em: ({ children }) => <em>{children}</em>,
-                      blockquote: ({ children }) => <blockquote className={`border-l-4 border-[#F59E0B] pl-4 my-3 ${theme.textMuted} italic`}>{children}</blockquote>,
+                      blockquote: ({ children }) => <blockquote className={`border-l-4 border-[#DC2626] pl-4 my-3 ${theme.textMuted} italic`}>{children}</blockquote>,
                       a: ({ children, href }) => <a href={href} className={`${theme.accentText} underline hover:opacity-80`} target="_blank" rel="noopener noreferrer">{children}</a>,
                       code: ({ children }) => <code className="bg-gray-100 px-1.5 py-0.5 rounded text-sm font-mono">{children}</code>,
                       pre: ({ children }) => <pre className="bg-gray-100 p-3 rounded-lg overflow-x-auto mb-3">{children}</pre>,

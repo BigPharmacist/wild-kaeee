@@ -47,7 +47,7 @@ const ScanList = ({
               isPharma
                 ? pznValidation?.valid
                   ? 'border-l-4 border-l-teal-500'
-                  : 'border-l-4 border-l-amber-500'
+                  : 'border-l-4 border-l-red-500'
                 : ''
             }`}
           >
@@ -55,9 +55,9 @@ const ScanList = ({
               // Pharmaceutical code display
               <div className="flex items-start gap-3">
                 <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${
-                  pznValidation?.valid ? 'bg-teal-100' : 'bg-amber-100'
+                  pznValidation?.valid ? 'bg-teal-100' : 'bg-red-100'
                 }`}>
-                  <Pill size={18} className={pznValidation?.valid ? 'text-teal-600' : 'text-amber-600'} weight="fill" />
+                  <Pill size={18} className={pznValidation?.valid ? 'text-teal-600' : 'text-red-700'} weight="fill" />
                 </div>
 
                 <div className="flex-1 min-w-0">
@@ -76,7 +76,7 @@ const ScanList = ({
                         pznValidation.valid ? (
                           <CheckCircle size={12} className="text-teal-500" weight="fill" title="PZN gültig" />
                         ) : (
-                          <Warning size={12} className="text-amber-500" weight="fill" title={pznValidation.error} />
+                          <Warning size={12} className="text-red-500" weight="fill" title={pznValidation.error} />
                         )
                       )}
                     </div>

@@ -83,7 +83,7 @@ export function CashCollectionModal({
                   setCollectedAmount(amount?.toString() || '')
                 }
               }}
-              className="w-5 h-5 rounded border-gray-300 text-amber-500 focus:ring-amber-500"
+              className="w-5 h-5 rounded border-gray-300 text-red-500 focus:ring-red-500"
             />
             <span className={`text-sm ${theme.textPrimary}`}>Nur Anzahlung / Teilbetrag</span>
           </label>
@@ -106,7 +106,7 @@ export function CashCollectionModal({
                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">€</span>
               </div>
               {remainingAmount > 0 && (
-                <p className="mt-1 text-sm text-amber-600">
+                <p className="mt-1 text-sm text-red-700">
                   Restbetrag: {formatCurrency(remainingAmount)}
                 </p>
               )}
@@ -129,11 +129,11 @@ export function CashCollectionModal({
           </div>
 
           {/* Confirmation Info */}
-          <div className={`p-4 rounded-lg ${isFullAmount ? 'bg-green-50 border border-green-200' : 'bg-amber-50 border border-amber-200'}`}>
-            <p className={`font-medium ${isFullAmount ? 'text-green-800' : 'text-amber-800'}`}>
+          <div className={`p-4 rounded-lg ${isFullAmount ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+            <p className={`font-medium ${isFullAmount ? 'text-green-800' : 'text-red-800'}`}>
               {isFullAmount ? 'Vollständig kassiert' : 'Anzahlung'}
             </p>
-            <p className={`text-sm mt-1 ${isFullAmount ? 'text-green-700' : 'text-amber-700'}`}>
+            <p className={`text-sm mt-1 ${isFullAmount ? 'text-green-700' : 'text-red-700'}`}>
               Kassierter Betrag: {formatCurrency(parsedAmount)}
               {!isFullAmount && ` (Rest: ${formatCurrency(remainingAmount)})`}
             </p>

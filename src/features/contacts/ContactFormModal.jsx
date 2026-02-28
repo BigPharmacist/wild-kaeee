@@ -379,7 +379,7 @@ export default function ContactFormModal({
               type="checkbox"
               checked={contactForm.shared}
               onChange={(e) => onContactInput('shared', e.target.checked)}
-              className="accent-[#F59E0B]"
+              className="accent-[#DC2626]"
             />
             Für alle Mitarbeiter sichtbar
           </label>

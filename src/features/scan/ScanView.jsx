@@ -317,7 +317,7 @@ const ScanView = ({ theme, session, pharmacyId }) => {
             className={`p-2 rounded-lg ${
               scans.length === 0
                 ? 'text-slate-300 cursor-not-allowed'
-                : `${theme.accentText} hover:bg-amber-50`
+                : `${theme.accentText} hover:bg-red-50`
             }`}
             title="Als CSV exportieren"
           >

@@ -91,7 +91,7 @@ const ScanSessionModal = ({
 
           {/* Current Session Info */}
           {currentSession.id && (
-            <div className={`mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl`}>
+            <div className={`mb-4 p-4 bg-red-50 border border-red-200 rounded-xl`}>
               <div className="flex items-center justify-between">
                 <div>
                   <div className={`${theme.text} font-medium`}>{currentSession.name}</div>
@@ -99,7 +99,7 @@ const ScanSessionModal = ({
                 </div>
                 <button
                   onClick={onExport}
-                  className="p-2 rounded-lg text-amber-600 hover:bg-amber-100"
+                  className="p-2 rounded-lg text-red-700 hover:bg-red-100"
                   title="Als CSV exportieren"
                 >
                   <Download size={20} />

@@ -91,7 +91,7 @@ export function TokenStopsList({
               <span>{stats.totalPackages} Pakete</span>
             </div>
             {stats.totalCash > 0 && (
-              <div className="flex items-center gap-1 text-amber-600">
+              <div className="flex items-center gap-1 text-red-700">
                 <Money size={16} />
                 <span>{formatCurrency(stats.totalCash - stats.collectedCash)} offen</span>
               </div>
@@ -156,7 +156,7 @@ export function TokenStopsList({
                       )}
                       {stop.cash_amount > 0 && (
                         <span className={`flex items-center gap-0.5 ${
-                          stop.cash_collected ? 'text-green-600' : 'text-amber-600 font-medium'
+                          stop.cash_collected ? 'text-green-600' : 'text-red-700 font-medium'
                         }`}>
                           <Money size={12} />
                           {formatCurrency(stop.cash_amount)}
@@ -212,10 +212,10 @@ export function TokenStopsList({
                 <div className="px-4 pb-4 border-t border-gray-100">
                   {/* Notes */}
                   {(stop.stop_notes || stop.customer?.delivery_notes) && (
-                    <div className="mt-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                    <div className="mt-3 p-3 rounded-lg bg-red-50 border border-red-200">
                       <div className="flex items-start gap-2">
-                        <Note size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
-                        <div className="text-sm text-amber-800">
+                        <Note size={16} className="text-red-700 flex-shrink-0 mt-0.5" />
+                        <div className="text-sm text-red-800">
                           {stop.stop_notes || stop.customer?.delivery_notes}
                         </div>
                       </div>
@@ -250,7 +250,7 @@ export function TokenStopsList({
                     {stop.cash_amount > 0 && !stop.cash_collected && (
                       <button
                         onClick={() => onShowCash(stop)}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 border-amber-500 text-amber-600 font-medium hover:bg-amber-50"
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 border-red-500 text-red-700 font-medium hover:bg-red-50"
                       >
                         <Money size={20} />
                         {formatCurrency(stop.cash_amount)} kassieren

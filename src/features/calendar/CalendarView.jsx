@@ -306,7 +306,7 @@ const CalendarView = memo(function CalendarView({
                 onClick={() => setCalendarViewMode(mode)}
                 className={`px-3 py-1.5 text-xs font-medium transition-colors ${
                   calendarViewMode === mode
-                    ? 'bg-[#F59E0B] text-white'
+                    ? 'bg-[#DC2626] text-white'
                     : `${theme.panel} ${theme.textMuted} ${theme.bgHover}`
                 }`}
               >

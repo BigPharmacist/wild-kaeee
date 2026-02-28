@@ -191,7 +191,7 @@ export function TourQrModal({ theme, isOpen, onClose, tour, baseUrl }) {
             </button>
             <button
               onClick={handlePrint}
-              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-[#F59E0B] text-white hover:bg-[#D97706]"
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-[#DC2626] text-white hover:bg-[#B91C1C]"
             >
               <Printer size={18} />
               Drucken

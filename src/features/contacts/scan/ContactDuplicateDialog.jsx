@@ -62,7 +62,7 @@ export default function ContactDuplicateDialog({
                       <button
                         type="button"
                         onClick={() => onNewRepresentative(match)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-500 hover:bg-amber-400 text-white`}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium bg-red-500 hover:bg-red-400 text-white`}
                       >
                         Neuer Vertreter (ersetzt {match.first_name})
                       </button>

@@ -14,8 +14,8 @@ export function DriverNameSelection({
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-lg p-6 max-w-md w-full">
         <div className="text-center mb-6">
-          <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
-            <Moped size={32} className="text-amber-600" />
+          <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+            <Moped size={32} className="text-red-700" />
           </div>
           <h1 className="text-xl font-semibold text-gray-900">Botendienst</h1>
           <p className="text-gray-500 mt-1">{tourName || 'Tour'}</p>
@@ -36,7 +36,7 @@ export function DriverNameSelection({
                 className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left ${
                   savingName
                     ? 'border-gray-200 bg-gray-50 cursor-wait'
-                    : 'border-gray-200 hover:border-amber-400 hover:bg-amber-50'
+                    : 'border-gray-200 hover:border-red-400 hover:bg-red-50'
                 }`}
               >
                 <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
@@ -52,7 +52,7 @@ export function DriverNameSelection({
             <button
               onClick={() => setShowNameInput(true)}
               disabled={savingName}
-              className="w-full mt-3 p-3 rounded-xl border border-dashed border-gray-300 text-gray-500 hover:border-amber-400 hover:text-amber-600 transition-all disabled:opacity-50"
+              className="w-full mt-3 p-3 rounded-xl border border-dashed border-gray-300 text-gray-500 hover:border-red-400 hover:text-red-700 transition-all disabled:opacity-50"
             >
               + Anderen Namen eingeben
             </button>
@@ -65,7 +65,7 @@ export function DriverNameSelection({
                 placeholder="Name eingeben..."
                 autoFocus
                 disabled={savingName}
-                className="flex-1 px-4 py-3 rounded-xl border border-gray-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 disabled:bg-gray-100"
+                className="flex-1 px-4 py-3 rounded-xl border border-gray-300 focus:border-red-500 focus:ring-1 focus:ring-red-500 disabled:bg-gray-100"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && customName.trim() && !savingName) {
                     onSave(customName)
@@ -79,7 +79,7 @@ export function DriverNameSelection({
                   }
                 }}
                 disabled={!customName.trim() || savingName}
-                className="px-4 py-3 rounded-xl bg-amber-500 text-white font-medium hover:bg-amber-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                className="px-4 py-3 rounded-xl bg-red-500 text-white font-medium hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
                 {savingName ? <CircleNotch size={20} className="animate-spin" /> : 'OK'}
               </button>

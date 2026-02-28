@@ -147,7 +147,7 @@ export function BotenWidgetContent({ theme, pharmacyId }) {
           <div
             key={day.dateStr}
             className={`text-center py-1 ${
-              day.isToday ? 'bg-[#FEF3C7]/50 rounded-t-md' :
+              day.isToday ? 'bg-[#FEE2E2]/50 rounded-t-md' :
               day.isHoliday ? 'bg-red-50/50 rounded-t-md' : ''
             }`}
           >
@@ -218,7 +218,7 @@ export function BotenWidgetContent({ theme, pharmacyId }) {
                   <div
                     key={`bg-${i}`}
                     className={`${
-                      day.isToday ? 'bg-[#FEF3C7]/30' :
+                      day.isToday ? 'bg-[#FEE2E2]/30' :
                       day.isHoliday ? 'bg-red-100/60' : ''
                     }`}
                   />

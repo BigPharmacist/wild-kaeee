@@ -97,7 +97,7 @@ export function MonthlyConditionsView({ theme, isOpen, profile, pharmacyId, onCl
         <div className="p-4 space-y-6">
           {loading ? (
             <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#F59E0B]" />
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#DC2626]" />
             </div>
           ) : (
             <>

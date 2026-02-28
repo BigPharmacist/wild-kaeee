@@ -5,7 +5,7 @@ function getRoleBg(role) {
   switch (role) {
     case 'ApothekerIn': return 'bg-blue-50/60'
     case 'PTA': return 'bg-emerald-50/60'
-    case 'PKA': return 'bg-amber-50/60'
+    case 'PKA': return 'bg-red-50/60'
     case 'FahrerIn': return 'bg-purple-50/60'
     default: return 'bg-gray-50/40'
   }

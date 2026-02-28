@@ -157,7 +157,7 @@ function ApoDokumentationModal({
               <button
                 type="button"
                 onClick={() => setShowSignatureCanvas(true)}
-                className={`w-full px-4 py-3 rounded-xl border-2 border-dashed ${theme.border} ${theme.textMuted} hover:border-[#F59E0B] hover:text-[#F59E0B] transition-colors`}
+                className={`w-full px-4 py-3 rounded-xl border-2 border-dashed ${theme.border} ${theme.textMuted} hover:border-[#DC2626] hover:text-[#DC2626] transition-colors`}
               >
                 Unterschreiben
               </button>

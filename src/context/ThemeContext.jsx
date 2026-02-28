@@ -8,7 +8,7 @@ const lightTheme = {
   bg: 'bg-[#F8FAFC]',
   surface: 'bg-white',
   panel: 'bg-white',
-  bgHover: 'hover:bg-[#FEF3C7]/30',
+  bgHover: 'hover:bg-[#FEE2E2]/30',
   bgCard: 'bg-white',
   // Text - Navy & Slate-Grau
   textPrimary: 'text-[#1E293B]',
@@ -19,25 +19,25 @@ const lightTheme = {
   border: 'border-[#CBD5E1]',
   divider: 'border-[#1E293B]/20',
   // Navigation - Amber aktiv
-  navActive: 'bg-[#FEF3C7] text-[#1E293B] border border-[#F59E0B]/30',
-  navHover: 'hover:bg-[#FEF3C7]/50 hover:text-[#1E293B]',
+  navActive: 'bg-[#FEE2E2] text-[#1E293B] border border-[#DC2626]/30',
+  navHover: 'hover:bg-[#FEE2E2]/50 hover:text-[#1E293B]',
   // Amber (Primary) - CTA, wichtige Buttons
-  accent: 'bg-[#F59E0B] hover:bg-[#D97706]',
-  accentText: 'text-[#F59E0B]',
-  primary: 'text-[#F59E0B]',
-  primaryBg: 'bg-[#F59E0B]',
-  primaryHover: 'hover:bg-[#D97706]',
+  accent: 'bg-[#DC2626] hover:bg-[#B91C1C]',
+  accentText: 'text-[#DC2626]',
+  primary: 'text-[#DC2626]',
+  primaryBg: 'bg-[#DC2626]',
+  primaryHover: 'hover:bg-[#B91C1C]',
   // Teal (Secondary)
   secondary: 'text-[#0D9488]',
   secondaryAccent: 'bg-[#0D9488] hover:bg-[#0F766E]',
   // Sidebar - Dunkles Navy-Slate
   sidebarBg: 'bg-[#1E293B]',
   sidebarHover: 'hover:bg-[#334155]',
-  sidebarActive: 'border-[#F59E0B] bg-transparent',
+  sidebarActive: 'border-[#DC2626] bg-transparent',
   sidebarText: 'text-[#E2E8F0]',
   sidebarTextActive: 'text-[#E2E8F0]',
   secondarySidebarBg: 'bg-[#334155]',
-  secondaryActive: 'border-l-4 border-[#F59E0B] bg-[#1E293B] text-[#FEF3C7]',
+  secondaryActive: 'border-l-4 border-[#DC2626] bg-[#1E293B] text-[#FEE2E2]',
   // Inputs
   input: 'bg-white border-[#CBD5E1] focus:border-[#0D9488] focus:ring-1 focus:ring-[#0D9488]',
   inputPlaceholder: 'placeholder-[#94A3B8]',
@@ -48,8 +48,8 @@ const lightTheme = {
   // Status Colors
   success: 'text-[#0D9488]',
   successBg: 'bg-[#0D9488] hover:bg-[#0F766E]',
-  warning: 'text-[#F59E0B]',
-  warningBg: 'bg-[#F59E0B] hover:bg-[#D97706]',
+  warning: 'text-[#DC2626]',
+  warningBg: 'bg-[#DC2626] hover:bg-[#B91C1C]',
   danger: 'text-[#FF6500] hover:text-[#E65A00] hover:bg-[#FFF5EB]',
   dangerBg: 'bg-[#FF6500] hover:bg-[#E65A00]',
 }
@@ -71,25 +71,25 @@ const darkTheme = {
   border: 'border-zinc-700',
   divider: 'border-zinc-700',
   // Navigation - Amber aktiv
-  navActive: 'bg-amber-500/20 text-amber-300 border border-amber-500/30',
+  navActive: 'bg-red-600/20 text-red-300 border border-red-600/30',
   navHover: 'hover:bg-zinc-800 hover:text-zinc-100',
   // Amber (Primary)
-  accent: 'bg-amber-500 hover:bg-amber-600',
-  accentText: 'text-amber-400',
-  primary: 'text-amber-400',
-  primaryBg: 'bg-amber-500',
-  primaryHover: 'hover:bg-amber-600',
+  accent: 'bg-red-600 hover:bg-red-700',
+  accentText: 'text-red-400',
+  primary: 'text-red-400',
+  primaryBg: 'bg-red-600',
+  primaryHover: 'hover:bg-red-700',
   // Teal (Secondary)
   secondary: 'text-teal-400',
   secondaryAccent: 'bg-teal-600 hover:bg-teal-700',
   // Sidebar
   sidebarBg: 'bg-zinc-900',
   sidebarHover: 'hover:bg-zinc-800',
-  sidebarActive: 'border-amber-500 bg-transparent',
+  sidebarActive: 'border-red-600 bg-transparent',
   sidebarText: 'text-zinc-300',
   sidebarTextActive: 'text-zinc-100',
   secondarySidebarBg: 'bg-zinc-800',
-  secondaryActive: 'border-l-4 border-amber-500 bg-zinc-900 text-amber-300',
+  secondaryActive: 'border-l-4 border-red-600 bg-zinc-900 text-red-300',
   // Inputs
   input: 'bg-zinc-800 border-zinc-600 focus:border-teal-500 focus:ring-1 focus:ring-teal-500',
   inputPlaceholder: 'placeholder-zinc-500',
@@ -100,8 +100,8 @@ const darkTheme = {
   // Status Colors
   success: 'text-teal-400',
   successBg: 'bg-teal-600 hover:bg-teal-700',
-  warning: 'text-amber-400',
-  warningBg: 'bg-amber-500 hover:bg-amber-600',
+  warning: 'text-red-400',
+  warningBg: 'bg-red-600 hover:bg-red-700',
   danger: 'text-orange-400 hover:text-orange-300 hover:bg-orange-500/20',
   dangerBg: 'bg-orange-500 hover:bg-orange-600',
 }

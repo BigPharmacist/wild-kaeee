@@ -23,7 +23,7 @@ export function TokenCashModal({ stop, onClose, onCollect, loading }) {
               step="0.01"
               value={amount}
               onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
-              className="w-full px-4 py-3 rounded-lg border border-gray-300 text-lg font-medium focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 text-lg font-medium focus:border-red-500 focus:ring-1 focus:ring-red-500"
             />
           </div>
 
@@ -36,7 +36,7 @@ export function TokenCashModal({ stop, onClose, onCollect, loading }) {
               onChange={(e) => setNotes(e.target.value)}
               placeholder="z.B. Bar bezahlt, Wechselgeld..."
               rows={2}
-              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-red-500 focus:ring-1 focus:ring-red-500"
             />
           </div>
         </div>

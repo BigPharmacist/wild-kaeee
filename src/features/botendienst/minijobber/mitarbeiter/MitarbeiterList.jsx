@@ -83,7 +83,7 @@ export function MitarbeiterList({ theme, pharmacyId, staff, profilesHook }) {
       {/* Loading */}
       {loading && profiles.length === 0 && (
         <div className={`${theme.surface} border ${theme.border} rounded-xl p-12 flex items-center justify-center`}>
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#F59E0B]" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#DC2626]" />
         </div>
       )}
 
@@ -128,7 +128,7 @@ export function MitarbeiterList({ theme, pharmacyId, staff, profilesHook }) {
                       className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold"
                       style={colorHex
                         ? { backgroundColor: colorHex + '1A', color: colorHex }
-                        : { backgroundColor: 'rgb(245 158 11 / 0.1)', color: '#F59E0B' }
+                        : { backgroundColor: 'rgb(245 158 11 / 0.1)', color: '#DC2626' }
                       }
                     >
                       {initials}

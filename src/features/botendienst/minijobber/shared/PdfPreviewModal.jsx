@@ -31,7 +31,7 @@ export function PdfPreviewModal({ theme, blob, fileName, onClose }) {
           <div className="flex items-center gap-2">
             <button
               onClick={handleDownload}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white bg-[#F59E0B] hover:bg-[#D97706]"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white bg-[#DC2626] hover:bg-[#B91C1C]"
             >
               <DownloadSimple size={14} weight="bold" />
               Herunterladen
@@ -52,7 +52,7 @@ export function PdfPreviewModal({ theme, blob, fileName, onClose }) {
             />
           ) : (
             <div className="flex items-center justify-center h-full">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#F59E0B]" />
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#DC2626]" />
             </div>
           )}
         </div>

@@ -16,7 +16,7 @@ export function TokenNotesModal({ stop, onClose, onSave, loading }) {
           placeholder="Notiz eingeben..."
           rows={4}
           autoFocus
-          className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+          className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-red-500 focus:ring-1 focus:ring-red-500"
         />
 
         <div className="flex gap-3 mt-4">

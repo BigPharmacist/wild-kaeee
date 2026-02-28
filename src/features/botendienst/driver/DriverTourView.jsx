@@ -137,7 +137,7 @@ export function DriverTourView({
             <div
               key={stop.id}
               className={`border-b ${theme.border} ${
-                isActive ? 'bg-amber-50' : isCompleted ? 'bg-green-50/50' : ''
+                isActive ? 'bg-red-50' : isCompleted ? 'bg-green-50/50' : ''
               }`}
             >
               {/* Stop Header - Always visible */}
@@ -151,7 +151,7 @@ export function DriverTourView({
                     isCompleted
                       ? 'bg-green-500 text-white'
                       : isSkipped
-                        ? 'bg-amber-500 text-white'
+                        ? 'bg-red-500 text-white'
                         : stop.priority === 'urgent'
                           ? 'bg-red-500 text-white'
                           : 'bg-gray-200 text-gray-700'
@@ -236,10 +236,10 @@ export function DriverTourView({
 
                   {/* Notes */}
                   {deliveryNotes && (
-                    <div className="p-3 rounded-lg bg-amber-50 border border-amber-200">
+                    <div className="p-3 rounded-lg bg-red-50 border border-red-200">
                       <div className="flex items-start gap-2">
-                        <Note size={16} className="text-amber-600 mt-0.5" />
-                        <p className="text-sm text-amber-800">{deliveryNotes}</p>
+                        <Note size={16} className="text-red-700 mt-0.5" />
+                        <p className="text-sm text-red-800">{deliveryNotes}</p>
                       </div>
                     </div>
                   )}
@@ -263,7 +263,7 @@ export function DriverTourView({
                     )}
                     {stop.cash_amount > 0 && (
                       <div className={`flex items-center gap-2 text-sm ${
-                        stop.cash_collected ? 'text-green-600' : 'text-amber-600 font-medium'
+                        stop.cash_collected ? 'text-green-600' : 'text-red-700 font-medium'
                       }`}>
                         <Money size={16} />
                         <span>
@@ -317,7 +317,7 @@ export function DriverTourView({
 
                             {/* Hinweis wenn kein Nachweis */}
                             {!hasProof && (
-                              <p className="text-xs text-amber-600 text-center">
+                              <p className="text-xs text-red-700 text-center">
                                 Foto oder Unterschrift erforderlich
                               </p>
                             )}
@@ -338,7 +338,7 @@ export function DriverTourView({
                               </button>
                               <button
                                 onClick={() => onSkipStop(stop.id)}
-                                className="px-4 py-3 rounded-lg bg-amber-100 text-amber-700"
+                                className="px-4 py-3 rounded-lg bg-red-100 text-red-700"
                                 title="Überspringen"
                               >
                                 <X size={20} weight="bold" />

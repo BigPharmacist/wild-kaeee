@@ -83,7 +83,7 @@ export default function ChatSettingsSection({ theme }) {
       <div className="mb-4">
         <h3 className="text-base font-semibold">KI-Chat Einstellungen</h3>
         <p className={`text-xs ${theme.textMuted}`}>
-          Konfiguriere den schwebenden KI-Assistenten (Mistral)
+          Konfiguriere den schwebenden KI-Assistenten (OpenClaw)
         </p>
       </div>
 

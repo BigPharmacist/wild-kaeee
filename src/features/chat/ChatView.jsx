@@ -116,9 +116,9 @@ const ChatView = ({
         href={entry.file_url}
         target="_blank"
         rel="noopener noreferrer"
-        className={`mt-2 flex items-center gap-2 px-3 py-2 rounded-lg border ${theme.border} ${theme.surface} hover:bg-[#FEF3C7]/30 transition-colors`}
+        className={`mt-2 flex items-center gap-2 px-3 py-2 rounded-lg border ${theme.border} ${theme.surface} hover:bg-[#FEE2E2]/30 transition-colors`}
       >
-        <File size={20} className="text-[#F59E0B]" />
+        <File size={20} className="text-[#DC2626]" />
         <span className="text-sm flex-1 truncate">{entry.file_name || 'Datei'}</span>
         <DownloadSimple size={16} className={theme.textMuted} />
       </a>
@@ -143,7 +143,7 @@ const ChatView = ({
               type="button"
               onClick={loadMoreMessages}
               disabled={chatLoadingMore}
-              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border ${theme.border} ${theme.surface} ${theme.textSecondary} hover:bg-[#FEF3C7]/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors`}
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border ${theme.border} ${theme.surface} ${theme.textSecondary} hover:bg-[#FEE2E2]/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors`}
             >
               <ArrowUp size={16} />
               {chatLoadingMore ? 'Wird geladen...' : 'Ältere Nachrichten laden'}
@@ -228,7 +228,7 @@ const ChatView = ({
                                 <button
                                   type="button"
                                   onClick={() => setEmojiMenuOpenFor(emojiMenuOpenFor === entry.id ? null : entry.id)}
-                                  className="opacity-0 group-hover:opacity-100 transition-opacity text-[#64748B] hover:text-[#F59E0B]"
+                                  className="opacity-0 group-hover:opacity-100 transition-opacity text-[#64748B] hover:text-[#DC2626]"
                                   title="Reagieren"
                                 >
                                   <Smiley size={14} />
@@ -278,7 +278,7 @@ const ChatView = ({
                           {entry.edited_at && <span className="italic">(bearbeitet)</span>}
                           {readStatus}
                         </div>
-                        <div className={`inline-block rounded-2xl px-4 py-2 border ${entry.deleted_at ? `${theme.panel} ${theme.border}` : 'bg-[#F59E0B]/15 border-[#F59E0B]/30 text-[#1E293B]'}`}>
+                        <div className={`inline-block rounded-2xl px-4 py-2 border ${entry.deleted_at ? `${theme.panel} ${theme.border}` : 'bg-[#DC2626]/15 border-[#DC2626]/30 text-[#1E293B]'}`}>
                           {entry.deleted_at ? (
                             <p className={`text-sm italic ${theme.textMuted}`}>Nachricht gelöscht</p>
                           ) : isEditing ? (
@@ -330,8 +330,8 @@ const ChatView = ({
                                 onClick={() => toggleReaction(entry.id, emoji)}
                                 className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs border transition-colors ${
                                   userIds.includes(session?.user?.id)
-                                    ? 'bg-[#F59E0B]/20 border-[#F59E0B]/40 text-[#1E293B]'
-                                    : 'bg-white border-[#CBD5E1] text-[#64748B] hover:bg-[#FEF3C7]/50'
+                                    ? 'bg-[#DC2626]/20 border-[#DC2626]/40 text-[#1E293B]'
+                                    : 'bg-white border-[#CBD5E1] text-[#64748B] hover:bg-[#FEE2E2]/50'
                                 }`}
                                 title={userIds.map((id) => staffByAuthId[id]?.first_name || 'Unbekannt').join(', ')}
                               >
@@ -360,7 +360,7 @@ const ChatView = ({
                               <button
                                 type="button"
                                 onClick={() => setEmojiMenuOpenFor(emojiMenuOpenFor === entry.id ? null : entry.id)}
-                                className="opacity-0 group-hover:opacity-100 transition-opacity text-[#64748B] hover:text-[#F59E0B]"
+                                className="opacity-0 group-hover:opacity-100 transition-opacity text-[#64748B] hover:text-[#DC2626]"
                                 title="Reagieren"
                               >
                                 <Smiley size={14} />
@@ -407,8 +407,8 @@ const ChatView = ({
                                 onClick={() => toggleReaction(entry.id, emoji)}
                                 className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs border transition-colors ${
                                   userIds.includes(session?.user?.id)
-                                    ? 'bg-[#F59E0B]/20 border-[#F59E0B]/40 text-[#1E293B]'
-                                    : 'bg-white border-[#CBD5E1] text-[#64748B] hover:bg-[#FEF3C7]/50'
+                                    ? 'bg-[#DC2626]/20 border-[#DC2626]/40 text-[#1E293B]'
+                                    : 'bg-white border-[#CBD5E1] text-[#64748B] hover:bg-[#FEE2E2]/50'
                                 }`}
                                 title={userIds.map((id) => staffByAuthId[id]?.first_name || 'Unbekannt').join(', ')}
                               >
@@ -447,9 +447,9 @@ const ChatView = ({
       {pendingFile && (
         <div className={`mt-3 flex items-center gap-3 px-4 py-3 rounded-xl border ${theme.border} ${theme.surface}`}>
           {isImage(pendingFile.type) ? (
-            <Image size={20} className="text-[#F59E0B]" />
+            <Image size={20} className="text-[#DC2626]" />
           ) : (
-            <File size={20} className="text-[#F59E0B]" />
+            <File size={20} className="text-[#DC2626]" />
           )}
           <span className="text-sm flex-1 truncate">{pendingFile.name}</span>
           <span className={`text-xs ${theme.textMuted}`}>
@@ -485,7 +485,7 @@ const ChatView = ({
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={chatSending}
-          className={`p-3 rounded-xl border ${theme.border} ${theme.surface} text-[#64748B] hover:text-[#F59E0B] hover:bg-[#FEF3C7]/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors`}
+          className={`p-3 rounded-xl border ${theme.border} ${theme.surface} text-[#64748B] hover:text-[#DC2626] hover:bg-[#FEE2E2]/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors`}
           title="Datei anhängen"
         >
           <Paperclip size={20} />

@@ -84,7 +84,7 @@ export function TourOverview({
             onClick={() => setFilter(tab.id)}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
               filter === tab.id
-                ? 'bg-[#F59E0B] text-white'
+                ? 'bg-[#DC2626] text-white'
                 : `${theme.surface} ${theme.textSecondary} hover:bg-gray-100`
             }`}
           >
@@ -96,7 +96,7 @@ export function TourOverview({
       {/* Tours Grid */}
       {toursLoading ? (
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#F59E0B]" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#DC2626]" />
         </div>
       ) : filteredTours.length === 0 ? (
         <div className={`text-center py-12 ${theme.surface} ${theme.border} border rounded-xl`}>
@@ -104,7 +104,7 @@ export function TourOverview({
           <p className={theme.textMuted}>Keine Touren gefunden</p>
           <button
             onClick={onCreateTour}
-            className="mt-4 text-sm text-[#F59E0B] hover:underline"
+            className="mt-4 text-sm text-[#DC2626] hover:underline"
           >
             Erste Tour erstellen
           </button>

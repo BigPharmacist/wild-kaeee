@@ -68,7 +68,7 @@ export function EinstellungenView({ theme, pharmacyId, profiles }) {
 
         {loading ? (
           <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#F59E0B]" />
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#DC2626]" />
           </div>
         ) : (
           <div className="space-y-4">
@@ -126,7 +126,7 @@ export function EinstellungenView({ theme, pharmacyId, profiles }) {
         </p>
         {shiftsLoading ? (
           <div className="flex justify-center py-4">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#F59E0B]" />
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#DC2626]" />
           </div>
         ) : shifts.length === 0 ? (
           <p className={`text-sm ${theme.textMuted}`}>Keine Schichten vorhanden</p>

@@ -256,7 +256,7 @@ function StaffModal({
                 type="checkbox"
                 checked={staffForm.isAdmin}
                 onChange={(e) => onStaffInput('isAdmin', e.target.checked)}
-                className="accent-[#F59E0B]"
+                className="accent-[#DC2626]"
               />
               Admin
             </label>

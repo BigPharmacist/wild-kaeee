@@ -61,7 +61,7 @@ export function WeekBlock({ theme, days, schedules, shifts, profiles, onCellClic
             key={day.dateStr || `empty-${i}`}
             className={`px-3 py-2.5 border-b border-[#CBD5E1] border-l border-l-[#E2E8F0] ${
               day.empty ? '' :
-              day.isToday ? 'bg-[#FEF3C7]/50' :
+              day.isToday ? 'bg-[#FEE2E2]/50' :
               day.isHoliday ? 'bg-red-50/50' : ''
             }`}
           >
@@ -84,7 +84,7 @@ export function WeekBlock({ theme, days, schedules, shifts, profiles, onCellClic
                   {day.date.getDate()}.
                 </span>
                 {day.isToday && (
-                  <span className="px-1.5 py-0.5 rounded-full bg-[#FEF3C7] text-[#92400E] text-[9px] font-bold ml-auto">
+                  <span className="px-1.5 py-0.5 rounded-full bg-[#FEE2E2] text-[#92400E] text-[9px] font-bold ml-auto">
                     Heute
                   </span>
                 )}
@@ -176,7 +176,7 @@ export function WeekBlock({ theme, days, schedules, shifts, profiles, onCellClic
                       key={`bg-${i}`}
                       className={`${
                         day.empty ? '' :
-                        day.isToday ? 'bg-[#FEF3C7]/30' :
+                        day.isToday ? 'bg-[#FEE2E2]/30' :
                         day.isHoliday ? 'bg-red-50/30' : ''
                       } ${i > 0 ? 'border-l border-[#F1F5F9]' : ''}`}
                     />

@@ -131,10 +131,10 @@ const ApoView = ({
                           markAsRead('amk', msg.id)
                           loadDokumentationen(msg.id, 'amk')
                         }}
-                        className={`text-left ${theme.panel} rounded-2xl border ${theme.border} p-5 ${theme.cardShadow} ${theme.cardHoverShadow} hover:border-[#F59E0B] transition-all flex flex-col h-full ${isUnread ? 'ring-2 ring-blue-400' : ''}`}
+                        className={`text-left ${theme.panel} rounded-2xl border ${theme.border} p-5 ${theme.cardShadow} ${theme.cardHoverShadow} hover:border-[#DC2626] transition-all flex flex-col h-full ${isUnread ? 'ring-2 ring-blue-400' : ''}`}
                       >
                         <div className="flex items-center gap-2 mb-3">
-                          <span className="w-2 h-2 rounded-full bg-amber-500" />
+                          <span className="w-2 h-2 rounded-full bg-red-500" />
                           <span className={`text-xs ${theme.textMuted}`}>
                             {msg.date ? new Date(msg.date).toLocaleDateString('de-DE') : ''}
                           </span>
@@ -145,7 +145,7 @@ const ApoView = ({
                           {msg.description || msg.full_text?.substring(0, 150) || ''}
                         </p>
                         {msg.category && (
-                          <span className={`inline-block mt-3 text-xs px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 font-medium`}>
+                          <span className={`inline-block mt-3 text-xs px-2.5 py-1 rounded-lg bg-red-50 text-red-700 font-medium`}>
                             {msg.category}
                           </span>
                         )}
@@ -153,10 +153,10 @@ const ApoView = ({
                           const firstDok = msg.dokumentationen[msg.dokumentationen.length - 1]
                           const hasSignature = msg.dokumentationen.some(d => d.unterschrift_data)
                           return (
-                            <div className={`mt-3 -mx-5 -mb-5 px-5 py-3 rounded-b-2xl ${hasSignature ? 'bg-green-50' : 'bg-amber-50'}`}>
+                            <div className={`mt-3 -mx-5 -mb-5 px-5 py-3 rounded-b-2xl ${hasSignature ? 'bg-green-50' : 'bg-red-50'}`}>
                               <div className="flex items-center gap-2">
                                 <span className={`w-2 h-2 rounded-full ${hasSignature ? 'bg-green-500' : 'bg-yellow-500'}`} />
-                                <span className={`text-xs ${hasSignature ? 'text-green-700' : 'text-amber-700'}`}>
+                                <span className={`text-xs ${hasSignature ? 'text-green-700' : 'text-red-700'}`}>
                                   {firstDok.erstellt_von_name || 'Bearbeitet'}
                                   {firstDok.erstellt_am && ` · ${new Date(firstDok.erstellt_am).toLocaleDateString('de-DE')}`}
                                 </span>
@@ -202,7 +202,7 @@ const ApoView = ({
                           markAsRead('recall', msg.id)
                           loadDokumentationen(msg.id, 'recall')
                         }}
-                        className={`text-left ${theme.panel} rounded-2xl border ${theme.border} p-5 ${theme.cardShadow} ${theme.cardHoverShadow} hover:border-[#F59E0B] transition-all flex flex-col h-full ${isUnread ? 'ring-2 ring-blue-400' : ''}`}
+                        className={`text-left ${theme.panel} rounded-2xl border ${theme.border} p-5 ${theme.cardShadow} ${theme.cardHoverShadow} hover:border-[#DC2626] transition-all flex flex-col h-full ${isUnread ? 'ring-2 ring-blue-400' : ''}`}
                       >
                         <div className="flex items-center gap-2 mb-3">
                           <span className="w-2 h-2 rounded-full bg-[#FF6500]" />
@@ -232,10 +232,10 @@ const ApoView = ({
                           const firstDok = msg.dokumentationen[msg.dokumentationen.length - 1]
                           const hasSignature = msg.dokumentationen.some(d => d.unterschrift_data)
                           return (
-                            <div className={`mt-3 -mx-5 -mb-5 px-5 py-3 rounded-b-2xl ${hasSignature ? 'bg-green-50' : 'bg-amber-50'}`}>
+                            <div className={`mt-3 -mx-5 -mb-5 px-5 py-3 rounded-b-2xl ${hasSignature ? 'bg-green-50' : 'bg-red-50'}`}>
                               <div className="flex items-center gap-2">
                                 <span className={`w-2 h-2 rounded-full ${hasSignature ? 'bg-green-500' : 'bg-yellow-500'}`} />
-                                <span className={`text-xs ${hasSignature ? 'text-green-700' : 'text-amber-700'}`}>
+                                <span className={`text-xs ${hasSignature ? 'text-green-700' : 'text-red-700'}`}>
                                   {firstDok.erstellt_von_name || 'Bearbeitet'}
                                   {firstDok.erstellt_am && ` · ${new Date(firstDok.erstellt_am).toLocaleDateString('de-DE')}`}
                                 </span>
@@ -280,7 +280,7 @@ const ApoView = ({
                           setSelectedApoMessage({ ...ausgabe, type: 'lav' })
                           markAsRead('lav', ausgabe.id)
                         }}
-                        className={`text-left ${theme.panel} rounded-2xl border ${theme.border} p-5 ${theme.cardShadow} ${theme.cardHoverShadow} hover:border-[#F59E0B] transition-all flex flex-col h-full ${isUnread ? 'ring-2 ring-blue-400' : ''}`}
+                        className={`text-left ${theme.panel} rounded-2xl border ${theme.border} p-5 ${theme.cardShadow} ${theme.cardHoverShadow} hover:border-[#DC2626] transition-all flex flex-col h-full ${isUnread ? 'ring-2 ring-blue-400' : ''}`}
                       >
                         <div className="flex items-center gap-2 mb-3">
                           <span className="w-2 h-2 rounded-full bg-blue-500" />

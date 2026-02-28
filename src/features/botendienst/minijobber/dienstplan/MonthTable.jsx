@@ -71,12 +71,12 @@ export function MonthTable({ theme, profiles, schedules, shifts, holidayMap, yea
               {copySourceWeek?.kw === week.kw ? (
                 /* Source week selected */
                 <>
-                  <span className="inline-flex items-center justify-center bg-amber-400 text-white rounded-full px-2.5 py-0.5 text-xs font-bold ring-2 ring-amber-300">
+                  <span className="inline-flex items-center justify-center bg-red-400 text-white rounded-full px-2.5 py-0.5 text-xs font-bold ring-2 ring-red-300">
                     KW {week.kw}
                   </span>
                   <button
                     onClick={(e) => { e.stopPropagation(); onCopySource(null) }}
-                    className="ml-1 p-0.5 rounded-full text-amber-500 hover:bg-amber-100"
+                    className="ml-1 p-0.5 rounded-full text-red-500 hover:bg-red-100"
                     title="Kopieren abbrechen"
                   >
                     <X size={14} weight="bold" />
@@ -85,12 +85,12 @@ export function MonthTable({ theme, profiles, schedules, shifts, holidayMap, yea
               ) : copySourceWeek ? (
                 /* Other week — show paste button */
                 <>
-                  <span className="inline-flex items-center justify-center bg-[#FEF3C7] text-[#92400E] rounded-full px-2.5 py-0.5 text-xs font-bold">
+                  <span className="inline-flex items-center justify-center bg-[#FEE2E2] text-[#92400E] rounded-full px-2.5 py-0.5 text-xs font-bold">
                     KW {week.kw}
                   </span>
                   <button
                     onClick={(e) => { e.stopPropagation(); onPasteWeek({ kw: week.kw, startDate: week.startDate, endDate: week.endDate }) }}
-                    className="ml-1 p-0.5 rounded-full text-amber-600 hover:bg-amber-100"
+                    className="ml-1 p-0.5 rounded-full text-red-700 hover:bg-red-100"
                     title={`In KW ${week.kw} einfügen`}
                   >
                     <ClipboardText size={14} weight="bold" />
@@ -99,12 +99,12 @@ export function MonthTable({ theme, profiles, schedules, shifts, holidayMap, yea
               ) : (
                 /* Normal — hover to show copy */
                 <>
-                  <span className="inline-flex items-center justify-center bg-[#FEF3C7] text-[#92400E] rounded-full px-2.5 py-0.5 text-xs font-bold">
+                  <span className="inline-flex items-center justify-center bg-[#FEE2E2] text-[#92400E] rounded-full px-2.5 py-0.5 text-xs font-bold">
                     KW {week.kw}
                   </span>
                   <button
                     onClick={(e) => { e.stopPropagation(); onCopySource({ kw: week.kw, startDate: week.startDate, endDate: week.endDate }) }}
-                    className="ml-1 p-0.5 rounded-full text-gray-400 hover:text-amber-600 hover:bg-amber-100 opacity-0 group-hover/kw:opacity-100 transition-opacity"
+                    className="ml-1 p-0.5 rounded-full text-gray-400 hover:text-red-700 hover:bg-red-100 opacity-0 group-hover/kw:opacity-100 transition-opacity"
                     title={`KW ${week.kw} kopieren`}
                   >
                     <Copy size={14} weight="bold" />

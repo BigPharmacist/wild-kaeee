@@ -350,7 +350,7 @@ const SidebarNav = function SidebarNav() {
                     type="button"
                     className={`w-full flex items-center gap-2 text-left px-3 py-2.5 rounded-[6px] text-sm transition-colors overflow-hidden ${
                       isSubActive
-                        ? 'bg-[#1E293B] text-[#FEF3C7] font-medium'
+                        ? 'bg-[#1E293B] text-[#FEE2E2] font-medium'
                         : 'text-[#E5E7EB] hover:bg-[#1E293B]/50 hover:text-white'
                     }`}
                     onClick={() => {
@@ -402,7 +402,7 @@ const SidebarNav = function SidebarNav() {
             return (
               <div key={item.id} className="relative w-full flex justify-center">
                 {activeView === item.id && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] bg-[#F59E0B] rounded-r pointer-events-none z-10" />
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] bg-[#DC2626] rounded-r pointer-events-none z-10" />
                 )}
                 <button
                   type="button"
@@ -429,7 +429,7 @@ const SidebarNav = function SidebarNav() {
         <div className="py-2 flex justify-center border-t border-[#334155] pl-1">
           <div className="relative">
             {activeView === miscNavItem.id && (
-              <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] bg-[#F59E0B] rounded-r pointer-events-none z-10" />
+              <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] bg-[#DC2626] rounded-r pointer-events-none z-10" />
             )}
             <button
               type="button"

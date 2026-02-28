@@ -100,7 +100,7 @@ export function ZeiterfassungView({ theme, pharmacyId, profiles }) {
                 onClick={() => setActiveTab(tab)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium ${
                   activeTab === tab
-                    ? 'bg-[#F59E0B] text-white'
+                    ? 'bg-[#DC2626] text-white'
                     : `${theme.textSecondary} hover:bg-gray-100 border ${theme.border}`
                 }`}
               >
@@ -121,7 +121,7 @@ export function ZeiterfassungView({ theme, pharmacyId, profiles }) {
       {/* Loading */}
       {loading && (
         <div className={`${theme.surface} border ${theme.border} rounded-xl p-12 flex items-center justify-center`}>
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#F59E0B]" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#DC2626]" />
         </div>
       )}
 

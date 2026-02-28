@@ -672,7 +672,7 @@ export default function BotendienstView({
             )}
           </div>
           {stopsWithoutCoords.length > 0 && selectedTour && (
-            <p className="mt-2 text-xs text-amber-600">
+            <p className="mt-2 text-xs text-red-700">
               ⚠ {stopsWithoutCoords.length} Stop(s) ohne Koordinaten werden nicht auf der Karte angezeigt
             </p>
           )}
@@ -682,7 +682,7 @@ export default function BotendienstView({
         {selectedTour ? (
           stopsLoading ? (
             <div className={`${theme.surface} ${theme.border} border rounded-xl p-12 flex items-center justify-center`}>
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#F59E0B]" />
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#DC2626]" />
             </div>
           ) : (
             <TourMap

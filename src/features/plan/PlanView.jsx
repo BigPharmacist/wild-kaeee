@@ -101,7 +101,7 @@ const PlanView = () => {
                           ${day.isSelected
                             ? 'bg-[#334155] text-white'
                             : day.isTodayDate
-                              ? `border-2 border-[#F59E0B]/50 ${day.hasData ? theme.text : theme.textMuted}`
+                              ? `border-2 border-[#DC2626]/50 ${day.hasData ? theme.text : theme.textMuted}`
                               : day.hasData
                                 ? `${theme.bgHover} ${day.isWeekend ? theme.textMuted : theme.text}`
                                 : `${theme.textMuted} opacity-40 cursor-not-allowed`
@@ -174,11 +174,11 @@ const PlanView = () => {
             }
 
             return (
-              <div className={`${theme.panel} rounded-2xl p-5 border ${isToday ? 'border-[#F59E0B]/40' : theme.border} ${theme.cardShadow}`}>
+              <div className={`${theme.panel} rounded-2xl p-5 border ${isToday ? 'border-[#DC2626]/40' : theme.border} ${theme.cardShadow}`}>
                 <div className="flex items-center gap-2 mb-4">
                   <h3 className="text-lg font-semibold">{dayData.issueDate}</h3>
                   {isToday && (
-                    <span className="text-[10px] uppercase tracking-wide px-2 py-1 rounded-full bg-[#334155]/15 text-[#F59E0B] border border-[#F59E0B]/20">
+                    <span className="text-[10px] uppercase tracking-wide px-2 py-1 rounded-full bg-[#334155]/15 text-[#DC2626] border border-[#DC2626]/20">
                       Heute
                     </span>
                   )}

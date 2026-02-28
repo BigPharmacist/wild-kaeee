@@ -93,7 +93,7 @@ export function TourPrintModal({
             .customer-name { font-weight: bold; font-size: 11pt; }
             .address { font-size: 10pt; color: #333; }
             .phone { font-size: 10pt; color: #555; }
-            .delivery-notes { font-size: 9pt; color: #D97706; font-style: italic; margin-top: 4px; }
+            .delivery-notes { font-size: 9pt; color: #B91C1C; font-style: italic; margin-top: 4px; }
             .notes-section { margin-top: 6px; padding-top: 6px; border-top: 1px dotted #ccc; }
             .notes-row { display: flex; gap: 20px; font-size: 9pt; color: #666; }
             .notes-label { min-width: 100px; }
@@ -198,8 +198,8 @@ export function TourPrintModal({
             .stop-meta { display: flex; gap: 15px; margin-bottom: 8px; font-size: 9pt; }
             .stop-meta-item { display: flex; align-items: center; gap: 4px; }
             .stop-meta-item.cash { color: #0D9488; font-weight: 600; }
-            .stop-meta-item.pending { color: #D97706; }
-            .driver-notes { background: #FEF3C7; border-left: 3px solid #F59E0B; padding: 8px 10px; margin: 8px 0; font-size: 9pt; border-radius: 0 4px 4px 0; }
+            .stop-meta-item.pending { color: #B91C1C; }
+            .driver-notes { background: #FEE2E2; border-left: 3px solid #DC2626; padding: 8px 10px; margin: 8px 0; font-size: 9pt; border-radius: 0 4px 4px 0; }
             .driver-notes-label { font-weight: bold; color: #92400E; margin-bottom: 2px; }
             .driver-notes-text { color: #78350F; }
             .evidence-section { margin-top: 10px; }
@@ -212,7 +212,7 @@ export function TourPrintModal({
             .photo-img { width: 100%; height: 100%; object-fit: cover; }
             .photo-caption { font-size: 7pt; color: #64748B; padding: 2px 4px; background: #f8fafc; }
             .status-completed { color: #0D9488; }
-            .status-skipped { color: #D97706; }
+            .status-skipped { color: #B91C1C; }
             .footer { margin-top: 20px; padding-top: 10px; border-top: 1px solid #e2e8f0; font-size: 8pt; color: #94A3B8; text-align: center; }
             @media print {
               .stop-card { break-inside: avoid; }
@@ -371,7 +371,7 @@ export function TourPrintModal({
                 onClick={() => setPrintMode('list')}
                 className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all ${
                   printMode === 'list'
-                    ? 'border-[#F59E0B] bg-amber-50 text-amber-700'
+                    ? 'border-[#DC2626] bg-red-50 text-red-700'
                     : `${theme.border} border ${theme.textSecondary} hover:bg-gray-50`
                 }`}
               >
@@ -512,7 +512,7 @@ export function TourPrintModal({
                           </div>
                         </td>
                         <td className={`px-3 py-2 text-right ${theme.textSecondary}`}>{stop.package_count || 1}</td>
-                        <td className={`px-3 py-2 text-right ${stop.cash_amount > 0 ? 'text-amber-600 font-medium' : theme.textMuted}`}>
+                        <td className={`px-3 py-2 text-right ${stop.cash_amount > 0 ? 'text-red-700 font-medium' : theme.textMuted}`}>
                           {stop.cash_amount > 0 ? formatCurrency(stop.cash_amount) : '-'}
                         </td>
                       </tr>
@@ -540,7 +540,7 @@ export function TourPrintModal({
           <button
             onClick={handlePrint}
             className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white ${
-              printMode === 'protocol' ? 'bg-[#0D9488] hover:bg-[#0F766E]' : 'bg-[#F59E0B] hover:bg-[#D97706]'
+              printMode === 'protocol' ? 'bg-[#0D9488] hover:bg-[#0F766E]' : 'bg-[#DC2626] hover:bg-[#B91C1C]'
             }`}
           >
             <Printer size={18} />

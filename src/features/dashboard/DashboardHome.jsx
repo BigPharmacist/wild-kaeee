@@ -167,7 +167,7 @@ const DashboardHome = memo(function DashboardHome() {
               {weatherData.daily?.slice(0, 3).map((day, index) => {
                 const dayLabel = index === 0 ? 'Heute' : index === 1 ? 'Morgen' : new Date(day.date).toLocaleDateString('de-DE', { weekday: 'short' })
                 return (
-                  <div key={day.date} className={`bg-[#FEF3C7] rounded-lg px-2 py-1.5 text-center`}>
+                  <div key={day.date} className={`bg-[#FEE2E2] rounded-lg px-2 py-1.5 text-center`}>
                     <p className={`text-xs font-medium ${theme.textSecondary}`}>{dayLabel}</p>
                     <div className={`flex justify-center ${theme.textSecondary}`}>
                       <WeatherIcon code={day.weatherCode ?? weatherData.weatherCode} className="w-6 h-6" />
@@ -574,7 +574,7 @@ const DashboardHome = memo(function DashboardHome() {
                 <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
                   task.priority === 'A' ? 'bg-rose-100 text-rose-700' :
                   task.priority === 'B' ? 'bg-orange-100 text-orange-700' :
-                  task.priority === 'C' ? 'bg-amber-100 text-amber-700' :
+                  task.priority === 'C' ? 'bg-red-100 text-red-700' :
                   'bg-gray-100 text-gray-600'
                 }`}>
                   {task.priority}
@@ -618,8 +618,8 @@ const DashboardHome = memo(function DashboardHome() {
               {today.length > 0 && (
                 <div>
                   <div className="flex items-center gap-1.5 mb-2">
-                    <Clock size={14} className="text-amber-500" />
-                    <p className={`text-xs font-medium text-amber-600`}>Heute ({today.length})</p>
+                    <Clock size={14} className="text-red-500" />
+                    <p className={`text-xs font-medium text-red-700`}>Heute ({today.length})</p>
                   </div>
                   <div className="space-y-2 pl-0.5">
                     {today.slice(0, 3).map((task) => (

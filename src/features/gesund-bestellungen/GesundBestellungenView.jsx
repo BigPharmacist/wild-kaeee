@@ -23,7 +23,7 @@ const ORDER_TYPE_LABELS = {
 const ORDER_TYPE_COLORS = {
   OTC_ONLY: 'bg-blue-100 text-blue-700',
   FOTO: 'bg-purple-100 text-purple-700',
-  PARTNER: 'bg-amber-100 text-amber-700',
+  PARTNER: 'bg-red-100 text-red-700',
   EREZEPT: 'bg-teal-100 text-teal-700',
 }
 
@@ -48,8 +48,8 @@ const STATUS_LABELS = {
 const STATUS_COLORS = {
   NEW: 'bg-blue-100 text-blue-700',
   PHARMACIST_NEW: 'bg-blue-100 text-blue-700',
-  IN_PROGRESS: 'bg-amber-100 text-amber-700',
-  PHARMACIST_IN_PROGRESS: 'bg-amber-100 text-amber-700',
+  IN_PROGRESS: 'bg-red-100 text-red-700',
+  PHARMACIST_IN_PROGRESS: 'bg-red-100 text-red-700',
   PHARMACIST_AWAIT_WHOLESALE: 'bg-orange-100 text-orange-700',
   PHARMACIST_READY_COLLECT: 'bg-teal-100 text-teal-700',
   PHARMACIST_READY_DELIVERY: 'bg-teal-100 text-teal-700',

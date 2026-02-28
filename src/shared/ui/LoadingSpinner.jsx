@@ -9,7 +9,7 @@ export default function LoadingSpinner({ message = 'Lädt...' }) {
       <div className="text-center">
         <CircleNotch
           size={32}
-          className="animate-spin text-[#F59E0B] mx-auto mb-3"
+          className="animate-spin text-[#DC2626] mx-auto mb-3"
         />
         <p className="text-sm text-[#64748B]">{message}</p>
       </div>

@@ -476,7 +476,7 @@ const TasksView = ({
               type="checkbox"
               checked={showCompleted}
               onChange={(e) => setShowCompleted(e.target.checked)}
-              className="rounded accent-[#F59E0B]"
+              className="rounded accent-[#DC2626]"
             />
             Erledigte anzeigen
           </label>

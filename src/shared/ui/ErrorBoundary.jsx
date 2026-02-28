@@ -59,8 +59,8 @@ class ErrorBoundary extends Component {
           <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
             <div className="bg-white rounded-xl shadow-lg max-w-lg w-full p-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
-                  <svg className="w-6 h-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-red-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
                   </svg>
                 </div>
@@ -76,7 +76,7 @@ class ErrorBoundary extends Component {
               <div className="flex gap-3">
                 <button
                   onClick={this.handleReload}
-                  className="flex-1 px-4 py-2.5 bg-[#F59E0B] hover:bg-[#D97706] text-white font-medium rounded-lg transition-colors"
+                  className="flex-1 px-4 py-2.5 bg-[#DC2626] hover:bg-[#B91C1C] text-white font-medium rounded-lg transition-colors"
                 >
                   App neu laden
                 </button>
@@ -120,7 +120,7 @@ class ErrorBoundary extends Component {
             <div className="flex gap-3">
               <button
                 onClick={this.handleReset}
-                className="flex-1 px-4 py-2.5 bg-[#F59E0B] hover:bg-[#D97706] text-white font-medium rounded-lg transition-colors"
+                className="flex-1 px-4 py-2.5 bg-[#DC2626] hover:bg-[#B91C1C] text-white font-medium rounded-lg transition-colors"
               >
                 Erneut versuchen
               </button>

@@ -83,7 +83,7 @@ export function CustomerList({
       {/* Customer List */}
       {customersLoading ? (
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#F59E0B]" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#DC2626]" />
         </div>
       ) : filteredCustomers.length === 0 ? (
         <div className={`text-center py-12 ${theme.surface} ${theme.border} border rounded-xl`}>
@@ -127,7 +127,7 @@ export function CustomerList({
                     {(customer.delivery_notes || customer.access_info) ? (
                       <div className="flex items-center gap-2">
                         {customer.delivery_notes && (
-                          <span className="text-amber-600 truncate" title={customer.delivery_notes}>
+                          <span className="text-red-700 truncate" title={customer.delivery_notes}>
                             {customer.delivery_notes}
                           </span>
                         )}

@@ -147,7 +147,7 @@ export function NewStopModal({
                 <div className={`mt-2 border rounded-lg ${theme.border} max-h-48 overflow-auto`}>
                   {searchLoading ? (
                     <div className="p-4 text-center">
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#F59E0B] mx-auto" />
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#DC2626] mx-auto" />
                     </div>
                   ) : searchResults.length > 0 ? (
                     searchResults.map(customer => (
@@ -174,7 +174,7 @@ export function NewStopModal({
 
               <button
                 onClick={() => setShowNewForm(true)}
-                className={`mt-3 inline-flex items-center gap-1.5 text-sm text-[#F59E0B] hover:underline`}
+                className={`mt-3 inline-flex items-center gap-1.5 text-sm text-[#DC2626] hover:underline`}
               >
                 <Plus size={16} />
                 Neuen Kunden anlegen
@@ -187,14 +187,14 @@ export function NewStopModal({
             <div className="space-y-4">
               {selectedCustomer && (
                 <div className={`p-3 rounded-lg ${theme.bg} flex items-start gap-3`}>
-                  <User size={20} className="text-[#F59E0B]" />
+                  <User size={20} className="text-[#DC2626]" />
                   <div className="flex-1">
                     <p className={`font-medium ${theme.textPrimary}`}>{selectedCustomer.name}</p>
                     <p className={`text-sm ${theme.textMuted}`}>
                       {selectedCustomer.street}, {selectedCustomer.postal_code} {selectedCustomer.city}
                     </p>
                     {selectedCustomer.delivery_notes && (
-                      <p className="text-sm text-amber-600 mt-1">
+                      <p className="text-sm text-red-700 mt-1">
                         {selectedCustomer.delivery_notes}
                       </p>
                     )}

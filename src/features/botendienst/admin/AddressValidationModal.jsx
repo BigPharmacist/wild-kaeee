@@ -81,8 +81,8 @@ export function AddressValidationModal({
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
-              <Warning size={20} className="text-amber-600" weight="fill" />
+            <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+              <Warning size={20} className="text-red-700" weight="fill" />
             </div>
             <div>
               <h2 className={`font-semibold ${theme.textPrimary}`}>Adresse vervollständigen</h2>
@@ -102,13 +102,13 @@ export function AddressValidationModal({
         {/* Content */}
         <div className="p-4 space-y-4">
           {/* Warnung */}
-          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-            <p className="text-sm text-amber-800">
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-800">
               <strong>{form.customer_name}</strong> hat keine vollständige Adresse.
               Bitte ergänze die fehlenden Daten.
             </p>
             {stop?.street && (
-              <p className="text-xs text-amber-600 mt-1">
+              <p className="text-xs text-red-700 mt-1">
                 Aus PDF: {stop.street} {stop.postal_code} {stop.city}
               </p>
             )}

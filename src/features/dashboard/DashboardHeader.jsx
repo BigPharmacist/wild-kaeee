@@ -38,7 +38,7 @@ const DashboardHeader = () => {
       <div className="flex items-center gap-3">
         <button
           onClick={() => setMobileNavOpen(!mobileNavOpen)}
-          className={`lg:hidden p-2 rounded-[6px] ${theme.textSecondary} hover:bg-[#FEF3C7]`}
+          className={`lg:hidden p-2 rounded-[6px] ${theme.textSecondary} hover:bg-[#FEE2E2]`}
           title={mobileNavOpen ? 'Menü schließen' : 'Menü öffnen'}
         >
           {mobileNavOpen ? <Icons.X /> : <Icons.Menu />}
@@ -67,7 +67,7 @@ const DashboardHeader = () => {
                   cameraInputRef?.current?.click()
                 }
               }}
-              className={`p-2 rounded-[6px] hover:bg-[#FEF3C7] ${theme.textSecondary} transition-colors ${(photoUploading || businessCardScanning) ? 'opacity-50' : ''}`}
+              className={`p-2 rounded-[6px] hover:bg-[#FEE2E2] ${theme.textSecondary} transition-colors ${(photoUploading || businessCardScanning) ? 'opacity-50' : ''}`}
               title={(activeView === 'settings' && settingsTab === 'contacts') ? 'Visitenkarte scannen' : 'Foto aufnehmen'}
               disabled={photoUploading || businessCardScanning}
             >
@@ -107,7 +107,7 @@ const DashboardHeader = () => {
 
         <button
           onClick={() => { setActiveView('dokumente'); setDokumenteTab('rechnungen'); navigate({ to: '/rechnungen' }) }}
-          className={`p-2 rounded-[6px] hover:bg-[#FEF3C7] ${activeView === 'dokumente' && dokumenteTab === 'rechnungen' ? theme.accentText : theme.textSecondary} transition-colors`}
+          className={`p-2 rounded-[6px] hover:bg-[#FEE2E2] ${activeView === 'dokumente' && dokumenteTab === 'rechnungen' ? theme.accentText : theme.textSecondary} transition-colors`}
           title="GH-Rechnungen"
         >
           <Icons.FileText />

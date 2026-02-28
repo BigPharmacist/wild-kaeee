@@ -62,7 +62,7 @@ function EditableCell({ value, onSave, theme }) {
   return (
     <span
       onClick={startEdit}
-      className={`cursor-pointer px-1.5 py-0.5 rounded hover:bg-amber-100 hover:text-amber-800 ${theme.textSecondary}`}
+      className={`cursor-pointer px-1.5 py-0.5 rounded hover:bg-red-100 hover:text-red-800 ${theme.textSecondary}`}
       title="Klicken zum Bearbeiten"
     >
       {parseFloat(value || 0).toFixed(2).replace('.', ',')}
@@ -186,7 +186,7 @@ export function StundenkontoModal({ theme, isOpen, staffId, profile, pharmacyId,
         <div className="overflow-y-auto flex-1">
           {loading ? (
             <div className="flex justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#F59E0B]" />
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#DC2626]" />
             </div>
           ) : rows.length === 0 ? (
             <div className={`text-center py-12 ${theme.textMuted}`}>
@@ -207,7 +207,7 @@ export function StundenkontoModal({ theme, isOpen, staffId, profile, pharmacyId,
               </thead>
               <tbody>
                 {displayRows.map((r, i) => (
-                  <tr key={`${r.year}-${r.month}`} className={`${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-amber-50/40`}>
+                  <tr key={`${r.year}-${r.month}`} className={`${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-red-50/40`}>
                     <td
                       className={`px-3 py-2 font-medium ${theme.textPrimary} border-b border-gray-200 cursor-pointer hover:text-[#0D9488] hover:underline`}
                       onClick={() => setDetailMonth({ year: r.year, month: r.month })}
@@ -245,7 +245,7 @@ export function StundenkontoModal({ theme, isOpen, staffId, profile, pharmacyId,
                 ))}
 
                 {initialBalance !== 0 && (
-                  <tr className="bg-amber-50/50">
+                  <tr className="bg-red-50/50">
                     <td className={`px-3 py-2 font-medium italic ${theme.textSecondary} border-b border-gray-200`} colSpan={6}>
                       Anfangsbestand
                     </td>

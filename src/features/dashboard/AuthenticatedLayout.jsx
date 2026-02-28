@@ -26,9 +26,9 @@ function AuthenticatedShell() {
   // Document title mit Fax-Count
   useEffect(() => {
     if (faxCount > 0) {
-      document.title = `(${faxCount}) Kaeee`
+      document.title = `(${faxCount}) Wild·Kaeee`
     } else {
-      document.title = 'Kaeee'
+      document.title = 'Wild·Kaeee'
     }
   }, [faxCount])
 

@@ -16,7 +16,7 @@ function toLocalDateStr(d) {
 // Farben
 const COLORS = {
   primary: [30, 41, 59],       // Navy #1E293B
-  accent: [245, 158, 11],      // Amber #F59E0B
+  accent: [245, 158, 11],      // Amber #DC2626
   headerBg: [30, 41, 59],      // Navy
   headerText: [255, 255, 255], // Weiß
   rowEven: [255, 255, 255],

@@ -236,7 +236,7 @@ export function DienstplanView({ theme, pharmacyId, profiles, pharmacyName }) {
               <button
                 onClick={() => setViewMode('week')}
                 className={`inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium transition-colors ${
-                  viewMode === 'week' ? 'bg-[#FEF3C7] text-[#1E293B]' : `${theme.textSecondary} hover:bg-gray-50`
+                  viewMode === 'week' ? 'bg-[#FEE2E2] text-[#1E293B]' : `${theme.textSecondary} hover:bg-gray-50`
                 }`}
               >
                 <CalendarBlank size={14} />
@@ -245,7 +245,7 @@ export function DienstplanView({ theme, pharmacyId, profiles, pharmacyName }) {
               <button
                 onClick={() => setViewMode('month')}
                 className={`inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium transition-colors border-l ${theme.border} ${
-                  viewMode === 'month' ? 'bg-[#FEF3C7] text-[#1E293B]' : `${theme.textSecondary} hover:bg-gray-50`
+                  viewMode === 'month' ? 'bg-[#FEE2E2] text-[#1E293B]' : `${theme.textSecondary} hover:bg-gray-50`
                 }`}
               >
                 <ListBullets size={14} />
@@ -336,7 +336,7 @@ export function DienstplanView({ theme, pharmacyId, profiles, pharmacyName }) {
       {/* Grid / Table */}
       {loading && schedules.length === 0 ? (
         <div className={`${theme.surface} border ${theme.border} rounded-xl p-12 flex items-center justify-center`}>
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#F59E0B]" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#DC2626]" />
         </div>
       ) : viewMode === 'week' ? (
         <WeekGrid
@@ -389,7 +389,7 @@ export function DienstplanView({ theme, pharmacyId, profiles, pharmacyName }) {
           <div className={`${theme.surface} rounded-xl shadow-xl w-full max-w-sm mx-4`}>
             <div className="flex items-center justify-between px-5 py-4 border-b border-[#CBD5E1]">
               <div className="flex items-center gap-2">
-                <Warning size={20} weight="bold" className="text-amber-500" />
+                <Warning size={20} weight="bold" className="text-red-500" />
                 <h3 className={`text-sm font-semibold ${theme.textPrimary}`}>
                   Woche kopieren
                 </h3>
@@ -418,7 +418,7 @@ export function DienstplanView({ theme, pharmacyId, profiles, pharmacyName }) {
               </button>
               <button
                 onClick={handleConfirmPaste}
-                className="px-4 py-1.5 rounded-lg text-xs font-medium text-white bg-[#F59E0B] hover:bg-[#D97706]"
+                className="px-4 py-1.5 rounded-lg text-xs font-medium text-white bg-[#DC2626] hover:bg-[#B91C1C]"
               >
                 Kopieren
               </button>

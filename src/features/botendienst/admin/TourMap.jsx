@@ -31,7 +31,7 @@ const stopIcons = {
   pending: createIcon('#6B7280'), // gray
   in_progress: createIcon('#3B82F6'), // blue
   completed: createIcon('#22C55E'), // green
-  skipped: createIcon('#F59E0B'), // amber
+  skipped: createIcon('#DC2626'), // amber
   urgent: createIcon('#EF4444'), // red
 }
 
@@ -299,7 +299,7 @@ export function TourMap({
               {pendingPolyline.length > 1 && (
                 <Polyline
                   positions={pendingPolyline}
-                  color="#F59E0B"
+                  color="#DC2626"
                   weight={3}
                   opacity={0.7}
                   dashArray="10, 5"
@@ -365,7 +365,7 @@ export function TourMap({
             )}
             {pendingPolyline.length > 1 && (
               <div className="flex items-center gap-1.5">
-                <div className="w-4 h-0.5 bg-amber-500 rounded border-dashed" />
+                <div className="w-4 h-0.5 bg-red-500 rounded border-dashed" />
                 <span className={theme.textMuted}>Noch offen</span>
               </div>
             )}
