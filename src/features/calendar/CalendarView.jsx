@@ -157,25 +157,22 @@ const CalendarView = memo(function CalendarView({
   // DayPopup state for month view
   const [selectedDay, setSelectedDay] = useState(null)
 
-  // For infinite scroll: offset range from current month
-  const [monthRange, setMonthRange] = useState({ start: -2, end: 3 })
-  const monthRangeRef = useRef(monthRange)
+  // For infinite scroll: start bei aktuellem Monat (offset 0 = ganz oben, kein Scrollen nötig)
+  const [monthRange, setMonthRange] = useState({ start: 0, end: 5 })
+  // DEBUG: monthRange-Änderungen loggen
+  useEffect(() => {
+    console.log('[CAL DEBUG] monthRange changed:', monthRange, 'hasScrolledDown:', hasScrolledDown.current)
+    console.trace('[CAL DEBUG] monthRange change triggered by:')
+  }, [monthRange]) // eslint-disable-line react-hooks/exhaustive-deps
   const scrollContainerRef = useRef(null)
   const currentMonthRef = useRef(null)
   const topSentinelRef = useRef(null)
   const bottomSentinelRef = useRef(null)
-  const hasScrolledToToday = useRef(false)
-  const topTriggeredRef = useRef(false)
-  const bottomTriggeredRef = useRef(false)
   const scrollParentRef = useRef(null)
   const loadCooldownRef = useRef(0)
-  const prevScrollHeightRef = useRef(0) // Für Scroll-Kompensation beim Laden nach oben
-  const isLoadingTopRef = useRef(false) // Flag für Scroll-Kompensation
-
-  // Sync monthRange to ref for access in scroll handler
-  useEffect(() => {
-    monthRangeRef.current = monthRange
-  }, [monthRange])
+  const prevScrollHeightRef = useRef(0)
+  const isLoadingTopRef = useRef(false)
+  const hasScrolledDown = useRef(false) // Top-Loading erst nach erstem Runterscrollen
 
   // Generate list of months to render
   const getMonthsToRender = useCallback(() => {
@@ -187,22 +184,11 @@ const CalendarView = memo(function CalendarView({
     return months
   }, [monthRange.start, monthRange.end]) // eslint-disable-line react-hooks/exhaustive-deps -- today is stable within session
 
-  // Scroll to current month on initial load
-  useEffect(() => {
-    if (calendarViewMode === 'month' && currentMonthRef.current && !hasScrolledToToday.current) {
-      setTimeout(() => {
-        currentMonthRef.current?.scrollIntoView({ behavior: 'instant', block: 'start' })
-        hasScrolledToToday.current = true
-      }, 100)
-    }
-  }, [calendarViewMode, calendarsLoading, eventsLoading])
-
   // Scroll-based infinite loading
   useEffect(() => {
     if (calendarViewMode !== 'month') return
     if (!scrollContainerRef.current) return
 
-    // Der scrollContainerRef ist jetzt selbst der scrollbare Container
     const scrollContainer = scrollContainerRef.current
     scrollParentRef.current = scrollContainer
 
@@ -215,20 +201,24 @@ const CalendarView = memo(function CalendarView({
 
     let ticking = false
     const handleScroll = () => {
-      // Kein Infinite-Scroll bevor der initiale Scroll zu "Heute" stattgefunden hat
-      if (!hasScrolledToToday.current) return
       if (ticking) return
       ticking = true
       requestAnimationFrame(() => {
         const { scrollTop, scrollHeight, clientHeight } = scrollContainer
+        console.log('[CAL DEBUG] handleScroll:', { scrollTop, scrollHeight, clientHeight, hasScrolledDown: hasScrolledDown.current })
+
+        // User hat nach unten gescrollt → Top-Loading freigeben
+        if (scrollTop > 200) hasScrolledDown.current = true
 
         // Laden am unteren Ende
         if (scrollTop + clientHeight >= scrollHeight - 800 && canLoad()) {
+          console.log('[CAL DEBUG] → BOTTOM LOADING triggered')
           setMonthRange((prev) => ({ ...prev, end: prev.end + 3 }))
         }
 
-        // Laden am oberen Ende mit Scroll-Kompensation
-        if (scrollTop <= 800 && canLoad()) {
+        // Laden am oberen Ende — NUR wenn User vorher nach unten gescrollt hat
+        if (hasScrolledDown.current && scrollTop <= 800 && canLoad()) {
+          console.log('[CAL DEBUG] → TOP LOADING triggered')
           prevScrollHeightRef.current = scrollHeight
           isLoadingTopRef.current = true
           setMonthRange((prev) => ({ ...prev, start: prev.start - 3 }))
@@ -239,7 +229,6 @@ const CalendarView = memo(function CalendarView({
     }
 
     scrollContainer.addEventListener('scroll', handleScroll, { passive: true })
-    handleScroll()
     return () => scrollContainer.removeEventListener('scroll', handleScroll)
   }, [calendarViewMode, calendarsLoading, eventsLoading])
 
@@ -248,7 +237,6 @@ const CalendarView = memo(function CalendarView({
     if (!isLoadingTopRef.current) return
     if (!scrollParentRef.current) return
 
-    // Warte einen Frame, damit React die neuen Monate gerendert hat
     requestAnimationFrame(() => {
       const scrollContainer = scrollParentRef.current
       if (!scrollContainer) return
@@ -264,13 +252,13 @@ const CalendarView = memo(function CalendarView({
     })
   }, [monthRange.start])
 
-  // Scroll to today handler
+  // Scroll to today handler (Heute-Button)
   const scrollToToday = () => {
     if (calendarViewMode === 'month') {
-      // Reset range to include current month
-      setMonthRange({ start: -2, end: 3 })
+      hasScrolledDown.current = false
+      setMonthRange({ start: 0, end: 5 })
       setTimeout(() => {
-        currentMonthRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
       }, 50)
     } else {
       setCalendarViewDate(new Date())

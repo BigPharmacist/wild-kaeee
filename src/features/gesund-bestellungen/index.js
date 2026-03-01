@@ -1,5 +1,7 @@
 export { default as GesundBestellungenView } from './GesundBestellungenView'
+export { default as GesundStatistikView } from './GesundStatistikView'
 export { default as useGesundBestellungen } from './useGesundBestellungen'
+export { default as useGesundStatistik } from './useGesundStatistik'
 export { default as useGesundUnreadCount } from './useGesundUnreadCount'
 export { default as useGesundOrderDetail } from './useGesundOrderDetail'
 export { default as OrderDetailPopup } from './OrderDetailPopup'

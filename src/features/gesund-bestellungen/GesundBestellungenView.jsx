@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import {
   ArrowClockwise,
   ShoppingCart,
@@ -7,11 +7,15 @@ import {
   Pill,
   ChatDots,
   User,
-  CaretRight,
+  CalendarBlank,
+  ChartBar,
+  MagnifyingGlass,
+  X,
 } from '@phosphor-icons/react'
 import { supabase } from '../../lib/supabase'
 import useGesundBestellungen from './useGesundBestellungen'
 import OrderDetailPopup from './OrderDetailPopup'
+import GesundStatistikView from './GesundStatistikView'
 
 const ORDER_TYPE_LABELS = {
   OTC_ONLY: 'OTC',
@@ -102,171 +106,163 @@ function isUnseen(order) {
 const WEEKDAYS_LONG = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag']
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
 
-function getISOWeek(date) {
-  const d = new Date(date.getTime())
-  d.setHours(0, 0, 0, 0)
-  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7))
-  const yearStart = new Date(d.getFullYear(), 0, 4)
-  return 1 + Math.round(((d - yearStart) / 86400000 - 3 + ((yearStart.getDay() + 6) % 7)) / 7)
-}
-
-function getWeekMonday(date) {
-  const d = new Date(date.getTime())
-  d.setHours(0, 0, 0, 0)
-  d.setDate(d.getDate() - ((d.getDay() + 6) % 7))
-  return d
-}
-
-function formatWeekLabel(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00')
-  const weekNum = getISOWeek(d)
-  const monday = getWeekMonday(d)
-  const sunday = new Date(monday)
-  sunday.setDate(monday.getDate() + 6)
-  if (monday.getMonth() === sunday.getMonth()) {
-    return `KW ${weekNum} \u00B7 ${monday.getDate()}.–${sunday.getDate()}. ${MONTHS_SHORT[sunday.getMonth()]}`
-  }
-  return `KW ${weekNum} \u00B7 ${monday.getDate()}. ${MONTHS_SHORT[monday.getMonth()]} – ${sunday.getDate()}. ${MONTHS_SHORT[sunday.getMonth()]}`
-}
-
 function formatDaySubheader(dateStr) {
   const d = new Date(dateStr + 'T00:00:00')
   return `${WEEKDAYS_LONG[d.getDay()]}, ${d.getDate()}. ${MONTHS_SHORT[d.getMonth()]}`
 }
 
-function getWeekKey(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00')
-  return getWeekMonday(d).toISOString().split('T')[0]
-}
-
-function buildSections(ordersByDay) {
+function getTodayKey() {
   const now = new Date()
-  const today = now.toISOString().split('T')[0]
-  const yd = new Date(now)
-  yd.setDate(yd.getDate() - 1)
-  const yesterday = yd.toISOString().split('T')[0]
-
-  const sections = []
-  const weekBuckets = new Map()
-  const weekKeys = []
-
-  for (const dayGroup of ordersByDay) {
-    const { date } = dayGroup
-    if (date === today) {
-      sections.push({ key: 'today', label: 'Heute', days: [dayGroup] })
-    } else if (date === yesterday) {
-      sections.push({ key: 'yesterday', label: 'Gestern', days: [dayGroup] })
-    } else {
-      const wk = getWeekKey(date)
-      if (!weekBuckets.has(wk)) {
-        weekBuckets.set(wk, [])
-        weekKeys.push(wk)
-      }
-      weekBuckets.get(wk).push(dayGroup)
-    }
-  }
-
-  for (const wk of weekKeys) {
-    const days = weekBuckets.get(wk)
-    sections.push({ key: `week-${wk}`, label: formatWeekLabel(days[0].date), days })
-  }
-
-  return sections
+  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`
 }
 
-// Ältere Wochen gruppieren (aus lazy-geladenen Orders)
-function groupByDay(orders) {
-  const groups = {}
-  for (const order of orders) {
-    const date = new Date(order.order_date || order.created_at)
-    const dayKey = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`
-    if (!groups[dayKey]) groups[dayKey] = []
-    groups[dayKey].push(order)
-  }
-  return Object.entries(groups)
-    .sort(([a], [b]) => b.localeCompare(a))
-    .map(([date, dayOrders]) => ({ date, orders: dayOrders }))
+function getYesterdayKey() {
+  const now = new Date()
+  now.setUTCDate(now.getUTCDate() - 1)
+  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`
 }
 
-function formatWeekLabelFromDate(monday) {
-  const weekNum = getISOWeek(monday)
-  const sunday = new Date(monday)
-  sunday.setDate(monday.getDate() + 6)
-  if (monday.getMonth() === sunday.getMonth()) {
-    return `KW ${weekNum} \u00B7 ${monday.getDate()}.–${sunday.getDate()}. ${MONTHS_SHORT[sunday.getMonth()]}`
-  }
-  return `KW ${weekNum} \u00B7 ${monday.getDate()}. ${MONTHS_SHORT[monday.getMonth()]} – ${sunday.getDate()}. ${MONTHS_SHORT[sunday.getMonth()]}`
+function getMondayOfCurrentWeek() {
+  const now = new Date()
+  const day = now.getUTCDay() // 0=So
+  const diff = day === 0 ? 6 : day - 1
+  const monday = new Date(now)
+  monday.setUTCDate(now.getUTCDate() - diff)
+  monday.setUTCHours(0, 0, 0, 0)
+  return monday
 }
 
-// Wochen-Index per RPC laden (nur Wochen die Daten haben)
-function useOlderWeeks() {
-  const [weeks, setWeeks] = useState([])
-
-  const fetchWeeks = useCallback(async () => {
-    const { data, error } = await supabase.rpc('get_gesund_week_index')
-    if (error) {
-      console.error('Fehler beim Laden des Wochen-Index:', error)
-      return
-    }
-    setWeeks((data || []).map(w => ({
-      weekStart: new Date(w.week_start + 'T00:00:00'),
-      label: formatWeekLabelFromDate(new Date(w.week_start + 'T00:00:00')),
-      orderCount: w.order_count,
-      unseenCount: w.unseen_count,
-    })))
-  }, [])
-
-  useEffect(() => {
-    fetchWeeks()
-  }, [fetchWeeks])
-
-  // Refresh bei gesund-orders-changed
-  useEffect(() => {
-    const handler = () => fetchWeeks()
-    window.addEventListener('gesund-orders-changed', handler)
-    return () => window.removeEventListener('gesund-orders-changed', handler)
-  }, [fetchWeeks])
-
-  return weeks
+function getMondayOfLastWeek() {
+  const monday = getMondayOfCurrentWeek()
+  monday.setUTCDate(monday.getUTCDate() - 7)
+  return monday
 }
+
+const TABS = [
+  { key: 'today', label: 'Heute' },
+  { key: 'yesterday', label: 'Gestern' },
+  { key: 'this-week', label: 'Woche' },
+  { key: 'last-week', label: 'Vorwoche' },
+  { key: 'custom', label: 'Datum' },
+]
 
 export default function GesundBestellungenView({ theme }) {
-  const { ordersByDay, loading, refreshing, refresh, getViewUrl, printFile, markSeen, loadWeek } = useGesundBestellungen()
+  const { ordersByDay, todayOrders, loading, refreshing, refresh, getViewUrl, printFile, markSeen, loadDay } = useGesundBestellungen()
   const [selectedOrder, setSelectedOrder] = useState(null)
-  const [expandedSections, setExpandedSections] = useState(new Set(['today']))
-  const [olderWeeksData, setOlderWeeksData] = useState({}) // weekKey → { orders, loading }
+  const [showStats, setShowStats] = useState(false)
+  const [activeTab, setActiveTab] = useState('today')
+  const [customDate, setCustomDate] = useState('')
+  const [customOrders, setCustomOrders] = useState(null) // null = nicht geladen, [] = leer
+  const [customLoading, setCustomLoading] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState(null)
+  const [searchLoading, setSearchLoading] = useState(false)
+  const searchTimerRef = useRef(null)
+  const searchInputRef = useRef(null)
 
-  const sections = useMemo(() => buildSections(ordersByDay), [ordersByDay])
+  const handleSearchChange = useCallback((value) => {
+    setSearchQuery(value)
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
 
-  const olderWeeks = useOlderWeeks()
+    const trimmed = value.trim()
+    if (trimmed.length < 2) {
+      setSearchResults(null)
+      setSearchLoading(false)
+      return
+    }
 
-  const toggleSection = (key) => {
-    setExpandedSections(prev => {
-      const next = new Set(prev)
-      if (next.has(key)) next.delete(key)
-      else next.add(key)
-      return next
-    })
-  }
-
-  const handleExpandOlderWeek = useCallback(async (weekKey, weekStart) => {
-    setExpandedSections(prev => {
-      const next = new Set(prev)
-      if (next.has(weekKey)) {
-        next.delete(weekKey)
-        return next
+    setSearchLoading(true)
+    searchTimerRef.current = setTimeout(async () => {
+      const { data, error } = await supabase.rpc('search_gesund_orders', { p_query: trimmed })
+      if (error) {
+        console.error('Search error:', error)
+        setSearchResults([])
+      } else {
+        setSearchResults(data)
       }
-      next.add(weekKey)
-      return next
-    })
+      setSearchLoading(false)
+    }, 400)
+  }, [])
 
-    // Nur laden wenn noch nicht geladen
-    if (olderWeeksData[weekKey]?.orders) return
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current) }
+  }, [])
 
-    setOlderWeeksData(prev => ({ ...prev, [weekKey]: { orders: null, loading: true } }))
-    const orders = await loadWeek(weekStart)
-    setOlderWeeksData(prev => ({ ...prev, [weekKey]: { orders, loading: false } }))
-  }, [loadWeek, olderWeeksData])
+  const clearSearch = useCallback(() => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+    setSearchQuery('')
+    setSearchResults(null)
+    setSearchLoading(false)
+    searchInputRef.current?.focus()
+  }, [])
+
+  // Unseen-Counts pro Tab
+  const tabCounts = useMemo(() => {
+    const todayKey = getTodayKey()
+    const yesterdayKey = getYesterdayKey()
+    const mondayKey = getMondayOfCurrentWeek().toISOString().split('T')[0]
+    const lastMondayKey = getMondayOfLastWeek().toISOString().split('T')[0]
+
+    let yesterdayUnseen = 0
+    let weekUnseen = 0
+    let lastWeekUnseen = 0
+
+    for (const { date, orders } of ordersByDay) {
+      const unseen = orders.filter(isUnseen).length
+      if (date === yesterdayKey) yesterdayUnseen += unseen
+      if (date >= mondayKey && date !== todayKey) weekUnseen += unseen
+      if (date >= lastMondayKey && date < mondayKey) lastWeekUnseen += unseen
+    }
+
+    return {
+      today: todayOrders.filter(isUnseen).length,
+      yesterday: yesterdayUnseen,
+      'this-week': weekUnseen,
+      'last-week': lastWeekUnseen,
+    }
+  }, [ordersByDay, todayOrders])
+
+  // Tab-Inhalt berechnen (für Nicht-Heute und Nicht-Custom Tabs)
+  const tabData = useMemo(() => {
+    const todayKey = getTodayKey()
+    const yesterdayKey = getYesterdayKey()
+    const mondayKey = getMondayOfCurrentWeek().toISOString().split('T')[0]
+    const lastMondayKey = getMondayOfLastWeek().toISOString().split('T')[0]
+
+    if (activeTab === 'yesterday') {
+      const dayGroup = ordersByDay.find(d => d.date === yesterdayKey)
+      return dayGroup ? [dayGroup] : []
+    }
+    if (activeTab === 'this-week') {
+      return ordersByDay.filter(d => d.date >= mondayKey && d.date !== todayKey)
+    }
+    if (activeTab === 'last-week') {
+      return ordersByDay.filter(d => d.date >= lastMondayKey && d.date < mondayKey)
+    }
+    return []
+  }, [activeTab, ordersByDay])
+
+  const handleCustomDateChange = useCallback(async (dateStr) => {
+    setCustomDate(dateStr)
+    if (!dateStr) {
+      setCustomOrders(null)
+      return
+    }
+
+    // Prüfen ob Datum im bereits geladenen Bereich liegt
+    const dayGroup = ordersByDay.find(d => d.date === dateStr)
+    if (dayGroup) {
+      setCustomOrders(dayGroup.orders)
+      return
+    }
+
+    // Aus DB laden
+    setCustomLoading(true)
+    const orders = await loadDay(dateStr)
+    setCustomOrders(orders)
+    setCustomLoading(false)
+  }, [ordersByDay, loadDay])
 
   const handleOpenOrder = (order) => {
     setSelectedOrder(order)
@@ -278,215 +274,198 @@ export default function GesundBestellungenView({ theme }) {
   return (
     <>
       {/* Header */}
-      <div className="flex items-center gap-3 mb-4">
+      <div className="flex items-center gap-3 mb-3">
         <h1 className={`text-xl font-semibold tracking-tight ${theme.text}`}>
           Gesund.de Bestellungen
         </h1>
         <div className="flex-1" />
         <button
           type="button"
+          onClick={() => setShowStats(s => !s)}
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            showStats
+              ? 'bg-[#F59E0B] text-white shadow-sm'
+              : `${theme.textSecondary} hover:text-[#1E293B] hover:bg-[#F59E0B]/10`
+          }`}
+          title="Statistik"
+        >
+          <ChartBar size={16} />
+          Statistik
+        </button>
+        <button
+          type="button"
           onClick={refresh}
           disabled={refreshing}
-          className={`p-2 rounded-lg ${theme.bgHover} ${refreshing ? 'opacity-50' : ''}`}
+          className={`p-2 rounded-lg ${theme.textSecondary} hover:text-[#1E293B] hover:bg-[#F59E0B]/10 ${refreshing ? 'opacity-50' : ''}`}
           title="Aktualisieren"
         >
           <ArrowClockwise size={20} className={refreshing ? 'animate-spin' : ''} />
         </button>
       </div>
 
+      {/* Suchfeld */}
+      <div className="relative mb-4">
+        <MagnifyingGlass size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${theme.textMuted}`} />
+        <input
+          ref={searchInputRef}
+          type="text"
+          value={searchQuery}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          placeholder="Name, Bestellnr., Produkt, PZN..."
+          className={`w-full text-sm rounded-xl pl-9 pr-9 py-2 border ${theme.border} ${theme.panel} ${theme.text} placeholder-[#94A3B8] focus:outline-none focus:ring-1 focus:ring-[#0D9488] focus:border-[#0D9488]`}
+        />
+        {searchQuery && (
+          <button
+            type="button"
+            onClick={clearSearch}
+            className={`absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded-full bg-[#94A3B8]/20 ${theme.textMuted} hover:bg-[#94A3B8]/40 hover:text-[#1E293B]`}
+          >
+            <X size={12} />
+          </button>
+        )}
+      </div>
+
       {/* Content */}
-      {loading ? (
+      {showStats ? (
+        <GesundStatistikView theme={theme} />
+      ) : searchResults !== null || searchLoading ? (
+        /* === Suchergebnisse === */
+        <div>
+          {searchLoading ? (
+            <div className={`${theme.panel} rounded-xl border ${theme.border} flex items-center justify-center py-8`}>
+              <ArrowClockwise size={20} className={`animate-spin ${theme.textMuted}`} />
+            </div>
+          ) : searchResults.length === 0 ? (
+            <div className={`${theme.panel} rounded-xl border ${theme.border} flex flex-col items-center justify-center py-10 gap-2`}>
+              <MagnifyingGlass size={32} className={theme.textMuted} />
+              <p className={`text-sm ${theme.textMuted}`}>Keine Bestellungen gefunden für &quot;{searchQuery.trim()}&quot;</p>
+            </div>
+          ) : (
+            <>
+              <p className={`text-sm ${theme.textSecondary} mb-3`}>
+                {searchResults.length}{searchResults.length === 50 ? '+' : ''} Treffer für &quot;{searchQuery.trim()}&quot;
+              </p>
+              <div className={`${theme.panel} rounded-xl border ${theme.border} overflow-hidden`}>
+                {searchResults.map(order => (
+                  <SearchResultRow key={order.id} order={order} theme={theme} onOpen={handleOpenOrder} printFile={printFile} />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      ) : loading ? (
         <div className="flex items-center justify-center h-64">
           <ArrowClockwise size={32} className={`animate-spin ${theme.textMuted}`} />
         </div>
-      ) : ordersByDay.length === 0 && olderWeeks.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-64 gap-3">
-          <ShoppingCart size={48} className={theme.textMuted} />
-          <p className={`text-lg ${theme.textMuted}`}>Keine Bestellungen vorhanden</p>
-        </div>
       ) : (
-        <div className={`${theme.panel} rounded-xl border ${theme.border} overflow-hidden`}>
-          {/* Aktuelle + Vorwoche Sections */}
-          {sections.map((section, si) => {
-            const expanded = expandedSections.has(section.key)
-            const totalOrders = section.days.reduce((sum, d) => sum + d.orders.length, 0)
-            const totalUnseen = section.days.reduce((sum, d) => sum + d.orders.filter(isUnseen).length, 0)
-
-            return (
-              <div key={section.key} className={si > 0 ? `border-t ${theme.border}` : ''}>
-                {/* Section header */}
+        <div>
+          {/* Tabs */}
+          <div className="flex items-center gap-1 mb-5 flex-wrap">
+            {TABS.map(tab => {
+              const active = activeTab === tab.key
+              const unseen = tabCounts[tab.key] || 0
+              return (
                 <button
+                  key={tab.key}
                   type="button"
-                  onClick={() => toggleSection(section.key)}
-                  className="w-full flex items-center gap-2.5 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all ${
+                    active
+                      ? 'bg-[#F59E0B] text-white shadow-sm'
+                      : `${theme.textSecondary} hover:text-[#1E293B] hover:bg-[#F59E0B]/10`
+                  }`}
                 >
-                  <CaretRight
-                    size={14}
-                    weight="bold"
-                    className={`shrink-0 ${theme.textMuted} transition-transform ${expanded ? 'rotate-90' : ''}`}
-                  />
-                  <span className={`text-sm font-semibold ${theme.text}`}>{section.label}</span>
-                  <span className={`text-xs ${theme.textMuted}`}>{totalOrders}</span>
-                  {totalUnseen > 0 && (
-                    <span className="flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-red-500 rounded-full">
-                      {totalUnseen}
+                  {tab.key === 'custom' && <CalendarBlank size={15} />}
+                  {tab.label}
+                  {unseen > 0 && (
+                    <span className={`flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold rounded-full ${
+                      active ? 'bg-white/25 text-white' : 'bg-red-500 text-white'
+                    }`}>
+                      {unseen}
                     </span>
                   )}
                 </button>
+              )
+            })}
+          </div>
 
-                {expanded && section.key === 'today' && (
-                  <div className={`border-t ${theme.border} p-4`}>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                      {section.days[0].orders.map(order => {
-                        const unseen = isUnseen(order)
-                        return (
-                          <div
-                            key={order.id}
-                            className={`flex flex-col rounded-2xl border-2 ${unseen ? 'border-red-400 ring-1 ring-red-200' : theme.border} ${theme.cardShadow} ${theme.cardHoverShadow} transition-all cursor-pointer overflow-hidden`}
-                            onClick={() => handleOpenOrder(order)}
-                          >
-                            <div className={`p-4 ${theme.panel}`}>
-                              <div className="flex items-start justify-between gap-2 mb-2">
-                                <div className="flex items-center gap-2 min-w-0">
-                                  <User size={18} className={theme.textMuted} />
-                                  <p className={`text-sm font-semibold truncate ${theme.text}`}>
-                                    {order.customer_name || 'Unbekannt'}
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-1.5 flex-wrap mb-2">
-                                <TypeBadge orderType={order.order_type} partnerName={order.partner_name} />
-                                <StatusBadge status={order.status} />
-                              </div>
-                              <div className="flex items-center gap-3">
-                                <span className={`text-xs ${theme.textMuted}`}>#{order.order_number}</span>
-                                <span className={`text-xs ${theme.textMuted}`}>{formatTime(order.order_date)}</span>
-                              </div>
-                              <div className="flex items-center gap-3 mt-2">
-                                {order.erezept_count > 0 && (
-                                  <span className="flex items-center gap-1 text-xs text-teal-600">
-                                    <Pill size={14} />
-                                    {order.erezept_count} E-Rezept{order.erezept_count > 1 ? 'e' : ''}
-                                  </span>
-                                )}
-                                {order.chat_count > 0 && (
-                                  <span className={`flex items-center gap-1 text-xs ${theme.textMuted}`}>
-                                    <ChatDots size={14} />
-                                    {order.chat_count}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            {order.pdf_path && (
-                              <div className={`flex border-t ${theme.border} ${theme.panel}`}>
-                                <button
-                                  type="button"
-                                  onClick={(e) => { e.stopPropagation(); handleOpenOrder(order) }}
-                                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium ${theme.textSecondary} hover:bg-black/5 transition-colors`}
-                                  title="Ansehen"
-                                >
-                                  <Eye size={16} />
-                                  Ansehen
-                                </button>
-                                <div className={`w-px ${theme.border}`} />
-                                <button
-                                  type="button"
-                                  onClick={(e) => { e.stopPropagation(); printFile(order.pdf_path) }}
-                                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium ${theme.textSecondary} hover:bg-black/5 transition-colors`}
-                                  title="Drucken"
-                                >
-                                  <Printer size={16} />
-                                  Drucken
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
+          {/* === Tab: Heute === */}
+          {activeTab === 'today' && (
+            todayOrders.length === 0 ? (
+              <div className={`${theme.panel} rounded-xl border ${theme.border} flex flex-col items-center justify-center py-10 gap-2`}>
+                <ShoppingCart size={32} className={theme.textMuted} />
+                <p className={`text-sm ${theme.textMuted}`}>Heute noch keine Bestellungen</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {todayOrders.map(order => (
+                  <TodayCard key={order.id} order={order} theme={theme} onOpen={handleOpenOrder} printFile={printFile} />
+                ))}
+              </div>
+            )
+          )}
 
-                {expanded && section.key !== 'today' && (
-                  <div className={`border-t ${theme.border}`}>
-                    {section.days.map(({ date, orders }) => (
-                      <div key={date}>
-                        {section.days.length > 1 && (
-                          <div className={`px-4 py-1.5 text-xs font-medium ${theme.textMuted} bg-gray-50/60 border-b ${theme.border}`}>
-                            {formatDaySubheader(date)}
-                          </div>
-                        )}
-                        {orders.map(order => (
-                          <OrderRow key={order.id} order={order} theme={theme} onOpen={handleOpenOrder} printFile={printFile} />
-                        ))}
+          {/* === Tabs: Gestern / Woche / Vorwoche === */}
+          {(activeTab === 'yesterday' || activeTab === 'this-week' || activeTab === 'last-week') && (
+            <div className={`${theme.panel} rounded-xl border ${theme.border} overflow-hidden`}>
+              {tabData.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 gap-2">
+                  <ShoppingCart size={28} className={theme.textMuted} />
+                  <p className={`text-sm ${theme.textMuted}`}>Keine Bestellungen in diesem Zeitraum</p>
+                </div>
+              ) : (
+                tabData.map(({ date, orders }, di) => (
+                  <div key={date} className={di > 0 ? `border-t ${theme.border}` : ''}>
+                    {tabData.length > 1 && (
+                      <div className={`px-4 py-1.5 text-xs font-medium ${theme.textMuted} bg-gray-50/60 border-b ${theme.border}`}>
+                        {formatDaySubheader(date)}
                       </div>
+                    )}
+                    {orders.map(order => (
+                      <OrderRow key={order.id} order={order} theme={theme} onOpen={handleOpenOrder} printFile={printFile} />
                     ))}
                   </div>
-                )}
+                ))
+              )}
+            </div>
+          )}
+
+          {/* === Tab: Freie Eingabe === */}
+          {activeTab === 'custom' && (
+            <div>
+              <div className="mb-4">
+                <input
+                  type="date"
+                  value={customDate}
+                  max={getTodayKey()}
+                  onChange={(e) => handleCustomDateChange(e.target.value)}
+                  className={`text-sm rounded-lg px-3 py-2 border ${theme.border} ${theme.panel} ${theme.text} focus:outline-none focus:ring-1 focus:ring-[#0D9488] focus:border-[#0D9488]`}
+                />
               </div>
-            )
-          })}
 
-          {/* Ältere Wochen — lazy loaded */}
-          {olderWeeks.map((week, wi) => {
-            const weekKey = `older-${week.weekStart.toISOString().split('T')[0]}`
-            const expanded = expandedSections.has(weekKey)
-            const weekData = olderWeeksData[weekKey]
-            const isFirst = wi === 0 && sections.length === 0
-
-            return (
-              <div key={weekKey} className={!isFirst ? `border-t ${theme.border}` : ''}>
-                <button
-                  type="button"
-                  onClick={() => handleExpandOlderWeek(weekKey, week.weekStart)}
-                  className="w-full flex items-center gap-2.5 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
-                >
-                  <CaretRight
-                    size={14}
-                    weight="bold"
-                    className={`shrink-0 ${theme.textMuted} transition-transform ${expanded ? 'rotate-90' : ''}`}
-                  />
-                  <span className={`text-sm font-semibold ${theme.text}`}>{week.label}</span>
-                  <span className={`text-xs ${theme.textMuted}`}>{week.orderCount}</span>
-                  {week.unseenCount > 0 && (
-                    <span className="flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-red-500 rounded-full">
-                      {week.unseenCount}
-                    </span>
-                  )}
-                </button>
-
-                {expanded && (
-                  <div className={`border-t ${theme.border}`}>
-                    {weekData?.loading && (
-                      <div className="flex items-center justify-center py-6">
-                        <ArrowClockwise size={20} className={`animate-spin ${theme.textMuted}`} />
-                      </div>
-                    )}
-                    {weekData?.orders && weekData.orders.length === 0 && (
-                      <div className={`px-4 py-4 text-sm ${theme.textMuted} text-center`}>
-                        Keine Bestellungen in dieser Woche
-                      </div>
-                    )}
-                    {weekData?.orders && weekData.orders.length > 0 && (() => {
-                      const days = groupByDay(weekData.orders)
-                      return days.map(({ date, orders }) => (
-                        <div key={date}>
-                          {days.length > 1 && (
-                            <div className={`px-4 py-1.5 text-xs font-medium ${theme.textMuted} bg-gray-50/60 border-b ${theme.border}`}>
-                              {formatDaySubheader(date)}
-                            </div>
-                          )}
-                          {orders.map(order => (
-                            <OrderRow key={order.id} order={order} theme={theme} onOpen={handleOpenOrder} printFile={printFile} />
-                          ))}
-                        </div>
-                      ))
-                    })()}
-                  </div>
-                )}
-              </div>
-            )
-          })}
+              {!customDate ? (
+                <div className={`${theme.panel} rounded-xl border ${theme.border} flex flex-col items-center justify-center py-10 gap-2`}>
+                  <CalendarBlank size={32} className={theme.textMuted} />
+                  <p className={`text-sm ${theme.textMuted}`}>Datum auswählen</p>
+                </div>
+              ) : customLoading ? (
+                <div className={`${theme.panel} rounded-xl border ${theme.border} flex items-center justify-center py-8`}>
+                  <ArrowClockwise size={20} className={`animate-spin ${theme.textMuted}`} />
+                </div>
+              ) : customOrders && customOrders.length === 0 ? (
+                <div className={`${theme.panel} rounded-xl border ${theme.border} flex flex-col items-center justify-center py-8 gap-2`}>
+                  <ShoppingCart size={28} className={theme.textMuted} />
+                  <p className={`text-sm ${theme.textMuted}`}>Keine Bestellungen am {formatDaySubheader(customDate)}</p>
+                </div>
+              ) : customOrders ? (
+                <div className={`${theme.panel} rounded-xl border ${theme.border} overflow-hidden`}>
+                  {customOrders.map(order => (
+                    <OrderRow key={order.id} order={order} theme={theme} onOpen={handleOpenOrder} printFile={printFile} />
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          )}
         </div>
       )}
 
@@ -504,6 +483,72 @@ export default function GesundBestellungenView({ theme }) {
   )
 }
 
+function TodayCard({ order, theme, onOpen, printFile }) {
+  const unseen = isUnseen(order)
+  return (
+    <div
+      className={`flex flex-col rounded-2xl border-2 ${unseen ? 'border-red-400 ring-1 ring-red-200' : theme.border} ${theme.cardShadow} ${theme.cardHoverShadow} transition-all cursor-pointer overflow-hidden`}
+      onClick={() => onOpen(order)}
+    >
+      <div className={`p-4 ${theme.panel}`}>
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <User size={18} className={theme.textMuted} />
+            <p className={`text-sm font-semibold truncate ${theme.text}`}>
+              {order.customer_name || 'Unbekannt'}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5 flex-wrap mb-2">
+          <TypeBadge orderType={order.order_type} partnerName={order.partner_name} />
+          <StatusBadge status={order.status} />
+        </div>
+        <div className="flex items-center gap-3">
+          <span className={`text-xs ${theme.textMuted}`}>#{order.order_number}</span>
+          <span className={`text-xs ${theme.textMuted}`}>{formatTime(order.order_date)}</span>
+        </div>
+        <div className="flex items-center gap-3 mt-2">
+          {order.erezept_count > 0 && (
+            <span className="flex items-center gap-1 text-xs text-teal-600">
+              <Pill size={14} />
+              {order.erezept_count} E-Rezept{order.erezept_count > 1 ? 'e' : ''}
+            </span>
+          )}
+          {order.chat_count > 0 && (
+            <span className={`flex items-center gap-1 text-xs ${theme.textMuted}`}>
+              <ChatDots size={14} />
+              {order.chat_count}
+            </span>
+          )}
+        </div>
+      </div>
+      {order.pdf_path && (
+        <div className={`flex border-t ${theme.border} ${theme.panel}`}>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onOpen(order) }}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium ${theme.textSecondary} hover:bg-black/5 transition-colors`}
+            title="Ansehen"
+          >
+            <Eye size={16} />
+            Ansehen
+          </button>
+          <div className={`w-px ${theme.border}`} />
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); printFile(order.pdf_path) }}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium ${theme.textSecondary} hover:bg-black/5 transition-colors`}
+            title="Drucken"
+          >
+            <Printer size={16} />
+            Drucken
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function OrderRow({ order, theme, onOpen, printFile }) {
   const unseen = isUnseen(order)
   return (
@@ -517,6 +562,59 @@ function OrderRow({ order, theme, onOpen, printFile }) {
       <span className={`text-sm truncate flex-1 min-w-0 ${unseen ? 'font-semibold' : ''} ${theme.text}`}>
         {order.customer_name || 'Unbekannt'}
       </span>
+      <div className="hidden sm:flex items-center gap-1.5 shrink-0">
+        <TypeBadge orderType={order.order_type} partnerName={order.partner_name} />
+        <StatusBadge status={order.status} />
+      </div>
+      <div className="flex items-center gap-0.5 shrink-0">
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onOpen(order) }}
+          className={`p-1.5 rounded-md ${theme.textMuted} hover:bg-gray-100`}
+          title="Ansehen"
+        >
+          <Eye size={15} />
+        </button>
+        {order.pdf_path && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); printFile(order.pdf_path) }}
+            className={`p-1.5 rounded-md ${theme.textMuted} hover:bg-gray-100`}
+            title="Drucken"
+          >
+            <Printer size={15} />
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function formatShortDate(isoStr) {
+  if (!isoStr) return ''
+  const d = new Date(isoStr)
+  return `${String(d.getUTCDate()).padStart(2, '0')}.${String(d.getUTCMonth() + 1).padStart(2, '0')}.`
+}
+
+function SearchResultRow({ order, theme, onOpen, printFile }) {
+  const unseen = isUnseen(order)
+  return (
+    <div
+      className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors border-l-2 ${unseen ? 'border-l-red-400 bg-red-50/30' : 'border-l-transparent'}`}
+      onClick={() => onOpen(order)}
+    >
+      <span className={`text-xs tabular-nums ${theme.textMuted} w-16 shrink-0`}>
+        {formatShortDate(order.order_date)} {formatTime(order.order_date)}
+      </span>
+      <span className={`text-sm truncate min-w-0 ${unseen ? 'font-semibold' : ''} ${theme.text}`}>
+        {order.customer_name || 'Unbekannt'}
+      </span>
+      {order.matched_product && (
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-indigo-50 text-indigo-600 shrink-0 max-w-[180px] truncate" title={order.matched_product}>
+          {order.matched_product}
+        </span>
+      )}
+      <div className="flex-1" />
       <div className="hidden sm:flex items-center gap-1.5 shrink-0">
         <TypeBadge orderType={order.order_type} partnerName={order.partner_name} />
         <StatusBadge status={order.status} />
